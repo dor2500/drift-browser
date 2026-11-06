@@ -5,6 +5,7 @@ import { displayUrl, isInternalUrl } from '../../shared/url';
 import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { DownloadsButton } from './DownloadsButton';
 import { PageActions } from './PageActions';
 import { iconForPermission } from './PermissionCard';
 import { hasUpdateBadge } from './UpdatePanels';
@@ -133,6 +134,7 @@ export function TopBar({ state, onOpenBar }: Props) {
             <Icon name={state.media.playing ? 'pause' : 'play'} size={16} />
           </button>
         )}
+        <DownloadsButton downloads={state.downloads} className="tb-btn" />
         <button className="tb-btn menu-btn" title={t('nav.menu')} onClick={() => window.drift.appMenu()}>
           <Icon name="more" size={18} />
           {hasUpdateBadge(state.updates, state.settings.updates.engineAlerts) && <span className="update-dot" />}
@@ -161,7 +163,7 @@ function HTab({
 }) {
   return (
     <div
-      className={cx('htab', selected && 'selected', compact && 'compact', dropPos && `drop-${dropPos}`)}
+      className={cx('htab', selected && 'selected', compact && 'compact', tab.asleep && !selected && 'asleep', dropPos && `drop-${dropPos}`)}
       title={`${tab.title}\n${tab.url}`}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}

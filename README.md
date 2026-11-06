@@ -41,6 +41,13 @@ Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppIm
 
   ![Zen import](docs/screenshots/zen-import.png)
 
+- **Everyday tools:** find in page (Ctrl+F), zoom remembered per site, downloads (Ctrl+J), picture-in-picture, print, page source, screenshots (Ctrl+Shift+S), translate page, and sleeping tabs that free memory.
+- **Command actions:** type an action name in the address bar (or start with `>`) to run it, as in Arc and Vivaldi.
+- **Colour themes:** Ocean, Midnight, Nord, Dracula, Catppuccin, Tokyo Night, Gruvbox and more on top of any style, plus a custom accent. Optional dark mode for every website.
+
+  ![Ocean theme with the find bar](docs/screenshots/theme-ocean-find.png)
+
+- **Google sign-in** for Gmail, YouTube and Drive. Chrome Sync is Chrome-only. **Open page in** any other installed browser, with per-site "always open in…" rules.
 - **Media controls** in the sidebar for whatever is playing.
 - **Permission prompts** for camera, microphone, location and notifications, with per-site answers you can change from the lock icon.
 - **Languages:** English and Hebrew built in (Hebrew lays out right to left). More languages download on demand from [`locales/`](locales/).
@@ -89,7 +96,7 @@ locales/    downloadable language packs + index.json
 assets/     icon.svg → icon.png, icon.ico, png/ sizes
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it works and why Electron.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it works and why Electron, and [docs/FEATURES.md](docs/FEATURES.md) for a feature-by-feature comparison with other browsers and the roadmap.
 
 ## Shortcuts
 
@@ -102,6 +109,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it works and why Electr
 | Ctrl+Alt+C | Compact mode |
 | Ctrl+Alt+V | Split view with the next tab |
 | Alt+click a link | Glance (Esc closes) |
+| Ctrl+F, Ctrl+J | Find in page, downloads |
+| Ctrl +/−/0 | Zoom in / out / reset |
+| Ctrl+P, Ctrl+U, Ctrl+Shift+S | Print, page source, screenshot |
+| Ctrl+D | Pin or unpin the tab |
 | Ctrl+, | Settings |
 | Alt+← / →, Ctrl+R | Back / forward, reload |
 | F12 | DevTools |

@@ -4,6 +4,7 @@ import { displayUrl, isInternalUrl } from '../../shared/url';
 import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { DownloadsButton } from './DownloadsButton';
 import { MediaBar, PageActions } from './PageActions';
 import { PermissionCard } from './PermissionCard';
 import { TabItem } from './TabItem';
@@ -152,6 +153,7 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
           {hasUpdateBadge(state.updates, state.settings.updates.engineAlerts) && <span className="update-dot" />}
         </button>
         <SpaceSwitcher spaces={state.spaces} activeId={space.id} />
+        <DownloadsButton downloads={state.downloads} className="icon-btn" />
       </div>
       <div className="sidebar-resize" onPointerDown={startResize} />
     </aside>

@@ -3,6 +3,7 @@ import { SEARCH_ENGINES, type SearchEngineId } from '../../shared/settings';
 import type { BrowserState, DriftEnv } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { Icon } from './Icon';
+import { ColorThemePicker } from './ColorThemePicker';
 import { ImportPanel } from './ImportPanel';
 import { ThemePicker } from './ThemePicker';
 import { Toggle, UpdateSourceForm } from './UpdatePanels';
@@ -51,6 +52,7 @@ export function Onboarding({ state }: { state: BrowserState }) {
             <>
               <p className="ob-lead">{t('ob.lead.look')}</p>
               <ThemePicker value={s.theme} env={env} />
+              <ColorThemePicker settings={s} compact />
               <Toggle
                 checked={s.spaceColors}
                 onChange={(spaceColors) => cmd({ type: 'settings:set', patch: { spaceColors } })}
@@ -60,7 +62,17 @@ export function Onboarding({ state }: { state: BrowserState }) {
             </>
           )}
 
-          {step === 1 && <ImportPanel />}
+          {step === 1 && (
+            <>
+              <ImportPanel />
+              <div className="google-row">
+                <button className="btn" onClick={() => cmd({ type: 'google:signin' })}>
+                  <Icon name="google" size={15} /> {t('set.googleSignIn')}
+                </button>
+                <span className="toggle-hint">{t('set.googleHint')}</span>
+              </div>
+            </>
+          )}
 
           {step === 2 && (
             <div className="engine-list">

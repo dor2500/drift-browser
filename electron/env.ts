@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { DriftEnv } from '../shared/types';
@@ -40,6 +41,32 @@ const LINUX: Record<keyof DriftEnv['browsers'], string[]> = {
 };
 
 const CANDIDATES = process.platform === 'win32' ? WIN : process.platform === 'darwin' ? MAC : LINUX;
+
+const EDGE: string[] =
+  process.platform === 'win32'
+    ? [path.join(PF86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'), path.join(PF, 'Microsoft', 'Edge', 'Application', 'msedge.exe')]
+    : process.platform === 'darwin'
+      ? [path.join(APPS, 'Microsoft Edge.app')]
+      : onPath(['microsoft-edge', 'microsoft-edge-stable']);
+
+export const BROWSER_NAMES: Record<string, string> = { zen: 'Zen', firefox: 'Firefox', chrome: 'Google Chrome', brave: 'Brave', edge: 'Microsoft Edge' };
+
+/** Installed browsers Drift can hand a page to, with the path that launches each. */
+export function otherBrowsers(): { id: string; name: string; exe: string }[] {
+  const all: Record<string, string[]> = { ...CANDIDATES, edge: EDGE };
+  return Object.entries(all)
+    .map(([id, paths]) => ({ id, name: BROWSER_NAMES[id], exe: paths.find((p) => p && fs.existsSync(p)) ?? '' }))
+    .filter((b) => b.exe);
+}
+
+export function openInBrowser(id: string, url: string): boolean {
+  const b = otherBrowsers().find((x) => x.id === id);
+  if (!b || !/^https?:/i.test(url)) return false;
+  const child =
+    process.platform === 'darwin' ? spawn('open', ['-a', b.exe, url], { detached: true, stdio: 'ignore' }) : spawn(b.exe, [url], { detached: true, stdio: 'ignore' });
+  child.unref();
+  return true;
+}
 
 export function readEnv(): DriftEnv {
   const browsers = Object.fromEntries(

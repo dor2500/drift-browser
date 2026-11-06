@@ -21,6 +21,20 @@ function sanitize(s: Settings): Settings {
     restoreSession: typeof s.restoreSession === 'boolean' ? s.restoreSession : d.restoreSession,
     adblock: typeof s.adblock === 'boolean' ? s.adblock : d.adblock,
     adblockPaused: Array.isArray(s.adblockPaused) ? [...new Set(s.adblockPaused.filter((h) => typeof h === 'string' && h.length < 256))] : [],
+    sleepAfter: [0, 15, 30, 60, 120].includes(s.sleepAfter) ? s.sleepAfter : d.sleepAfter,
+    forceDark: !!s.forceDark,
+    siteZoom:
+      s.siteZoom && typeof s.siteZoom === 'object'
+        ? Object.fromEntries(Object.entries(s.siteZoom).filter(([h, z]) => h.length < 256 && typeof z === 'number' && z >= -3 && z <= 5).slice(0, 500))
+        : {},
+    colorTheme: typeof s.colorTheme === 'string' && /^[a-z0-9-]{1,32}$/.test(s.colorTheme) ? s.colorTheme : 'default',
+    customAccent: typeof s.customAccent === 'string' && /^(#[0-9a-fA-F]{6})?$/.test(s.customAccent) ? s.customAccent : '',
+    openInRules:
+      s.openInRules && typeof s.openInRules === 'object'
+        ? Object.fromEntries(
+            Object.entries(s.openInRules).filter(([h, b]) => h.length < 256 && ['zen', 'firefox', 'chrome', 'brave', 'edge'].includes(b as string)).slice(0, 200),
+          )
+        : {},
     updates: {
       source: ['github', 'custom', 'off'].includes(u?.source) ? u.source : d.updates.source,
       githubRepo: typeof u?.githubRepo === 'string' ? u.githubRepo.trim() : '',

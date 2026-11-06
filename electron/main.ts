@@ -2,8 +2,9 @@ import { app, BrowserWindow, ipcMain, Menu, nativeTheme, type IpcMainEvent, type
 import path from 'node:path';
 import type { Command, ImportBrowser, ImportOptions, Pane } from '../shared/types';
 import { Browser, detectRtl } from './browser';
-import { readEnv } from './env';
+import { otherBrowsers, readEnv } from './env';
 import { detectSources } from './importer';
+import { loadSettings } from './settings';
 import * as store from './store';
 
 const DEV_URL = process.env.DRIFT_DEV_URL;
@@ -14,6 +15,7 @@ app.setAppUserModelId('app.drift.browser');
 // Some sites (Google sign-in among them) refuse user agents that mention Electron.
 app.userAgentFallback = app.userAgentFallback.replace(/\s(Electron|drift-browser|Drift)\/\S+/g, '');
 nativeTheme.themeSource = 'dark';
+if (loadSettings().forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark');
 
 let win: BrowserWindow | undefined;
 let browser: Browser | undefined;
@@ -71,6 +73,9 @@ ipcMain.on('drift:spaces-menu', (e) => fromShell(e) && browser?.spacesMenu());
 ipcMain.handle('drift:env', (e) => (fromShell(e) ? readEnv() : undefined));
 ipcMain.handle('drift:site-permissions', (e) => (fromShell(e) ? browser?.permissions.all() : undefined));
 ipcMain.on('drift:shield-menu', (e) => fromShell(e) && browser?.shieldMenu());
+ipcMain.on('drift:downloads-menu', (e) => fromShell(e) && browser?.downloadsMenu());
+ipcMain.handle('drift:google-status', (e) => (fromShell(e) ? browser?.googleStatus() : false));
+ipcMain.handle('drift:other-browsers', (e) => (fromShell(e) ? otherBrowsers().map(({ id, name }) => ({ id, name })) : []));
 ipcMain.handle('drift:locale', (e) => (fromShell(e) ? browser?.i18n.bundle() : undefined));
 ipcMain.handle('drift:languages', (e) => (fromShell(e) ? browser?.i18n.list() : undefined));
 ipcMain.handle('drift:install-language', (e, code: string) => (fromShell(e) ? browser?.i18n.install(String(code)) : false));

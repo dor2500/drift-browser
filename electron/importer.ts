@@ -108,6 +108,16 @@ function withCopy<T>(files: string[], fn: (dir: string) => T): T {
 
 const isWeb = (u: unknown): u is string => typeof u === 'string' && /^https?:\/\//i.test(u);
 
+/** The other browser's own welcome / what's-new pages: not worth carrying into Drift. */
+const BROWSER_PAGES = [
+  /^https?:\/\/(www\.)?zen-browser\.app\/(welcome|whatsnew|release-notes|thank-you)/i,
+  /^https?:\/\/(www\.)?mozilla\.org\/([a-z-]+\/)?firefox\/([\d.a-z]+\/)?(whatsnew|firstrun|welcome|new)/i,
+  /^https?:\/\/(www\.)?brave\.com\/(welcome|whats-new|latest)/i,
+  /^https?:\/\/(www\.)?google\.com\/chrome\/(whats-new|welcome)/i,
+  /^https?:\/\/(www\.)?microsoft\.com\/[a-z-]+\/edge\/(welcome|whats-new)/i,
+];
+export const isBrowserPage = (url: string) => BROWSER_PAGES.some((r) => r.test(url));
+
 export function readSource(id: ImportBrowser): ImportedData {
   return id in GECKO ? readGecko(id) : readChromium(id);
 }
@@ -128,7 +138,7 @@ function readChromium(id: ImportBrowser): ImportedData {
     };
     Object.values(roots).forEach(walk);
     for (const n of roots.bookmark_bar?.children ?? []) {
-      if (n.type === 'url' && isWeb(n.url)) data.bookmarkBar.push({ url: n.url, title: n.name || n.url, bookmark: true });
+      if (n.type === 'url' && isWeb(n.url) && !isBrowserPage(n.url)) data.bookmarkBar.push({ url: n.url, title: n.name || n.url, bookmark: true });
     }
   }
 
@@ -164,7 +174,7 @@ function readGecko(id: ImportBrowser): ImportedData {
       for (const r of bm) {
         const item = { url: r.url, title: r.title || r.url, bookmark: true };
         data.bookmarks.push(item);
-        if (r.parent === toolbar) data.bookmarkBar.push(item);
+        if (r.parent === toolbar && !isBrowserPage(r.url)) data.bookmarkBar.push(item);
       }
       const rows = db
         .prepare("SELECT url, title, visit_count AS visits FROM moz_places WHERE visit_count > 0 AND hidden = 0 AND url LIKE 'http%' ORDER BY frecency DESC LIMIT 5000")
@@ -198,7 +208,7 @@ function readGecko(id: ImportBrowser): ImportedData {
         const favicon = typeof t.image === 'string' && /^(https?:|data:image\/)/.test(t.image) ? t.image : undefined;
         return { url: e.url ?? '', title: e.title || e.url || '', favicon, spaceId: t.zenWorkspace ?? spaces[0]?.id ?? '', pinned: !!t.pinned, essential: !!t.zenEssential };
       })
-      .filter((t) => isWeb(t.url));
+      .filter((t) => isWeb(t.url) && !isBrowserPage(t.url));
     data.zen = { spaces, tabs };
   }
   return data;

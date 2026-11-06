@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState, type PointerEvent a
 import type { BrowserState, Pane, Snapshot } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { isInternalUrl } from '../../shared/url';
+import { FindBar } from './FindBar';
 import { Glance } from './Glance';
 import { SettingsPage } from './SettingsPage';
 import { t } from '../i18n';
@@ -10,6 +11,8 @@ interface Props {
   state: BrowserState;
   snapshots: Snapshot[];
   dimmed: boolean;
+  findOpen: boolean;
+  onCloseFind: () => void;
 }
 
 /**
@@ -17,7 +20,7 @@ interface Props {
  * main process, which moves the native web views on top of them. Layout is
  * plain CSS, so split view, compact mode and resizing all come for free.
  */
-export function ContentArea({ state, snapshots, dimmed }: Props) {
+export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }: Props) {
   const ref = useRef<HTMLElement>(null);
   const active = state.activeTabId;
   const split = state.split && active && state.split.tabIds.includes(active) ? state.split : undefined;
@@ -67,7 +70,7 @@ export function ContentArea({ state, snapshots, dimmed }: Props) {
       window.removeEventListener('resize', report);
       cancelAnimationFrame(frame);
     };
-  }, [key, ratio]);
+  }, [key, ratio, findOpen]);
 
   const startGutterDrag = (e: RPointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -113,6 +116,7 @@ export function ContentArea({ state, snapshots, dimmed }: Props) {
           })}
         </div>
       )}
+      {findOpen && ids.length > 0 && !internal.has(ids[0]) && <FindBar find={state.find} onClose={onCloseFind} />}
       {glance && glanceTab && (
         <Glance
           key={glanceTab.id}

@@ -20,7 +20,7 @@ const stop = (e: SyntheticEvent) => e.stopPropagation();
 export function TabItem({ tab, selected, inSplit, attention, dropPos, onDragOverItem }: Props) {
   return (
     <div
-      className={cx('tab', selected && 'selected', inSplit && 'in-split', dropPos && `drop-${dropPos}`)}
+      className={cx('tab', selected && 'selected', inSplit && 'in-split', tab.asleep && !selected && 'asleep', dropPos && `drop-${dropPos}`)}
       title={`${tab.title}\n${tab.url}`}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}

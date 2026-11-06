@@ -33,6 +33,18 @@ export interface Settings {
   adblock: boolean;
   /** Hosts where blocking is paused, e.g. "example.com". */
   adblockPaused: string[];
+  /** Unload tabs idle this many minutes (0 = never), like Edge's sleeping tabs. */
+  sleepAfter: number;
+  /** Chromium's force-dark rendering for every website (applies after restart). */
+  forceDark: boolean;
+  /** Remembered zoom level per site host. */
+  siteZoom: Record<string, number>;
+  /** Colour theme on top of the browser style ("default" keeps the style's colours). */
+  colorTheme: string;
+  /** Optional accent override, e.g. "#4fb3ff" ("" = theme's accent). */
+  customAccent: string;
+  /** Sites that always open in another installed browser, e.g. { "bank.example": "firefox" }. */
+  openInRules: Record<string, string>;
   updates: UpdateSettings;
 }
 
@@ -57,6 +69,12 @@ export const DEFAULT_SETTINGS: Settings = {
   restoreSession: true,
   adblock: true,
   adblockPaused: [],
+  sleepAfter: 30,
+  forceDark: false,
+  siteZoom: {},
+  colorTheme: 'default',
+  customAccent: '',
+  openInRules: {},
   updates: {
     source: 'github',
     // Official Drift releases; installed copies update from here.

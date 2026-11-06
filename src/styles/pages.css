@@ -361,3 +361,82 @@ select.field-input option { background: var(--panel); }
 .lang-option svg { color: var(--accent); }
 .lang-native { flex: 1; color: var(--text); font-weight: 500; }
 .lang-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-faint); }
+
+/* ------------------------------------------------------------------ find bar */
+
+.find-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  height: 40px;
+  margin-top: var(--sep);
+  padding: 0 8px 0 12px;
+  border-radius: var(--content-radius);
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--border-contrast);
+  color: var(--text-dim);
+  animation: fade-in 0.12s ease-out;
+}
+.app.horizontal .find-bar { margin-top: 0; border-radius: 0; }
+.find-input {
+  width: min(320px, 40vw);
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-contrast);
+  border-radius: var(--button-radius);
+  background: var(--urlbar-bg);
+  color: var(--text);
+  outline: none;
+  user-select: text;
+}
+.find-input:focus { border-color: var(--accent); }
+.find-input.none { border-color: #ff7b6b; background: color-mix(in srgb, #ff7b6b 12%, var(--urlbar-bg)); }
+.find-count { min-width: 80px; font-size: 12px; color: var(--text-faint); }
+
+/* ------------------------------------------------------------------ zoom, downloads, sleeping tabs */
+
+.zoom-badge { width: auto; padding: 0 6px; font-size: 11px; font-weight: 600; color: var(--text-dim); }
+.downloads-btn { position: relative; }
+.dl-ring { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); transform: rotate(-90deg); pointer-events: none; }
+.dl-ring circle { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dasharray 0.3s; }
+.downloads-btn.busy { color: var(--accent); }
+.tab.asleep .favicon, .htab.asleep .favicon { opacity: 0.55; filter: grayscale(0.5); }
+.tab.asleep .tab-label, .htab.asleep .htab-title { opacity: 0.7; }
+
+/* ------------------------------------------------------------------ colour themes */
+
+.color-themes { margin: 6px 0 12px; }
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--element-bg);
+  box-shadow: 0 0 0 1px var(--border-contrast);
+  text-align: start;
+}
+.swatch:hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent); }
+.swatch.selected { box-shadow: 0 0 0 1.5px var(--accent); }
+.swatch svg { color: var(--accent); flex: 0 0 auto; }
+.swatch-chip {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.swatch-chip.default { background: conic-gradient(#8aa4ff, #b89cff, #5b67e8, #a8c7fa, #8aa4ff); }
+.swatch-chip i { position: absolute; inset-inline-end: 3px; bottom: 3px; width: 9px; height: 9px; border-radius: 50%; }
+.swatch-name { flex: 1; min-width: 0; font-size: 12px; color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.accent-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.accent-pick { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); }
+.accent-pick input { width: 30px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; }
+
+/* ------------------------------------------------------------------ google + open-in */
+
+.google-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0 12px; }
+.google-ok { display: inline-flex; align-items: center; gap: 6px; color: #7ad88a; }

@@ -5,6 +5,7 @@ import type { BrowserState, DriftEnv, SitePermissions } from '../../shared/types
 import { cmd, cx } from '../lib';
 import { Icon } from './Icon';
 import { ImportPanel } from './ImportPanel';
+import { ColorThemePicker } from './ColorThemePicker';
 import { LanguagePicker } from './LanguagePicker';
 import { ThemePicker } from './ThemePicker';
 import { CommitInput, EngineCard, Toggle, UpdateSourceForm } from './UpdatePanels';
@@ -15,6 +16,14 @@ const SECTIONS = ['appearance', 'language', 'general', 'privacy', 'import', 'upd
 /** drift://settings, drawn by the shell inside the content pane (no web view). */
 export function SettingsPage({ state }: { state: BrowserState }) {
   const locale = useLocale();
+  const [google, setGoogle] = useState(false);
+  const [browsers, setBrowsers] = useState<{ id: string; name: string }[]>([]);
+  // Force-dark only changes after a restart, so remember what this run started with.
+  const [startDark] = useState(state.settings.forceDark);
+  useEffect(() => {
+    void window.drift.googleStatus().then(setGoogle);
+    void window.drift.otherBrowsers().then(setBrowsers);
+  }, [state.activeTabId]);
   const s = state.settings;
   const [env, setEnv] = useState<DriftEnv>();
   const [perms, setPerms] = useState<SitePermissions>({});
@@ -51,6 +60,9 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         <section id="settings-appearance" className="settings-section">
           <h2>{t('set.nav.appearance')}</h2>
           <ThemePicker value={s.theme} env={env} />
+          <h3>{t('set.colorTheme')}</h3>
+          <p className="settings-lead">{t('set.colorThemeHint')}</p>
+          <ColorThemePicker settings={s} />
           <Toggle
             checked={s.spaceColors}
             onChange={(spaceColors) => cmd({ type: 'settings:set', patch: { spaceColors } })}
@@ -96,6 +108,64 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             <span className="field-label">{t('set.homePage')}</span>
             <CommitInput value={s.homePage} placeholder="https://…" onCommit={(homePage) => cmd({ type: 'settings:set', patch: { homePage } })} />
           </div>
+          <div className="field">
+            <span className="field-label">{t('set.sleep')}</span>
+            <select className="field-input" value={s.sleepAfter} onChange={(e) => cmd({ type: 'settings:set', patch: { sleepAfter: Number(e.target.value) } })}>
+              <option value={0}>{t('set.sleepOff')}</option>
+              {[15, 30, 60, 120].map((n) => (
+                <option key={n} value={n}>
+                  {t('set.sleepMinutes', { n })}
+                </option>
+              ))}
+            </select>
+            <span className="toggle-hint">{t('set.sleepHint')}</span>
+          </div>
+          <Toggle
+            checked={s.forceDark}
+            onChange={(forceDark) => cmd({ type: 'settings:set', patch: { forceDark } })}
+            label={t('set.forceDark')}
+            hint={t('set.forceDarkHint')}
+          />
+          {s.forceDark !== startDark && (
+            <button className="btn small" onClick={() => cmd({ type: 'app:restart' })}>
+              {t('set.restartNow')}
+            </button>
+          )}
+          <h3>{t('set.google')}</h3>
+          <p className="settings-lead">{t('set.googleHint')}</p>
+          <div className="google-row">
+            {google ? (
+              <>
+                <span className="google-ok">
+                  <Icon name="check" size={14} /> {t('set.googleSignedIn')}
+                </span>
+                <button className="btn small" onClick={() => cmd({ type: 'tab:new', url: 'https://myaccount.google.com/' })}>
+                  {t('set.googleManage')}
+                </button>
+              </>
+            ) : (
+              <button className="btn" onClick={() => cmd({ type: 'google:signin' })}>
+                <Icon name="google" size={15} /> {t('set.googleSignIn')}
+              </button>
+            )}
+          </div>
+          <h3>{t('set.openIn')}</h3>
+          {Object.keys(s.openInRules).length === 0 ? (
+            <div className="empty-note">
+              {t('set.openInNone')} {t('set.openInHint')}
+            </div>
+          ) : (
+            <div className="site-chips">
+              {Object.entries(s.openInRules).map(([h, b]) => (
+                <span key={h} className="chip">
+                  {h} → {browsers.find((x) => x.id === b)?.name ?? b}
+                  <button onClick={() => cmd({ type: 'openin:remove', host: h })}>
+                    <Icon name="x" size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <Toggle
             checked={s.restoreSession}
             onChange={(restoreSession) => cmd({ type: 'settings:set', patch: { restoreSession } })}

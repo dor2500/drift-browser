@@ -27,6 +27,10 @@ export interface TabState {
   glanceOf?: string;
   /** Ads and trackers blocked on the current page. */
   blocked?: number;
+  /** Page zoom in percent when not 100. */
+  zoom?: number;
+  /** Unloaded to save memory (sleeping or not opened yet); loads when shown. */
+  asleep?: boolean;
 }
 
 export interface SpaceState {
@@ -97,6 +101,24 @@ export interface MediaState {
   playing: boolean;
 }
 
+export interface DownloadInfo {
+  id: string;
+  filename: string;
+  path: string;
+  url: string;
+  received: number;
+  total: number;
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+  paused?: boolean;
+  startedAt: number;
+}
+
+export interface FindState {
+  tabId: string;
+  active: number;
+  matches: number;
+}
+
 export type ImportBrowser = 'zen' | 'firefox' | 'chrome' | 'brave' | 'edge';
 
 export interface ImportSource {
@@ -140,6 +162,8 @@ export interface BrowserState {
   glance?: GlanceState;
   prompts: PermissionPrompt[];
   media?: MediaState;
+  downloads: DownloadInfo[];
+  find?: FindState;
   settings: Settings;
   updates: UpdateStatus;
   compact: boolean;
@@ -181,6 +205,16 @@ export type Command =
   | { type: 'updates:check' }
   | { type: 'adblock:site'; host: string; paused: boolean }
   | { type: 'media:control'; id: string; action: 'toggle' | 'next' | 'prev' }
+  | { type: 'find:query'; text: string; forward?: boolean; next?: boolean }
+  | { type: 'find:stop' }
+  | { type: 'zoom'; dir: 1 | -1 | 0 }
+  | { type: 'download:open' | 'download:show' | 'download:cancel'; id: string }
+  | { type: 'downloads:clear' }
+  | { type: 'page:print' | 'page:source' | 'page:screenshot' | 'page:translate' | 'page:pip' }
+  | { type: 'split:toggle' }
+  | { type: 'app:restart' }
+  | { type: 'google:signin' }
+  | { type: 'openin:remove'; host: string }
   | { type: 'updates:install' }
   | { type: 'space:new' }
   | { type: 'space:activate'; id: string }
@@ -196,7 +230,8 @@ export type Command =
 export type UiEvent =
   | { type: 'commandbar'; mode: 'new' | 'current' }
   | { type: 'space:rename'; id: string }
-  | { type: 'glance:backdrop'; snapshots: Snapshot[] };
+  | { type: 'glance:backdrop'; snapshots: Snapshot[] }
+  | { type: 'find' };
 
 export interface DriftApi {
   /** process.platform: 'win32' | 'darwin' | 'linux'. */
@@ -213,6 +248,9 @@ export interface DriftApi {
   env(): Promise<DriftEnv>;
   sitePermissions(): Promise<SitePermissions>;
   shieldMenu(): void;
+  downloadsMenu(): void;
+  googleStatus(): Promise<boolean>;
+  otherBrowsers(): Promise<{ id: string; name: string }[]>;
   locale(): Promise<LocaleBundle>;
   languages(): Promise<{ languages: LanguageInfo[]; offline: boolean }>;
   installLanguage(code: string): Promise<boolean>;

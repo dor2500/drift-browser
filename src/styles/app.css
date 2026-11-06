@@ -400,6 +400,8 @@ body.dragging .tab-section.pinned:empty {
 
 .content {
   position: relative;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   margin-block: var(--sep);
@@ -408,7 +410,7 @@ body.dragging .tab-section.pinned:empty {
 }
 .app.compact:not(.sidebar-open) .content { margin-inline-start: var(--sep); }
 
-.panes { display: flex; height: 100%; }
+.panes { display: flex; flex: 1; min-height: 0; }
 .pane {
   position: relative;
   flex: 1 1 0;
@@ -446,7 +448,7 @@ body.dragging .tab-section.pinned:empty {
 .split-gutter:hover::after { opacity: 1; }
 
 .empty-state {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

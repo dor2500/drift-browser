@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { colorTheme } from '../shared/colorThemes';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { Snapshot } from '../shared/types';
 import { CommandBar } from './components/CommandBar';
@@ -32,6 +33,7 @@ export function App() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [renamingSpace, setRenamingSpace] = useState<string | null>(null);
   const [peek, setPeek] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const [glanceSnaps, setGlanceSnaps] = useState<Snapshot[]>([]);
 
   // Native web views paint above HTML. While any HTML layer must cover the
@@ -78,6 +80,15 @@ export function App() {
     void hold('bar', false);
   }, [hold]);
 
+  useEffect(() => {
+    const open = () => setFindOpen(true);
+    window.addEventListener('drift:find', open);
+    return () => window.removeEventListener('drift:find', open);
+  }, []);
+
+  const activeId = state?.activeTabId;
+  useEffect(() => setFindOpen(false), [activeId]);
+
   const onboarding = state ? !state.settings.onboarded : false;
   useEffect(() => {
     void hold('onboarding', onboarding);
@@ -99,6 +110,7 @@ export function App() {
         }
         else if (e.type === 'space:rename') setRenamingSpace(e.id);
         else if (e.type === 'glance:backdrop') setGlanceSnaps(e.snapshots);
+        else if (e.type === 'find') setFindOpen(true);
       }),
     [openBar],
   );
@@ -106,6 +118,25 @@ export function App() {
   if (!state) return null;
   const space = state.spaces.find((s) => s.id === state.activeSpaceId)!;
   const info = THEMES[state.settings.theme];
+  const ct = colorTheme(state.settings.colorTheme);
+  const accent = state.settings.spaceColors ? space.accent : state.settings.customAccent || ct?.accent || info.accent;
+  // A colour theme repaints the window and page backgrounds; the style keeps its layout and shapes.
+  const themeVars: Record<string, string> = ct
+    ? {
+        '--window-bg': ct.bg,
+        '--surface': ct.surface,
+        '--panel': `color-mix(in srgb, ${ct.surface} 85%, white 6%)`,
+        '--urlbar-bg': `color-mix(in srgb, ${ct.surface} 75%, black)`,
+        '--element-bg': `color-mix(in srgb, ${ct.surface} 70%, white 8%)`,
+        '--tab-selected': `color-mix(in srgb, ${ct.accent} 20%, rgba(255, 255, 255, 0.12))`,
+        '--essential-bg': `color-mix(in srgb, ${ct.surface} 80%, white 5%)`,
+        '--essential-selected': `color-mix(in srgb, ${ct.accent} 30%, ${ct.surface})`,
+        '--hstrip-bg': ct.bg,
+        '--toolbar-bg': ct.surface,
+        '--htab-selected': `color-mix(in srgb, ${ct.accent} 18%, ${ct.surface})`,
+        '--omni-bg': `color-mix(in srgb, ${ct.surface} 70%, black)`,
+      }
+    : {};
   // A permission prompt lives in the sidebar, so compact mode must reveal it.
   const focusId = state.glance?.id ?? state.activeTabId;
   const sidebarOpen = !state.compact || peek || state.prompts.some((p) => p.tabId === focusId);
@@ -115,7 +146,8 @@ export function App() {
       className={cx('app', horizontal ? 'horizontal' : state.compact && 'compact', (horizontal || sidebarOpen) && 'sidebar-open')}
       style={
         {
-          '--accent': state.settings.spaceColors ? space.accent : info.accent,
+          ...themeVars,
+          '--accent': accent,
           '--content-radius': `${contentRadiusFor(state.settings)}px`,
           '--sidebar-width': `${state.sidebarWidth}px`,
         } as CSSProperties
@@ -135,7 +167,13 @@ export function App() {
           />
         </>
       )}
-      <ContentArea state={state} snapshots={[...snapshots, ...glanceSnaps]} dimmed={bar !== null || onboarding} />
+      <ContentArea
+        state={state}
+        snapshots={[...snapshots, ...glanceSnaps]}
+        dimmed={bar !== null || onboarding}
+        findOpen={findOpen}
+        onCloseFind={() => setFindOpen(false)}
+      />
       {bar && <CommandBar key={bar} mode={bar} state={state} anchor={horizontal ? anchor : undefined} onClose={closeBar} />}
       {onboarding && <Onboarding state={state} />}
     </div>

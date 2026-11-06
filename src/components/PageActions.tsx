@@ -17,6 +17,11 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
 
   return (
     <div className="page-actions">
+      {tab?.zoom && (
+        <button className="page-action zoom-badge" title={t('zoom.reset', { percent: tab.zoom })} onClick={() => cmd({ type: 'zoom', dir: 0 })}>
+          {tab.zoom}%
+        </button>
+      )}
       {web && (
         <button
           className="page-action"
@@ -61,6 +66,9 @@ export function MediaBar({ state }: { state: BrowserState }) {
         </button>
         <button title={t('media.next')} onClick={() => cmd({ type: 'media:control', id: tab.id, action: 'next' })}>
           <Icon name="next" size={14} />
+        </button>
+        <button title={t('act.pip')} onClick={() => cmd({ type: 'page:pip' })}>
+          <Icon name="pip" size={15} />
         </button>
         <button title={tab.muted ? t('tabs.unmute') : t('tabs.mute')} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>
           <Icon name={tab.muted ? 'muted' : 'speaker'} size={15} />

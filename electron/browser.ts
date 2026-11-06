@@ -1,6 +1,10 @@
 import {
   BrowserWindow,
+  ClipboardItem,
+  DownloadItem,
   Menu,
+  app,
+  shell,
   WebContentsView,
   clipboard,
   session,
@@ -10,6 +14,7 @@ import {
   type WebContents,
 } from 'electron';
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   ESSENTIALS_MAX,
@@ -18,7 +23,9 @@ import {
   type BrowserState,
   type Command,
   type DropPosition,
+  type DownloadInfo,
   type DropZone,
+  type FindState,
   type GlanceState,
   type ImportBrowser,
   type ImportOptions,
@@ -36,6 +43,7 @@ import { contentRadiusFor } from '../shared/themes';
 import { SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
+import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
 import { HistoryIndex } from './history';
 import { readSource, sourceName } from './importer';
 import { Permissions, originOf } from './permissions';
@@ -57,6 +65,7 @@ const ACCENTS = ['#8aa4ff', '#f5a97f', '#a6da95', '#f5bde6', '#91d7e3', '#eed49f
 const ICONS = ['🏠', '💼', '🎮', '📚', '🎨', '🎵', '🧪', '✈️', '🛒', '💬'];
 
 const newId = () => randomUUID();
+const FIREFOX_UA = `Mozilla/5.0 (${process.platform === 'darwin' ? 'Macintosh; Intel Mac OS X 10.15' : process.platform === 'win32' ? 'Windows NT 10.0; Win64; x64' : 'X11; Linux x86_64'}; rv:140.0) Gecko/20100101 Firefox/140.0`;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /**
@@ -89,6 +98,11 @@ export class Browser {
   private settings: Settings = loadSettings();
   readonly i18n = new I18n(() => this.settings.language);
   private media?: MediaState;
+  private downloads: DownloadInfo[] = [];
+  private downloadItems = new Map<string, DownloadItem>();
+  private find?: FindState;
+  /** When each tab was last in front, for sleeping tabs. */
+  private lastActive = new Map<string, number>();
 
   constructor(private win: BrowserWindow) {
     this.updater = new Updater(() => this.settings, () => this.emit(), (k) => this.i18n.t(k));
@@ -97,6 +111,9 @@ export class Browser {
       changed: () => this.emit(),
     });
     this.permissions.install(session.fromPartition(PARTITION));
+    this.setupDownloads(session.fromPartition(PARTITION));
+    this.setupGoogleSignIn(session.fromPartition(PARTITION));
+    setInterval(() => this.sleepIdleTabs(), 60_000);
     this.adblock = new AdBlock({
       enabled: () => this.settings.adblock,
       isPaused: (url) => this.sitePaused(url),
@@ -188,7 +205,7 @@ export class Browser {
 
   state(): BrowserState {
     return {
-      tabs: this.tabs,
+      tabs: this.tabs.map((t) => (isInternalUrl(t.url) || this.views.has(t.id) ? t : { ...t, asleep: true })),
       spaces: this.spaces,
       activeSpaceId: this.activeSpaceId,
       activeTabId: this.activeTabId,
@@ -196,6 +213,8 @@ export class Browser {
       glance: this.glance,
       prompts: this.permissions.prompts,
       media: this.media,
+      downloads: this.downloads,
+      find: this.find,
       settings: this.settings,
       updates: this.updater.status,
       compact: this.compact,
@@ -238,7 +257,9 @@ export class Browser {
   // ---------------------------------------------------------------- tabs
 
   private createTab(o: { url?: string; spaceId?: string; background?: boolean; afterId?: string }) {
-    const t = this.newTabState(o.url ? normalizeInput(o.url, this.searchUrl) : this.settings.homePage, o.spaceId);
+    const target = o.url ? normalizeInput(o.url, this.searchUrl) : this.settings.homePage;
+    if (this.handOff(target)) return this.tab(this.activeTabId) ?? this.newTabState(target, o.spaceId);
+    const t = this.newTabState(target, o.spaceId);
     const opener = this.tab(o.afterId);
     if (opener && !opener.essential && !opener.pinned && opener.spaceId === t.spaceId) {
       this.tabs.splice(this.tabs.indexOf(opener) + 1, 0, t);
@@ -277,6 +298,10 @@ export class Browser {
     // Moving to another tab dismisses the Glance, like Zen.
     if (this.glance && this.glance.parentId !== id) this.closeTab(this.glance.id, false);
     if (!t.essential && t.spaceId !== this.activeSpaceId) this.activeSpaceId = t.spaceId;
+    const prev = this.space.activeTabId;
+    if (prev && prev !== id) this.lastActive.set(prev, Date.now());
+    this.lastActive.set(id, Date.now());
+    if (this.find && this.find.tabId !== id) this.closeFind();
     this.space.activeTabId = id;
     this.emit();
   }
@@ -381,7 +406,9 @@ export class Browser {
           this.createTab({ url: c.input });
           break;
         }
-        t.url = normalizeInput(c.input, this.searchUrl);
+        const next = normalizeInput(c.input, this.searchUrl);
+        if (this.handOff(next)) break;
+        t.url = next;
         if (isInternalUrl(t.url)) {
           this.destroyView(t.id);
           Object.assign(t, { title: internalTitle(t.url), favicon: undefined, loading: false, canGoBack: false, canGoForward: false });
@@ -460,6 +487,95 @@ export class Browser {
         this.wc()?.reload();
         break;
       }
+      case 'find:query': {
+        const wc = this.wc();
+        const id = this.glance?.id ?? this.activeTabId;
+        if (!wc || !id) break;
+        if (!c.text) {
+          wc.stopFindInPage('clearSelection');
+          this.find = { tabId: id, active: 0, matches: 0 };
+          this.emit();
+          break;
+        }
+        // findNext: true starts a new search; false moves through the current one.
+        wc.findInPage(c.text, { forward: c.forward ?? true, findNext: !c.next });
+        break;
+      }
+      case 'find:stop':
+        this.closeFind();
+        this.emit();
+        break;
+      case 'zoom':
+        this.zoomTab(this.glance?.id ?? this.activeTabId, c.dir);
+        break;
+      case 'download:open': {
+        const d = this.downloads.find((x) => x.id === c.id);
+        if (d?.state === 'completed') void shell.openPath(d.path);
+        break;
+      }
+      case 'download:show': {
+        const d = this.downloads.find((x) => x.id === c.id);
+        if (d) shell.showItemInFolder(d.path);
+        break;
+      }
+      case 'download:cancel':
+        this.downloadItems.get(c.id)?.cancel();
+        break;
+      case 'downloads:clear':
+        this.downloads = this.downloads.filter((d) => d.state === 'progressing');
+        this.emit();
+        break;
+      case 'page:print':
+        this.wc()?.print();
+        break;
+      case 'page:source': {
+        const t = this.tab(this.activeTabId);
+        if (t && /^https?:/.test(t.url)) this.createTab({ url: `view-source:${t.url}`, afterId: t.id });
+        break;
+      }
+      case 'page:screenshot':
+        void this.screenshot();
+        break;
+      case 'page:translate': {
+        const t = this.tab(this.activeTabId);
+        if (t && /^https?:/.test(t.url)) {
+          const lang = this.i18n.bundle().code;
+          this.createTab({ url: `https://translate.google.com/translate?sl=auto&tl=${lang}&u=${encodeURIComponent(t.url)}`, afterId: t.id });
+        }
+        break;
+      }
+      case 'page:pip':
+        void this.wc(this.media?.tabId ?? this.activeTabId)
+          ?.executeJavaScript(
+            `(async () => { if (document.pictureInPictureElement) return document.exitPictureInPicture(); const all = [...document.querySelectorAll('video')]; const v = all.find((x) => !x.paused) || all[0]; if (v) { v.disablePictureInPicture = false; await v.requestPictureInPicture(); } })()`,
+            true,
+          )
+          .catch(() => {});
+        break;
+      case 'split:toggle': {
+        if (this.split?.tabIds.includes(this.activeTabId ?? '')) {
+          this.run({ type: 'split:close' });
+          break;
+        }
+        const list = this.visibleIn(this.activeSpaceId);
+        const i2 = list.findIndex((t) => t.id === this.activeTabId);
+        const other = list[i2 + 1] ?? list[i2 - 1];
+        if (this.activeTabId && other) this.run({ type: 'split:create', ids: [this.activeTabId, other.id] });
+        break;
+      }
+      case 'google:signin':
+        this.createTab({ url: 'https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmyaccount.google.com%2F' });
+        break;
+      case 'openin:remove': {
+        const openInRules = { ...this.settings.openInRules };
+        delete openInRules[c.host];
+        this.setSettings({ openInRules });
+        break;
+      }
+      case 'app:restart':
+        app.relaunch();
+        app.quit();
+        break;
       case 'media:control':
         this.mediaControl(c.id, c.action);
         break;
@@ -639,6 +755,8 @@ export class Browser {
     this.views.set(t.id, v);
     this.wire(t.id, v.webContents);
     if (t.muted) v.webContents.setAudioMuted(true);
+    this.lastActive.set(t.id, Date.now());
+    t.asleep = undefined;
     v.webContents.loadURL(t.url).catch(() => {});
     return v;
   }
@@ -672,7 +790,11 @@ export class Browser {
 
     wc.on('did-start-loading', () => patch({ loading: true }));
     wc.on('did-stop-loading', () => patch({ loading: false, ...nav() }));
+    wc.on('will-navigate', (e) => {
+      if (this.handOff(e.url)) e.preventDefault();
+    });
     wc.on('did-start-navigation', (e) => {
+      if (e.isMainFrame && !e.isSameDocument) this.signInUserAgent(wc, e.url);
       if (e.isMainFrame && !e.isSameDocument) {
         this.adblock.reset(wc.id);
         patch({ blocked: 0 });
@@ -697,6 +819,13 @@ export class Browser {
     wc.on('media-started-playing', () => {
       this.media = { tabId: id, playing: true };
       patch({ audible: true });
+    });
+    wc.on('did-finish-load', () => this.applySiteZoom(id));
+    wc.on('zoom-changed', (_e, dir) => this.zoomTab(id, dir === 'in' ? 1 : -1));
+    wc.on('found-in-page', (_e, r) => {
+      if (this.find?.tabId !== id && (this.glance?.id ?? this.activeTabId) !== id) return;
+      this.find = { tabId: id, active: r.activeMatchOrdinal, matches: r.matches };
+      this.emit();
     });
     wc.on('media-paused', () => {
       if (this.media?.tabId === id) this.media = { tabId: id, playing: false };
@@ -819,12 +948,18 @@ export class Browser {
     if (ctrl && i.alt && k === 'c') return run({ type: 'ui:compact' });
     if (ctrl && i.alt && k === 'arrowright') return run({ type: 'space:cycle', dir: 1 });
     if (ctrl && i.alt && k === 'arrowleft') return run({ type: 'space:cycle', dir: -1 });
-    if (ctrl && i.alt && k === 'v') {
-      if (this.split?.tabIds.includes(this.activeTabId ?? '')) return run({ type: 'split:close' });
-      const list = this.visibleIn(this.activeSpaceId);
-      const i2 = list.findIndex((t) => t.id === this.activeTabId);
-      const other = list[i2 + 1] ?? list[i2 - 1];
-      if (this.activeTabId && other) this.run({ type: 'split:create', ids: [this.activeTabId, other.id] });
+    if (ctrl && i.alt && k === 'v') return run({ type: 'split:toggle' });
+    if (ctrl && !i.alt && !i.shift && k === 'f') return this.ui({ type: 'find' }), true;
+    if (ctrl && !i.alt && (k === '=' || k === '+')) return run({ type: 'zoom', dir: 1 });
+    if (ctrl && !i.alt && (k === '-' || k === '_')) return run({ type: 'zoom', dir: -1 });
+    if (ctrl && !i.alt && !i.shift && k === '0') return run({ type: 'zoom', dir: 0 });
+    if (ctrl && !i.alt && !i.shift && k === 'p') return run({ type: 'page:print' });
+    if (ctrl && !i.alt && !i.shift && k === 'u') return run({ type: 'page:source' });
+    if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:screenshot' });
+    if (ctrl && !i.alt && !i.shift && k === 'j') return this.downloadsMenu(), true;
+    if (ctrl && !i.alt && !i.shift && k === 'd') {
+      const t = this.tab(this.activeTabId);
+      if (t && !t.essential) this.run({ type: 'tab:set', id: t.id, pinned: !t.pinned });
       return true;
     }
     if (ctrl && !i.alt && /^[1-9]$/.test(i.key)) {
@@ -998,13 +1133,13 @@ export class Browser {
       this.tabs.push(t);
       return t;
     };
-    const icon: Record<ImportBrowser, string> = { zen: '🧘', firefox: '🦊', chrome: '🌐', brave: '🦁', edge: '🌊' };
+    const icon: Record<ImportBrowser, string> = { zen: '📥', firefox: '🦊', chrome: '🌐', brave: '🦁', edge: '🌊' };
 
     if (data.zen && options.zenSpaces && data.zen.tabs.length) {
       const ids = new Map<string, string>();
       data.zen.spaces.forEach((zs, i) => {
         const n = this.spaces.length;
-        const s: SpaceState = { id: newId(), name: zs.name, icon: i === 0 ? icon.zen : ICONS[n % ICONS.length], accent: ACCENTS[n % ACCENTS.length] };
+        const s: SpaceState = { id: newId(), name: zs.name, icon: ICONS[n % ICONS.length], accent: ACCENTS[n % ACCENTS.length] };
         this.spaces.push(s);
         ids.set(zs.id, s.id);
         r.spaces++;
@@ -1043,12 +1178,250 @@ export class Browser {
     return r;
   }
 
+  // ---------------------------------------------------------------- other browsers & Google
+
+  /** If a site is set to always open in another browser, send it there. */
+  private handOff(url: string): boolean {
+    const host = hostOfUrl(url);
+    const rule = host && Object.entries(this.settings.openInRules).find(([h]) => host === h || host.endsWith('.' + h))?.[1];
+    return !!rule && openInBrowser(rule, url);
+  }
+
+  /** "Open page in ▸ Firefox / Zen / Chrome …" plus an "always" rule per site. */
+  private openInMenu(url: string): MenuItemConstructorOptions {
+    const t = this.i18n.t;
+    const host = hostOfUrl(url);
+    const browsers = otherBrowsers();
+    const rule = host ? this.settings.openInRules[host] : undefined;
+    return {
+      label: t('open.in'),
+      enabled: browsers.length > 0 && /^https?:/.test(url),
+      submenu: [
+        ...browsers.map((b) => ({ label: b.name, click: () => void openInBrowser(b.id, url) })),
+        { type: 'separator' as const },
+        ...browsers.map((b) => ({
+          label: t('open.always', { host, browser: b.name }),
+          type: 'checkbox' as const,
+          checked: rule === b.id,
+          click: () => {
+            const openInRules = { ...this.settings.openInRules };
+            if (rule === b.id) delete openInRules[host];
+            else openInRules[host] = b.id;
+            this.setSettings({ openInRules });
+          },
+        })),
+      ],
+    };
+  }
+
+  /**
+   * Google blocks sign-in from browsers it doesn't recognise, which includes
+   * Electron apps. Its sign-in pages get a Firefox user agent (a known
+   * workaround); every other site keeps Drift's normal Chrome-style agent.
+   */
+  private setupGoogleSignIn(ses: Electron.Session) {
+    ses.webRequest.onBeforeSendHeaders({ urls: ['https://accounts.google.com/*'] }, (details, cb) => {
+      const headers: Record<string, string> = { ...details.requestHeaders, 'User-Agent': FIREFOX_UA };
+      for (const k of Object.keys(headers)) if (/^sec-ch-ua/i.test(k)) delete headers[k];
+      cb({ requestHeaders: headers });
+    });
+  }
+
+  private signInUserAgent(wc: WebContents, url: string) {
+    const google = hostOfUrl(url) === 'accounts.google.com';
+    const want = google ? FIREFOX_UA : app.userAgentFallback;
+    if (wc.getUserAgent() !== want) wc.setUserAgent(want);
+  }
+
+  async googleStatus(): Promise<boolean> {
+    const cookies = await session.fromPartition(PARTITION).cookies.get({ domain: '.google.com', name: 'SID' });
+    return cookies.length > 0;
+  }
+
+  // ---------------------------------------------------------------- find, zoom, sleep
+
+  private closeFind() {
+    if (!this.find) return;
+    const wc = this.wc(this.find.tabId);
+    wc?.stopFindInPage('keepSelection');
+    this.find = undefined;
+  }
+
+  private applySiteZoom(id: string) {
+    const t = this.tab(id);
+    const wc = this.wc(id);
+    if (!t || !wc) return;
+    const level = this.settings.siteZoom[hostOfUrl(wc.getURL())] ?? 0;
+    wc.setZoomLevel(level);
+    const pct = Math.round(Math.pow(1.2, level) * 100);
+    if ((t.zoom ?? 100) !== pct) {
+      t.zoom = pct === 100 ? undefined : pct;
+      this.emit();
+    }
+  }
+
+  /** Chromium zoom is per site: every tab of that site follows, and it is remembered. */
+  private zoomTab(id: string | undefined, dir: 1 | -1 | 0) {
+    const wc = this.wc(id);
+    if (!id || !wc) return;
+    const host = hostOfUrl(wc.getURL());
+    if (!host) return;
+    const level = dir === 0 ? 0 : Math.max(-3, Math.min(5, wc.getZoomLevel() + dir * 0.5));
+    const siteZoom = { ...this.settings.siteZoom };
+    if (level === 0) delete siteZoom[host];
+    else siteZoom[host] = level;
+    this.setSettings({ siteZoom });
+    for (const t of this.tabs) if (this.views.has(t.id) && hostOfUrl(t.url) === host) this.applySiteZoom(t.id);
+  }
+
+  /** Unload tabs nobody has looked at for a while, like Edge's sleeping tabs. They reload when shown. */
+  private sleepIdleTabs() {
+    const mins = this.settings.sleepAfter;
+    if (!mins) return;
+    const cutoff = Date.now() - mins * 60_000;
+    const keep = new Set<string>([
+      ...this.panes.map((p) => p.tabId),
+      ...this.spaces.map((s) => s.activeTabId ?? ''),
+      ...this.permissions.prompts.map((p) => p.tabId),
+      this.media?.tabId ?? '',
+      this.glance?.id ?? '',
+    ]);
+    let changed = false;
+    for (const id of [...this.views.keys()]) {
+      const t = this.tab(id);
+      if (!t || keep.has(id) || t.audible) continue;
+      if ((this.lastActive.get(id) ?? Date.now()) < cutoff) {
+        this.destroyView(id);
+        changed = true;
+      }
+    }
+    if (changed) this.emit();
+  }
+
+  // ---------------------------------------------------------------- downloads & screenshots
+
+  private uniquePath(dir: string, name: string) {
+    const safe = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 180) || 'download';
+    const ext = path.extname(safe);
+    const base = safe.slice(0, safe.length - ext.length);
+    let candidate = path.join(dir, safe);
+    for (let n = 1; fs.existsSync(candidate); n++) candidate = path.join(dir, `${base} (${n})${ext}`);
+    return candidate;
+  }
+
+  /** Save straight to Downloads like Chrome does, and track progress for the downloads menu. */
+  private setupDownloads(ses: Electron.Session) {
+    ses.on('will-download', (_e, item, source) => {
+      // A tab opened only to fetch a file is closed again, like Chrome does.
+      const owner = source ? this.tabIdForWc(source.id) : undefined;
+      if (owner && !source.isDestroyed() && source.navigationHistory.length() <= 1 && !/^https?:/.test(source.getURL())) {
+        setTimeout(() => this.closeTab(owner, false), 0);
+      }
+      const file = this.uniquePath(app.getPath('downloads'), item.getFilename());
+      item.setSavePath(file);
+      const d: DownloadInfo = {
+        id: newId(),
+        filename: path.basename(file),
+        path: file,
+        url: item.getURL(),
+        received: 0,
+        total: item.getTotalBytes(),
+        state: 'progressing',
+        startedAt: Date.now(),
+      };
+      this.downloads = [d, ...this.downloads].slice(0, 40);
+      this.downloadItems.set(d.id, item);
+      item.on('updated', (_ev, st) => {
+        d.received = item.getReceivedBytes();
+        d.total = item.getTotalBytes();
+        d.state = st === 'interrupted' ? 'interrupted' : 'progressing';
+        d.paused = item.isPaused();
+        this.emit();
+      });
+      item.once('done', (_ev, st) => {
+        d.received = item.getReceivedBytes();
+        d.state = st;
+        this.downloadItems.delete(d.id);
+        this.emit();
+      });
+      this.emit();
+    });
+  }
+
+  private size(n: number) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
+    if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+    return `${(n / 1024 ** 3).toFixed(2)} GB`;
+  }
+
+  downloadsMenu() {
+    const t = this.i18n.t;
+    const items: MenuItemConstructorOptions[] = [];
+    if (this.downloads.length === 0) items.push({ label: t('dl.none'), enabled: false });
+    for (const d of this.downloads.slice(0, 15)) {
+      const status =
+        d.state === 'progressing'
+          ? d.total > 0
+            ? `${Math.round((d.received / d.total) * 100)}% · ${this.size(d.received)} / ${this.size(d.total)}`
+            : this.size(d.received)
+          : d.state === 'completed'
+            ? `${t('dl.done')} · ${this.size(d.received)}`
+            : d.state === 'cancelled'
+              ? t('dl.cancelled')
+              : t('dl.failed');
+      items.push({
+        label: `${d.filename}  —  ${status}`,
+        submenu: [
+          { label: t('dl.open'), enabled: d.state === 'completed', click: () => this.run({ type: 'download:open', id: d.id }) },
+          { label: t('dl.show'), enabled: d.state !== 'cancelled', click: () => this.run({ type: 'download:show', id: d.id }) },
+          { label: t('dl.cancel'), enabled: d.state === 'progressing', click: () => this.run({ type: 'download:cancel', id: d.id }) },
+          { type: 'separator' },
+          { label: t('menu.copyLink'), click: () => clipboard.writeText(d.url) },
+        ],
+      });
+    }
+    items.push(
+      { type: 'separator' },
+      { label: t('dl.folder'), click: () => void shell.openPath(app.getPath('downloads')) },
+      { label: t('dl.clear'), enabled: this.downloads.some((d) => d.state !== 'progressing'), click: () => this.run({ type: 'downloads:clear' }) },
+    );
+    Menu.buildFromTemplate(items).popup({ window: this.win });
+  }
+
+  /** Visible part of the page: copied to the clipboard and saved in Downloads. */
+  private async screenshot(id = this.activeTabId) {
+    const wc = this.wc(id);
+    if (!wc) return;
+    const img = await wc.capturePage();
+    void clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(img.toPNG())], { type: 'image/png' }) })]).catch(() => {});
+    const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19).replace(/:/g, '.');
+    const file = this.uniquePath(app.getPath('downloads'), `Drift screenshot ${stamp}.png`);
+    fs.writeFileSync(file, img.toPNG());
+    const d: DownloadInfo = { id: newId(), filename: path.basename(file), path: file, url: wc.getURL(), received: fs.statSync(file).size, total: 0, state: 'completed', startedAt: Date.now() };
+    this.downloads = [d, ...this.downloads].slice(0, 40);
+    this.emit();
+  }
+
   /** The ⋮ menu in top-tab layouts. */
   appMenu() {
     const items: MenuItemConstructorOptions[] = [
       { label: this.i18n.t('menu.newTab'), accelerator: 'Ctrl+T', click: () => this.ui({ type: 'commandbar', mode: 'new' }) },
       { label: this.i18n.t('menu.reopen'), accelerator: 'Ctrl+Shift+T', enabled: this.closed.length > 0, click: () => this.run({ type: 'tab:reopen' }) },
       { label: this.i18n.t('menu.newSpace'), click: () => this.run({ type: 'space:new' }) },
+      { type: 'separator' },
+      { label: this.i18n.t('act.find'), accelerator: 'Ctrl+F', click: () => this.ui({ type: 'find' }) },
+      {
+        label: this.i18n.t('act.zoom'),
+        submenu: [
+          { label: this.i18n.t('act.zoomIn'), accelerator: 'Ctrl+=', click: () => this.run({ type: 'zoom', dir: 1 }) },
+          { label: this.i18n.t('act.zoomOut'), accelerator: 'Ctrl+-', click: () => this.run({ type: 'zoom', dir: -1 }) },
+          { label: this.i18n.t('act.zoomReset'), accelerator: 'Ctrl+0', click: () => this.run({ type: 'zoom', dir: 0 }) },
+        ],
+      },
+      { label: this.i18n.t('act.downloads'), accelerator: 'Ctrl+J', click: () => this.downloadsMenu() },
+      { label: this.i18n.t('act.print'), accelerator: 'Ctrl+P', click: () => this.run({ type: 'page:print' }) },
+      { label: this.i18n.t('act.screenshot'), accelerator: 'Ctrl+Shift+S', click: () => this.run({ type: 'page:screenshot' }) },
       { type: 'separator' },
       { label: this.i18n.t('menu.verticalTabs'), type: 'checkbox', checked: this.settings.verticalTabs, click: () => this.setSettings({ verticalTabs: !this.settings.verticalTabs }) },
       { label: this.i18n.t('menu.splitNext'), accelerator: 'Ctrl+Alt+V', click: () => this.shortcut({ type: 'keyDown', key: 'v', control: true, alt: true } as Input) },
@@ -1127,6 +1500,13 @@ export class Browser {
       { label: this.i18n.t('menu.forward'), enabled: wc.navigationHistory.canGoForward(), click: () => wc.navigationHistory.goForward() },
       { label: this.i18n.t('menu.reload'), click: () => wc.reload() },
       sep,
+      this.openInMenu(wc.getURL()),
+      { type: 'separator' },
+      { label: this.i18n.t('act.print'), accelerator: 'Ctrl+P', click: () => wc.print() },
+      { label: this.i18n.t('act.screenshot'), accelerator: 'Ctrl+Shift+S', click: () => void this.screenshot(id) },
+      { label: this.i18n.t('act.translate'), click: () => this.run({ type: 'page:translate' }) },
+      { label: this.i18n.t('act.source'), accelerator: 'Ctrl+U', click: () => this.run({ type: 'page:source' }) },
+      { type: 'separator' },
       { label: this.i18n.t('menu.inspect'), click: () => wc.inspectElement(p.x, p.y) },
     );
     Menu.buildFromTemplate(items).popup({ window: this.win });
