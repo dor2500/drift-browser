@@ -4,19 +4,17 @@ import { SEARCH_ENGINES, type SearchEngineId } from '../../shared/settings';
 import type { BrowserState, DriftEnv, SitePermissions } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { Icon } from './Icon';
+import { ImportPanel } from './ImportPanel';
+import { LanguagePicker } from './LanguagePicker';
 import { ThemePicker } from './ThemePicker';
 import { CommitInput, EngineCard, Toggle, UpdateSourceForm } from './UpdatePanels';
+import { t, useLocale } from '../i18n';
 
-const SECTIONS = [
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'general', label: 'General' },
-  { id: 'privacy', label: 'Site permissions' },
-  { id: 'updates', label: 'Updates' },
-  { id: 'about', label: 'About' },
-] as const;
+const SECTIONS = ['appearance', 'language', 'general', 'privacy', 'import', 'updates', 'about'] as const;
 
 /** drift://settings, drawn by the shell inside the content pane (no web view). */
 export function SettingsPage({ state }: { state: BrowserState }) {
+  const locale = useLocale();
   const s = state.settings;
   const [env, setEnv] = useState<DriftEnv>();
   const [perms, setPerms] = useState<SitePermissions>({});
@@ -40,43 +38,48 @@ export function SettingsPage({ state }: { state: BrowserState }) {
     <div className="settings-page">
       <nav className="settings-nav">
         <div className="settings-title">
-          <Icon name="gear" size={18} /> Settings
+          <Icon name="gear" size={18} /> {t('set.title')}
         </div>
-        {SECTIONS.map((x) => (
-          <button key={x.id} className={cx('settings-nav-item', section === x.id && 'active')} onClick={() => go(x.id)}>
-            {x.label}
+        {SECTIONS.map((id) => (
+          <button key={id} className={cx('settings-nav-item', section === id && 'active')} onClick={() => go(id)}>
+            {t(`set.nav.${id}`)}
           </button>
         ))}
       </nav>
 
       <div className="settings-scroll">
         <section id="settings-appearance" className="settings-section">
-          <h2>Appearance</h2>
+          <h2>{t('set.nav.appearance')}</h2>
           <ThemePicker value={s.theme} env={env} />
           <Toggle
             checked={s.spaceColors}
             onChange={(spaceColors) => cmd({ type: 'settings:set', patch: { spaceColors } })}
-            label="Colour the window with each space"
-            hint="Off keeps the style's own accent colour in every space."
+            label={t('set.spaceColors')}
+            hint={t('set.spaceColorsHint')}
           />
           <Toggle
             checked={s.verticalTabs}
             onChange={(verticalTabs) => cmd({ type: 'settings:set', patch: { verticalTabs } })}
-            label="Vertical tabs"
-            hint="Tabs in a sidebar like Zen. Off puts them across the top, the way Chrome, Firefox and Brave do by default."
+            label={t('set.verticalTabs')}
+            hint={t('set.verticalTabsHint')}
           />
           <Toggle
             checked={state.compact}
             onChange={(value) => cmd({ type: 'ui:compact', value })}
-            label="Compact mode"
-            hint="Hide the sidebar until you point at the left edge (Ctrl+Alt+C)."
+            label={t('set.compact')}
+            hint={t('set.compactHint')}
           />
         </section>
 
+        <section id="settings-language" className="settings-section">
+          <h2>{t('set.nav.language')}</h2>
+          <LanguagePicker value={s.language} system={locale.system} />
+        </section>
+
         <section id="settings-general" className="settings-section">
-          <h2>General</h2>
+          <h2>{t('set.nav.general')}</h2>
           <div className="field">
-            <span className="field-label">Search engine</span>
+            <span className="field-label">{t('set.searchEngine')}</span>
             <select
               className="field-input"
               value={s.searchEngine}
@@ -90,92 +93,119 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             </select>
           </div>
           <div className="field">
-            <span className="field-label">Home page (new tabs from links and startup)</span>
+            <span className="field-label">{t('set.homePage')}</span>
             <CommitInput value={s.homePage} placeholder="https://…" onCommit={(homePage) => cmd({ type: 'settings:set', patch: { homePage } })} />
           </div>
           <Toggle
             checked={s.restoreSession}
             onChange={(restoreSession) => cmd({ type: 'settings:set', patch: { restoreSession } })}
-            label="Reopen last session's tabs on startup"
-            hint="Pinned tabs and Essentials always come back."
+            label={t('set.restore')}
+            hint={t('set.restoreHint')}
           />
         </section>
 
         <section id="settings-privacy" className="settings-section">
-          <h2>Site permissions</h2>
-          <p className="settings-lead">Answers you asked Drift to remember. Anything not listed will ask again.</p>
-          {sites.length === 0 && <div className="empty-note">No remembered permissions yet.</div>}
+          <h2>{t('set.nav.privacy')}</h2>
+          <Toggle
+            checked={s.adblock}
+            onChange={(adblock) => cmd({ type: 'settings:set', patch: { adblock } })}
+            label={t('set.adblock')}
+            hint={t('set.adblockHint')}
+          />
+          {s.adblockPaused.length > 0 && (
+            <div className="site-row">
+              <div className="site-host">{t('set.pausedOn')}</div>
+              <div className="site-chips">
+                {s.adblockPaused.map((h) => (
+                  <span key={h} className="chip">
+                    {h}
+                    <button title={t('set.unpause')} onClick={() => cmd({ type: 'adblock:site', host: h, paused: false })}>
+                      <Icon name="x" size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <h3>{t('set.sitePermissions')}</h3>
+          <p className="settings-lead">{t('set.sitePermissionsLead')}</p>
+          {sites.length === 0 && <div className="empty-note">{t('set.noPermissions')}</div>}
           {sites.map(([origin, kinds]) => (
             <div key={origin} className="site-row">
               <div className="site-host">{hostOf(origin)}</div>
               <div className="site-chips">
                 {Object.entries(kinds).map(([kind, d]) => (
                   <span key={kind} className={cx('chip', d)}>
-                    {permissionShortName(kind)}: {d === 'allow' ? 'Allowed' : 'Blocked'}
-                    <button title="Ask next time" onClick={() => void reset(origin, kind)}>
+                    {permissionShortName(kind, t)}: {d === 'allow' ? t('set.allowed') : t('set.blocked')}
+                    <button title={t('set.askNext')} onClick={() => void reset(origin, kind)}>
                       <Icon name="x" size={11} />
                     </button>
                   </span>
                 ))}
               </div>
               <button className="btn small" onClick={() => void reset(origin)}>
-                Reset site
+                {t('set.resetSite')}
               </button>
             </div>
           ))}
         </section>
 
+        <section id="settings-import" className="settings-section">
+          <h2>{t('set.nav.import')}</h2>
+          <ImportPanel />
+        </section>
+
         <section id="settings-updates" className="settings-section">
-          <h2>Updates</h2>
+          <h2>{t('set.nav.updates')}</h2>
           <EngineCard status={state.updates} env={env} />
-          <h3>Update source</h3>
+          <h3>{t('set.updateSource')}</h3>
           <UpdateSourceForm u={s.updates} />
           <div className="field">
-            <span className="field-label">Channel</span>
+            <span className="field-label">{t('set.channel')}</span>
             <select
               className="field-input"
               value={s.updates.channel}
               onChange={(e) => cmd({ type: 'settings:set', patch: { updates: { channel: e.target.value as 'stable' | 'beta' } } })}
             >
-              <option value="stable">Stable</option>
-              <option value="beta">Beta (pre-releases)</option>
+              <option value="stable">{t('set.channelStable')}</option>
+              <option value="beta">{t('set.channelBeta')}</option>
             </select>
           </div>
           <Toggle
             checked={s.updates.autoCheck}
             onChange={(autoCheck) => cmd({ type: 'settings:set', patch: { updates: { autoCheck } } })}
-            label="Check automatically"
-            hint="On startup and every 6 hours."
+            label={t('set.autoCheck')}
+            hint={t('set.autoCheckHint')}
           />
           <Toggle
             checked={s.updates.engineAlerts}
             onChange={(engineAlerts) => cmd({ type: 'settings:set', patch: { updates: { engineAlerts } } })}
-            label="Alert me about newer Chromium engines"
+            label={t('set.engineAlerts')}
           />
         </section>
 
         <section id="settings-about" className="settings-section">
-          <h2>About</h2>
+          <h2>{t('set.nav.about')}</h2>
           <div className="engine-rows about">
             <div className="engine-row">
               <span>Drift</span>
               <span className="mono">{env?.versions.app}</span>
             </div>
             <div className="engine-row">
-              <span>Electron</span>
+              <span>{t('set.electron')}</span>
               <span className="mono">{env?.versions.electron}</span>
             </div>
             <div className="engine-row">
-              <span>Chromium</span>
+              <span>{t('set.chromium')}</span>
               <span className="mono">{env?.versions.chrome}</span>
             </div>
             <div className="engine-row">
-              <span>Build</span>
-              <span>{env?.packaged ? 'Installed' : 'Development'}</span>
+              <span>{t('set.build')}</span>
+              <span>{env?.packaged ? t('set.buildInstalled') : t('set.buildDev')}</span>
             </div>
           </div>
           <button className="btn" onClick={() => cmd({ type: 'settings:set', patch: { onboarded: false } })}>
-            Run first-time setup again
+            {t('set.rerunSetup')}
           </button>
         </section>
       </div>

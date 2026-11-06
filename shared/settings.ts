@@ -18,6 +18,8 @@ export interface UpdateSettings {
 export interface Settings {
   /** False until the first-run setup has been completed. */
   onboarded: boolean;
+  /** "auto" follows the system language; otherwise a language code such as "he". */
+  language: string;
   theme: ThemeId;
   /** Tint the window with each space's colour (Zen), or keep the theme's own accent. */
   spaceColors: boolean;
@@ -27,6 +29,10 @@ export interface Settings {
   homePage: string;
   /** Reopen last session's regular tabs on startup (pinned tabs and Essentials always come back). */
   restoreSession: boolean;
+  /** Built-in ad and tracker blocking (EasyList/uBlock-style filters + YouTube ad skipping). */
+  adblock: boolean;
+  /** Hosts where blocking is paused, e.g. "example.com". */
+  adblockPaused: string[];
   updates: UpdateSettings;
 }
 
@@ -42,12 +48,15 @@ export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string;
 
 export const DEFAULT_SETTINGS: Settings = {
   onboarded: false,
+  language: 'auto',
   theme: 'zen',
   spaceColors: true,
   verticalTabs: true,
   searchEngine: 'google',
   homePage: 'https://www.google.com/',
   restoreSession: true,
+  adblock: true,
+  adblockPaused: [],
   updates: {
     source: 'github',
     // Official Drift releases; installed copies update from here.

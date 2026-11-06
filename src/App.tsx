@@ -6,6 +6,7 @@ import { ContentArea } from './components/ContentArea';
 import { Onboarding } from './components/Onboarding';
 import { Sidebar } from './components/Sidebar';
 import { TopBar, type Anchor } from './components/TopBar';
+import { loadLocale, useLocale } from './i18n';
 import { cx, useBrowserState } from './lib';
 
 type BarMode = 'new' | 'current';
@@ -13,6 +14,16 @@ type OverlayReason = 'bar' | 'onboarding';
 
 export function App() {
   const state = useBrowserState();
+  useLocale();
+
+  // Switch language live when the setting changes.
+  const language = state?.settings.language;
+  const firstLanguage = useRef(language);
+  useEffect(() => {
+    if (language === undefined || language === firstLanguage.current) return;
+    firstLanguage.current = language;
+    void loadLocale();
+  }, [language]);
   const [bar, setBar] = useState<BarMode | null>(null);
   const [anchor, setAnchor] = useState<Anchor | undefined>();
   const horizontal = state ? !state.settings.verticalTabs : false;

@@ -1,10 +1,10 @@
-# Builds the Windows installer and publishes it as a GitHub Release.
-# Installed copies of Drift check these releases (latest.yml) and update themselves.
+# Builds Drift for Windows, macOS and Linux and publishes one GitHub Release.
+# Installed copies check these releases (latest*.yml) and update themselves.
 #
 # Triggers:
-#   - pushing a version tag:  git tag v0.1.1 && git push --tags
+#   - pushing a version tag:  npm version patch && git push --follow-tags
 #   - the daily engine watch (engine-watch.yml) after it upgrades Chromium
-#   - manually from the Actions tab
+#   - manually from the Actions tab (pick a tag)
 name: Release
 
 on:
@@ -21,33 +21,64 @@ on:
 permissions:
   contents: write
 
+env:
+  TAG: ${{ inputs.ref || github.ref_name }}
+
 jobs:
-  windows:
-    runs-on: windows-latest
+  # One draft release that all three builds attach their files to.
+  prepare:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ env.TAG }}
+      - name: Check tag matches version
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$VERSION" ]; then echo "Tag $TAG does not match package.json $VERSION"; exit 1; fi
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" -R "$GITHUB_REPOSITORY" --draft --title "Drift ${TAG#v}" --generate-notes --verify-tag
 
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-
       - run: npm ci
-
       # Catches API breaks when the engine watch moves to a new Electron major.
       - run: npm run typecheck
-
-      # Version in package.json must match the tag (vX.Y.Z).
-      - name: Check tag matches version
-        shell: bash
-        run: |
-          TAG="${{ inputs.ref || github.ref_name }}"
-          VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$TAG" != "$VERSION" ]; then echo "Tag $TAG does not match package.json $VERSION"; exit 1; fi
-
-      - name: Build and publish
-        run: npm run release
+      - name: Build and upload to the draft release
+        run: npm run build && npx electron-builder ${{ matrix.target }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS builds are unsigned until an Apple Developer ID is added.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false --latest

@@ -1,6 +1,7 @@
 import { app, net } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import type { Settings } from '../shared/settings';
+import type { MessageKey } from '../shared/i18n';
 import type { UpdateStatus } from '../shared/types';
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
@@ -32,6 +33,7 @@ export class Updater {
   constructor(
     private settings: () => Settings,
     private changed: () => void,
+    private t: (key: MessageKey) => string,
   ) {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
@@ -96,7 +98,7 @@ export class Updater {
       }
     }
     if (chrome.status === 'fulfilled') engine.chromeStable = chrome.value.versions?.[0]?.version;
-    if (releases.status === 'rejected' && chrome.status === 'rejected') engine.error = 'Could not reach the release servers.';
+    if (releases.status === 'rejected' && chrome.status === 'rejected') engine.error = this.t('updmsg.offline');
     this.status.engine = engine;
     this.changed();
   }
@@ -108,16 +110,16 @@ export class Updater {
     if (!app.isPackaged) {
       return {
         state: 'dev',
-        message: 'App updates run in installed builds. In development, run "npm run update-engine" to move to the newest Chromium.',
+        message: this.t('updmsg.dev'),
       };
     }
     autoUpdater.allowPrerelease = u.channel === 'beta';
     if (u.source === 'github') {
       const [owner, repo] = u.githubRepo.split('/').map((x) => x.trim());
-      if (!owner || !repo) return { state: 'error', message: 'Enter the GitHub repository that publishes Drift releases (owner/name).' };
+      if (!owner || !repo) return { state: 'error', message: this.t('updmsg.repo') };
       autoUpdater.setFeedURL({ provider: 'github', owner, repo });
     } else {
-      if (!/^https:\/\//i.test(u.customUrl)) return { state: 'error', message: 'Enter an https:// address for the update server.' };
+      if (!/^https:\/\//i.test(u.customUrl)) return { state: 'error', message: this.t('updmsg.url') };
       autoUpdater.setFeedURL({ provider: 'generic', url: u.customUrl, channel: u.channel === 'beta' ? 'beta' : 'latest' });
     }
     return null;

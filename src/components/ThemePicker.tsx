@@ -2,6 +2,7 @@ import type { ThemeId } from '../../shared/settings';
 import { THEMES, THEME_ORDER } from '../../shared/themes';
 import type { DriftEnv } from '../../shared/types';
 import { cmd, cx } from '../lib';
+import { t as tr } from '../i18n';
 import { Icon } from './Icon';
 
 /** Theme cards with a tiny mock of the browser in each style. Picking one applies it live. */
@@ -33,13 +34,13 @@ export function ThemePicker({ value, env }: { value: ThemeId; env?: DriftEnv }) 
             </div>
             <div className="theme-meta">
               <div className="theme-name">
-                {t.name}
+                {tr(`theme.${id}.name`)}
                 {value === id && <Icon name="check" size={14} />}
               </div>
-              <div className="theme-tagline">{t.tagline}</div>
+              <div className="theme-tagline">{tr(`theme.${id}.tagline`)}</div>
               <div className={cx('theme-source', installed && 'installed')}>
-                {installed ? 'Installed on this PC · ' : ''}
-                {t.source}
+                {installed ? tr('theme.installed') : ''}
+                {tr('theme.measured', { source: t.source })}
               </div>
             </div>
           </button>

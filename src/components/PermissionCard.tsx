@@ -3,6 +3,7 @@ import { hostOf, permissionLabel } from '../../shared/permissions';
 import type { PermissionPrompt } from '../../shared/types';
 import { cmd } from '../lib';
 import { Icon, type IconName } from './Icon';
+import { t } from '../i18n';
 
 export function iconForPermission(kind: string): IconName {
   if (kind === 'camera') return 'camera';
@@ -23,29 +24,29 @@ export function PermissionCard({ prompt, extra }: { prompt: PermissionPrompt; ex
   return (
     <div className="perm-card" role="alertdialog" aria-label={`${hostOf(prompt.origin)} permission request`}>
       <div className="perm-head">
-        <span className="perm-site">{hostOf(prompt.origin)}</span> wants to
+        {t('perm.wantsTo', { site: '\u0000' }).split('\u0000').map((part, i) => (i === 0 ? part : [<span key="s" className="perm-site">{hostOf(prompt.origin)}</span>, part]))}
       </div>
       <ul className="perm-list">
         {prompt.kinds.map((k) => (
           <li key={k}>
             <Icon name={iconForPermission(k)} size={15} />
-            {permissionLabel(k)}
+            {permissionLabel(k, t)}
           </li>
         ))}
       </ul>
       <label className="perm-remember">
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-        Remember for this site
+        {t('perm.remember')}
       </label>
       <div className="perm-actions">
         <button className="perm-btn" onClick={() => respond(false)}>
-          Block
+          {t('perm.block')}
         </button>
         <button className="perm-btn primary" onClick={() => respond(true)} autoFocus>
-          Allow
+          {t('perm.allow')}
         </button>
       </div>
-      {extra > 0 && <div className="perm-more">+{extra} more waiting</div>}
+      {extra > 0 && <div className="perm-more">{t('perm.more', { count: extra })}</div>}
     </div>
   );
 }

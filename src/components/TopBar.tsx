@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { hostOf, permissionLabel } from '../../shared/permissions';
 import type { BrowserState, DropPosition, PermissionPrompt, TabState } from '../../shared/types';
-import { displayUrl } from '../../shared/url';
-import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag } from '../lib';
+import { displayUrl, isInternalUrl } from '../../shared/url';
+import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { PageActions } from './PageActions';
 import { iconForPermission } from './PermissionCard';
 import { hasUpdateBadge } from './UpdatePanels';
+import { t } from '../i18n';
 
 export interface Anchor {
   left: number;
@@ -49,7 +51,7 @@ export function TopBar({ state, onOpenBar }: Props) {
     <header className="topbar">
       <div className="tabstrip drag">
         {state.spaces.length > 1 && (
-          <button className="strip-btn space-btn" title={`Space: ${space.name}`} onClick={() => window.drift.spacesMenu()}>
+          <button className="strip-btn space-btn" title={t('spaces.space', { name: space.name })} onClick={() => window.drift.spacesMenu()}>
             {space.icon}
           </button>
         )}
@@ -80,48 +82,58 @@ export function TopBar({ state, onOpenBar }: Props) {
               onDragOverTab={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
             />
           ))}
-          <button className="strip-btn newtab-btn" title="New tab (Ctrl+T)" onClick={() => void newTab()}>
+          <button className="strip-btn newtab-btn" title={`${t('menu.newTab')} (Ctrl+T)`} onClick={() => void newTab()}>
             <Icon name="plus" size={16} />
           </button>
         </div>
         <div className="strip-spacer" />
         <div className="caption-buttons">
-          <button title="Minimize" onClick={() => cmd({ type: 'win:minimize' })}>
+          <button title={t('win.minimize')} onClick={() => cmd({ type: 'win:minimize' })}>
             <Icon name="minimize" size={14} />
           </button>
-          <button title="Maximize" onClick={() => cmd({ type: 'win:maximize' })}>
+          <button title={t('win.maximize')} onClick={() => cmd({ type: 'win:maximize' })}>
             <Icon name="maximize" size={13} />
           </button>
-          <button className="close" title="Close" onClick={() => cmd({ type: 'win:close' })}>
+          <button className="close" title={t('win.close')} onClick={() => cmd({ type: 'win:close' })}>
             <Icon name="x" size={15} />
           </button>
         </div>
       </div>
 
       <div className="toolbar">
-        <button className="tb-btn" title="Back (Alt+Left)" disabled={!focus?.canGoBack} onClick={() => cmd({ type: 'tab:back' })}>
+        <button className="tb-btn" title={`${t('nav.back')} (Alt+←)`} disabled={!focus?.canGoBack} onClick={() => cmd({ type: 'tab:back' })}>
           <Icon name="back" size={18} />
         </button>
-        <button className="tb-btn" title="Forward (Alt+Right)" disabled={!focus?.canGoForward} onClick={() => cmd({ type: 'tab:forward' })}>
+        <button className="tb-btn" title={`${t('nav.forward')} (Alt+→)`} disabled={!focus?.canGoForward} onClick={() => cmd({ type: 'tab:forward' })}>
           <Icon name="forward" size={18} />
         </button>
-        <button className="tb-btn" title="Reload (Ctrl+R)" disabled={!focus} onClick={() => cmd({ type: 'tab:reload' })}>
+        <button className="tb-btn" title={`${t('nav.reload')} (Ctrl+R)`} disabled={!focus} onClick={() => cmd({ type: 'tab:reload' })}>
           <Icon name="reload" size={17} />
         </button>
         <div className="omnibox">
           <button
             className="omnibox-site"
-            title="Site permissions"
+            title={t('url.sitePermissions')}
             disabled={!focus || !/^https?:/.test(focus.url)}
             onClick={() => window.drift.siteMenu()}
           >
             <Icon name={focus?.url.startsWith('https:') ? 'lock' : 'search'} size={14} />
           </button>
           <button ref={omnibox} className="omnibox-text" title="Ctrl+L" onClick={() => onOpenBar('current', anchor())}>
-            {focus ? displayUrl(focus.url) : 'Search or type a URL'}
+            {focus ? (isInternalUrl(focus.url) ? t('set.title') : displayUrl(focus.url)) : t('url.placeholder')}
           </button>
+          <PageActions tab={focus} state={state} />
         </div>
-        <button className="tb-btn menu-btn" title="Menu" onClick={() => window.drift.appMenu()}>
+        {state.media && (
+          <button
+            className="tb-btn"
+            title={state.media.playing ? t('media.pause') : t('media.play')}
+            onClick={() => cmd({ type: 'media:control', id: state.media!.tabId, action: 'toggle' })}
+          >
+            <Icon name={state.media.playing ? 'pause' : 'play'} size={16} />
+          </button>
+        )}
+        <button className="tb-btn menu-btn" title={t('nav.menu')} onClick={() => window.drift.appMenu()}>
           <Icon name="more" size={18} />
           {hasUpdateBadge(state.updates, state.settings.updates.engineAlerts) && <span className="update-dot" />}
         </button>
@@ -168,7 +180,7 @@ function HTab({
       }}
     >
       <Favicon tab={tab} />
-      {!compact && <span className="htab-title">{tab.title || tab.url}</span>}
+      {!compact && <span className="htab-title">{tabTitle(tab, t('set.title'))}</span>}
       {attention && <span className="tab-attention" />}
       {!compact && (tab.audible || tab.muted) && (
         <button className="htab-icon" onMouseDown={(e) => e.stopPropagation()} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>
@@ -178,7 +190,7 @@ function HTab({
       {!compact && (
         <button
           className="htab-icon htab-close"
-          title="Close tab (Ctrl+W)"
+          title={t('tabs.close')}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => cmd({ type: 'tab:close', id: tab.id })}
         >
@@ -197,17 +209,17 @@ function PermissionBar({ prompt }: { prompt: PermissionPrompt }) {
     <div className="permission-bar" role="alertdialog">
       <Icon name={iconForPermission(prompt.kinds[0])} size={16} />
       <span className="pb-text">
-        <b>{hostOf(prompt.origin)}</b> wants to {prompt.kinds.map((k) => permissionLabel(k).toLowerCase()).join(' and ')}
+        {t('perm.wantsTo', { site: hostOf(prompt.origin) })}: {prompt.kinds.map((k) => permissionLabel(k, t)).join(', ')}
       </span>
       <label className="perm-remember">
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-        Remember
+        {t('perm.rememberShort')}
       </label>
       <button className="btn small" onClick={() => respond(false)}>
-        Block
+        {t('perm.block')}
       </button>
       <button className="btn small primary" onClick={() => respond(true)}>
-        Allow
+        {t('perm.allow')}
       </button>
     </div>
   );

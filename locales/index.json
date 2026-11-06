@@ -1,0 +1,5 @@
+[
+ { "code": "ar", "name": "Arabic", "native": "العربية" },
+ { "code": "es", "name": "Spanish", "native": "Español" },
+ { "code": "ru", "name": "Russian", "native": "Русский" }
+]

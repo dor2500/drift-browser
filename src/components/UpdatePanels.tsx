@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { UpdateSettings, UpdateSource } from '../../shared/settings';
+import type { MessageKey } from '../../shared/i18n';
 import type { DriftEnv, UpdateStatus } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { Icon } from './Icon';
+import { t } from '../i18n';
 
 const setUpdates = (updates: Partial<UpdateSettings>) => cmd({ type: 'settings:set', patch: { updates } });
 
@@ -35,10 +37,10 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
   );
 }
 
-const SOURCES: { id: UpdateSource; title: string; body: string }[] = [
-  { id: 'github', title: 'GitHub Releases', body: 'Recommended. Drift checks a GitHub repository for new releases.' },
-  { id: 'custom', title: 'Your own update server', body: 'An https:// folder holding latest.yml and the installers.' },
-  { id: 'off', title: 'Manual only', body: 'Never check automatically. You install new versions yourself.' },
+const SOURCES: { id: UpdateSource; title: MessageKey; body: MessageKey }[] = [
+  { id: 'github', title: 'upd.github', body: 'upd.githubBody' },
+  { id: 'custom', title: 'upd.custom', body: 'upd.customBody' },
+  { id: 'off', title: 'upd.off', body: 'upd.offBody' },
 ];
 
 /** Where updates come from: used in first-run setup and in Settings. */
@@ -49,10 +51,10 @@ export function UpdateSourceForm({ u }: { u: UpdateSettings }) {
         <label key={s.id} className={cx('source-option', u.source === s.id && 'selected')}>
           <input type="radio" name="update-source" checked={u.source === s.id} onChange={() => setUpdates({ source: s.id })} />
           <span className="source-text">
-            <span className="source-title">{s.title}</span>
-            <span className="source-body">{s.body}</span>
+            <span className="source-title">{t(s.title)}</span>
+            <span className="source-body">{t(s.body)}</span>
             {u.source === s.id && s.id === 'github' && (
-              <CommitInput value={u.githubRepo} placeholder="owner/repository, e.g. dor2500/drift-browser" onCommit={(githubRepo) => setUpdates({ githubRepo })} />
+              <CommitInput value={u.githubRepo} placeholder={t('upd.githubPlaceholder')} onCommit={(githubRepo) => setUpdates({ githubRepo })} />
             )}
             {u.source === s.id && s.id === 'custom' && (
               <CommitInput value={u.customUrl} placeholder="https://updates.example.com/drift/" onCommit={(customUrl) => setUpdates({ customUrl })} />
@@ -64,17 +66,7 @@ export function UpdateSourceForm({ u }: { u: UpdateSettings }) {
   );
 }
 
-const APP_STATE_TEXT: Record<UpdateStatus['app']['state'], string> = {
-  idle: 'Not checked yet',
-  checking: 'Checking…',
-  none: 'Drift is up to date',
-  available: 'Update found, downloading…',
-  downloading: 'Downloading update…',
-  ready: 'Update ready: restart to install',
-  error: 'Update check failed',
-  disabled: 'Automatic updates are off',
-  dev: 'Development build',
-};
+
 
 /** Shows Drift's version and Chromium engine next to the newest available ones. */
 export function EngineCard({ status, env }: { status: UpdateStatus; env?: DriftEnv }) {
@@ -83,22 +75,19 @@ export function EngineCard({ status, env }: { status: UpdateStatus; env?: DriftE
   return (
     <div className="engine-card">
       <div className="engine-rows">
-        <Row label="Drift" value={env?.versions.app ?? '…'} />
-        <Row label="Chromium engine in Drift" value={e.current} />
-        <Row label="Newest Electron release" value={e.latestElectron ? `${e.latestElectron} (Chromium ${e.latestElectronChrome})` : '—'} />
-        <Row label="Google Chrome stable" value={e.chromeStable ?? '—'} />
+        <Row label={t('upd.drift')} value={env?.versions.app ?? '…'} />
+        <Row label={t('upd.engineCurrent')} value={e.current} />
+        <Row label={t('upd.engineElectron')} value={e.latestElectron ? `${e.latestElectron} (Chromium ${e.latestElectronChrome})` : '—'} />
+        <Row label={t('upd.engineChrome')} value={e.chromeStable ?? '—'} />
       </div>
       {e.newer && (
-        <div className="engine-note highlight">
-          A newer Chromium ({e.latestElectronChrome?.split('.')[0]}) is available. It reaches Drift as a new Drift version: from your update source when installed,
-          or with <code>npm run update-engine</code> in development.
-        </div>
+        <div className="engine-note highlight">{t('upd.newer', { major: e.latestElectronChrome?.split('.')[0] ?? '' })}</div>
       )}
       {e.error && <div className="engine-note error">{e.error}</div>}
       <div className="engine-status">
         <span className={cx('status-dot', a.state)} />
         <span>
-          {APP_STATE_TEXT[a.state]}
+          {t(`upd.state.${a.state}`)}
           {a.version ? ` (${a.version})` : ''}
           {a.state === 'downloading' && a.progress !== undefined ? ` ${a.progress}%` : ''}
         </span>
@@ -106,14 +95,14 @@ export function EngineCard({ status, env }: { status: UpdateStatus; env?: DriftE
       {a.message && <div className="engine-note">{a.message}</div>}
       <div className="engine-actions">
         <button className="btn" disabled={e.checking || a.state === 'checking'} onClick={() => cmd({ type: 'updates:check' })}>
-          <Icon name="reload" size={14} /> {e.checking || a.state === 'checking' ? 'Checking…' : 'Check now'}
+          <Icon name="reload" size={14} /> {e.checking || a.state === 'checking' ? t('upd.checking') : t('upd.check')}
         </button>
         {a.state === 'ready' && (
           <button className="btn primary" onClick={() => cmd({ type: 'updates:install' })}>
-            <Icon name="download" size={14} /> Restart and update
+            <Icon name="download" size={14} /> {t('upd.restart')}
           </button>
         )}
-        {e.checkedAt && <span className="engine-checked">Last checked {new Date(e.checkedAt).toLocaleTimeString()}</span>}
+        {e.checkedAt && <span className="engine-checked">{t('upd.lastChecked', { time: new Date(e.checkedAt).toLocaleTimeString() })}</span>}
       </div>
     </div>
   );

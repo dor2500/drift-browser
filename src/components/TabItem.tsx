@@ -1,8 +1,9 @@
 import type { SyntheticEvent } from 'react';
 import type { DropPosition, TabState } from '../../shared/types';
-import { cmd, cx, endTabDrag, isTabDrag, startTabDrag } from '../lib';
+import { cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { t } from '../i18n';
 
 interface Props {
   tab: TabState;
@@ -39,16 +40,16 @@ export function TabItem({ tab, selected, inSplit, attention, dropPos, onDragOver
       }}
     >
       <Favicon tab={tab} />
-      <span className="tab-label">{tab.title || tab.url}</span>
-      {attention && <span className="tab-attention" title="This site is asking for a permission" />}
+      <span className="tab-label">{tabTitle(tab, t('set.title'))}</span>
+      {attention && <span className="tab-attention" title={t('tabs.waiting')} />}
       {(tab.audible || tab.muted) && (
-        <button className="tab-audio" title={tab.muted ? 'Unmute' : 'Mute'} onMouseDown={stop} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>
+        <button className="tab-audio" title={tab.muted ? t('tabs.unmute') : t('tabs.mute')} onMouseDown={stop} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>
           <Icon name={tab.muted ? 'muted' : 'speaker'} size={14} />
         </button>
       )}
       <button
         className="tab-close"
-        title="Close tab (Ctrl+W)"
+        title={t('tabs.close')}
         onMouseDown={stop}
         onClick={(e) => {
           e.stopPropagation();

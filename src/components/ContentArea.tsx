@@ -4,6 +4,7 @@ import { cmd, cx } from '../lib';
 import { isInternalUrl } from '../../shared/url';
 import { Glance } from './Glance';
 import { SettingsPage } from './SettingsPage';
+import { t } from '../i18n';
 
 interface Props {
   state: BrowserState;
@@ -74,7 +75,9 @@ export function ContentArea({ state, snapshots, dimmed }: Props) {
     el.setPointerCapture(e.pointerId);
     let r = ratio;
     const move = (ev: PointerEvent) => {
-      r = Math.min(0.85, Math.max(0.15, (ev.clientX - box.left) / box.width));
+      const rtl = document.documentElement.dir === 'rtl';
+      const x = rtl ? box.right - ev.clientX : ev.clientX - box.left;
+      r = Math.min(0.85, Math.max(0.15, x / box.width));
       setLiveRatio(r);
     };
     const up = () => {
@@ -127,11 +130,11 @@ export function ContentArea({ state, snapshots, dimmed }: Props) {
 function EmptyState() {
   return (
     <div className="empty-state">
-      <div className="big">Nothing open in this space</div>
+      <div className="big">{t('empty.title')}</div>
       <div className="keys">
-        <span><kbd>Ctrl</kbd><kbd>T</kbd>new tab</span>
-        <span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>→</kbd>next space</span>
-        <span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>C</kbd>compact mode</span>
+        <span><kbd>Ctrl</kbd><kbd>T</kbd>{t('empty.newTab')}</span>
+        <span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>→</kbd>{t('empty.nextSpace')}</span>
+        <span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>C</kbd>{t('empty.compact')}</span>
       </div>
     </div>
   );

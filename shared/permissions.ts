@@ -1,51 +1,22 @@
-// Human-readable names for permission kinds, shared by the prompt card and
-// the site-permissions menu.
-//
-// A "kind" is what gets remembered per site. It is usually Electron's
-// permission name, except that media is split into camera and microphone,
-// and external-app links are kept per protocol ("openExternal:mailto").
+import { en } from './locales/en';
+import type { MessageKey, Translate } from './i18n';
 
-const LABELS: Record<string, string> = {
-  camera: 'Use your camera',
-  microphone: 'Use your microphone',
-  geolocation: 'Know your location',
-  notifications: 'Show notifications',
-  'clipboard-read': 'See text and images you copy',
-  midi: 'Use your MIDI devices',
-  midiSysex: 'Fully control your MIDI devices',
-  'idle-detection': 'Know when you are using this device',
-  'storage-access': 'Use its cookies while embedded on other sites',
-  'top-level-storage-access': 'Use its cookies on related sites',
-  'window-management': 'Manage windows on all your displays',
-  keyboardLock: 'Capture your keyboard',
-  'speaker-selection': 'Choose your audio output',
-  fileSystem: 'Edit files on your device',
-};
+// A permission "kind" is what gets remembered per site: usually Electron's
+// permission name, with media split into camera and microphone and
+// external-app links kept per protocol ("openExternal:mailto").
 
-export function permissionLabel(kind: string): string {
-  if (kind.startsWith('openExternal:')) return `Open ${kind.slice('openExternal:'.length)}: links in another app`;
-  return LABELS[kind] ?? kind;
+const known = (key: string): key is MessageKey => key in en;
+
+export function permissionLabel(kind: string, t: Translate): string {
+  if (kind.startsWith('openExternal:')) return t('perm.openExternal', { protocol: kind.slice('openExternal:'.length) });
+  const key = `perm.${kind}`;
+  return known(key) ? t(key) : kind;
 }
 
-export function permissionShortName(kind: string): string {
-  if (kind.startsWith('openExternal:')) return `${kind.slice('openExternal:'.length)}: links`;
-  const short: Record<string, string> = {
-    camera: 'Camera',
-    microphone: 'Microphone',
-    geolocation: 'Location',
-    notifications: 'Notifications',
-    'clipboard-read': 'Clipboard',
-    midi: 'MIDI devices',
-    midiSysex: 'MIDI control',
-    'idle-detection': 'Idle detection',
-    'storage-access': 'Embedded cookies',
-    'top-level-storage-access': 'Related-site cookies',
-    'window-management': 'Window management',
-    keyboardLock: 'Keyboard lock',
-    'speaker-selection': 'Audio output',
-    fileSystem: 'File editing',
-  };
-  return short[kind] ?? kind;
+export function permissionShortName(kind: string, t: Translate): string {
+  if (kind.startsWith('openExternal:')) return t('permShort.openExternal', { protocol: kind.slice('openExternal:'.length) });
+  const key = `permShort.${kind}`;
+  return known(key) ? t(key) : kind;
 }
 
 export function hostOf(origin: string): string {

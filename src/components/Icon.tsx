@@ -85,7 +85,32 @@ const paths = {
       <circle cx="12" cy="18.5" r="1.3" fill="currentColor" />
     </>
   ),
-  check:<path d="M5 12.5l4.5 4.5L19 7.5" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  moreh: (
+    <>
+      <circle cx="5.5" cy="12" r="1.4" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+      <circle cx="18.5" cy="12" r="1.4" fill="currentColor" />
+    </>
+  ),
+  play: <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />,
+  pause: <path d="M8 5v14M16 5v14" strokeWidth={3} />,
+  next: <path d="M6 5.5v13l9-6.5zM18 5v14" fill="currentColor" />,
+  prev: <path d="M18 5.5v13l-9-6.5zM6 5v14" fill="currentColor" />,
+  star: <path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+    </>
+  ),
+  import: <path d="M12 3v12M7 10l5 5 5-5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />,
   download: <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />,
   shield:<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" />,
   expand:<path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" />,
@@ -101,7 +126,7 @@ export type IconName = keyof typeof paths;
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg className={`ic ic-${name}`} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {paths[name]}
     </svg>
   );

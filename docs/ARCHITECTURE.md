@@ -105,12 +105,20 @@ Why: Zen's identity is mostly UI (CSS, layout, motion). Electron gives a real Ch
 - **Updates** (`electron/updater.ts`): `electron-updater` against GitHub Releases or a generic https server, stable or beta, checked on startup and every 6 hours. A separate engine check reads `releases.electronjs.org` and Google's VersionHistory API to compare Drift's Chromium with the newest Electron and Chrome stable. `scripts/update-engine.mjs` performs the upgrade in development.
 - **Icon** (`assets/icon.svg`): a "D" whose stem is a vertical-tab sidebar. `npm run icons` renders the PNG sizes and a multi-size `.ico` used by the window, taskbar (AppUserModelID `app.drift.browser`) and installer.
 
+### Ad blocking, import, languages, platforms
+
+- **Ad blocking** (`electron/adblock.ts`): Ghostery's engine with its prebuilt ads + tracking lists (cached in userData), wrapped so network, cosmetic and scriptlet filtering skip paused sites. `tab-preload.ts` adds a YouTube video-ad skipper. Blocked counts go to `TabState.blocked` and show on the shield.
+- **Import** (`electron/importer.ts`): Chromium `Bookmarks` JSON and `History` SQLite; Gecko `places.sqlite`, read with Node's built-in `node:sqlite` from a temporary copy because browsers lock their databases. Zen's `zen-sessions.jsonlz4` is decoded with a small Mozilla-LZ4 reader (`mozlz4.ts`) for spaces, pins, Essentials and open tabs. Passwords and cookies are never read. Imported entries feed `history.ts`, which also records Drift's own visits and powers address-bar suggestions.
+- **Languages** (`shared/i18n.ts`, `electron/i18n.ts`, `src/i18n.ts`): English and Hebrew catalogs are compiled in; other packs are fetched from `locales/` on GitHub, sanitised to known keys and stored in userData. The main process uses the same translator for native menus. RTL languages set `dir=rtl`, and the CSS uses logical properties so the layout mirrors.
+- **Platforms**: Windows (NSIS), macOS (universal dmg + zip, system traffic lights, app menu) and Linux (AppImage + deb), built in parallel by `release.yml` into one draft release that is published only when all three succeed. `install.ps1` / `install.sh` install the latest release in one command.
+
 ### Known limits of the Electron approach
 
 1. HTML cannot draw over a web page. Floating UI uses the screenshot swap. Compact mode pushes the page aside instead of floating the sidebar over it. A Chromium fork removes this limit.
 2. Chrome Web Store extensions are partly supported (through `electron-chrome-extensions`).
 3. Netflix-style DRM needs Castlabs' "Electron for Content Security" build.
 4. The Chromium version trails Google Chrome by the time Electron needs to adopt each release (Chrome 158 vs Drift's 156 on 2026-11-06).
+5. macOS auto-update needs a signed app (Apple Developer ID). Until then, macOS users update by re-running the install command.
 
 ## 4. Roadmap
 

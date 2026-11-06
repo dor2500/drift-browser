@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import path from 'node:path';
-import type { Command, Pane } from '../shared/types';
+import type { Command, ImportBrowser, ImportOptions, Pane } from '../shared/types';
 import { Browser, detectRtl } from './browser';
 import { readEnv } from './env';
+import { detectSources } from './importer';
 import * as store from './store';
 
 const DEV_URL = process.env.DRIFT_DEV_URL;
@@ -28,7 +29,8 @@ function createWindow() {
     minHeight: 495,
     title: 'Drift',
     icon: path.join(__dirname, '../../assets/icon.png'),
-    titleBarStyle: 'hidden', // we draw our own window controls in the sidebar
+    titleBarStyle: 'hidden', // Windows/Linux: Drift draws its own window buttons
+    trafficLightPosition: { x: 14, y: 13 }, // macOS: keep the system buttons, inset into Drift's top row
     backgroundColor: '#141414',
     show: false,
     webPreferences: {
@@ -68,6 +70,17 @@ ipcMain.on('drift:app-menu', (e) => fromShell(e) && browser?.appMenu());
 ipcMain.on('drift:spaces-menu', (e) => fromShell(e) && browser?.spacesMenu());
 ipcMain.handle('drift:env', (e) => (fromShell(e) ? readEnv() : undefined));
 ipcMain.handle('drift:site-permissions', (e) => (fromShell(e) ? browser?.permissions.all() : undefined));
+ipcMain.on('drift:shield-menu', (e) => fromShell(e) && browser?.shieldMenu());
+ipcMain.handle('drift:locale', (e) => (fromShell(e) ? browser?.i18n.bundle() : undefined));
+ipcMain.handle('drift:languages', (e) => (fromShell(e) ? browser?.i18n.list() : undefined));
+ipcMain.handle('drift:install-language', (e, code: string) => (fromShell(e) ? browser?.i18n.install(String(code)) : false));
+ipcMain.handle('drift:suggest', (e, q: string) => (fromShell(e) ? browser?.history.suggest(String(q ?? '')) : []));
+ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
+ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
+  fromShell(e) ? browser?.runImport(source, options) : undefined,
+);
+// Asked by tab-preload.js on YouTube: should the ad skipper run on this page?
+ipcMain.handle('drift:adblock-active', (e) => browser?.adblockActiveFor(e.sender.getURL()) ?? false);
 
 app.whenReady().then(() => {
   detectRtl(app.getLocale());
@@ -75,7 +88,13 @@ app.whenReady().then(() => {
   // Pages may not embed <webview> tags.
   app.on('web-contents-created', (_e, wc) => wc.on('will-attach-webview', (ev) => ev.preventDefault()));
 
+  // macOS needs an application menu for Cmd+Q and for copy/paste in text fields.
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]));
+  }
+
   createWindow();
 });
 
 app.on('window-all-closed', () => app.quit());
+app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && app.isReady() && createWindow());

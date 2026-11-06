@@ -6,14 +6,17 @@
  */
 
 :root {
-  --glow-1: 20%;
-  --glow-2: 9%;
+  /* Zen colours the whole window with the space's gradient. */
+  --glow-1: 42%;
+  --glow-2: 24%;
+  --tint: 14%;
 }
 
 /* Firefox 159 — design-system tokens + browser-colors.css (dark). */
 :root[data-theme='firefox'] {
   --glow-1: 0%;
   --glow-2: 0%;
+  --tint: 0%;
   --branding-bg: #15141a;          /* gray-100 */
   --window-bg: #1c1b22;            /* gray-90: toolbox + sidebar */
   --surface: #2b2a33;              /* content background */
@@ -44,6 +47,7 @@
 :root[data-theme='brave'] {
   --glow-1: 0%;
   --glow-2: 0%;
+  --tint: 0%;
   --branding-bg: #000000;
   --window-bg: #141415;            /* page-background: neutral-5 */
   --surface: #1c1c1d;              /* container-background: neutral-10 */
@@ -74,6 +78,7 @@
 :root[data-theme='chrome'] {
   --glow-1: 0%;
   --glow-2: 0%;
+  --tint: 0%;
   --branding-bg: #131314;
   --window-bg: #1f1f1f;            /* color-surface */
   --surface: #27282a;              /* color-surface1 */

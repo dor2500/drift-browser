@@ -3,10 +3,12 @@ import { SEARCH_ENGINES, type SearchEngineId } from '../../shared/settings';
 import type { BrowserState, DriftEnv } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { Icon } from './Icon';
+import { ImportPanel } from './ImportPanel';
 import { ThemePicker } from './ThemePicker';
 import { Toggle, UpdateSourceForm } from './UpdatePanels';
+import { t } from '../i18n';
 
-const STEPS = ['Look', 'Search', 'Updates'] as const;
+const STEPS = ['look', 'import', 'search', 'updates'] as const;
 
 /**
  * First-run setup: pick a look modelled on a familiar browser, a search
@@ -28,19 +30,17 @@ export function Onboarding({ state }: { state: BrowserState }) {
           <div>
             <div className="ob-kicker">
               <img className="ob-logo" src="./icon.svg" alt="" />
-              Welcome to Drift
+              {t('ob.welcome')}
             </div>
             <h1>
-              {step === 0 && 'Which look do you want?'}
-              {step === 1 && 'Pick a search engine'}
-              {step === 2 && 'Where should updates come from?'}
+              {t(`ob.title.${STEPS[step]}`)}
             </h1>
           </div>
           <ol className="ob-steps">
             {STEPS.map((name, i) => (
               <li key={name} className={cx(i === step && 'current', i < step && 'done')}>
                 <span>{i < step ? <Icon name="check" size={12} /> : i + 1}</span>
-                {name}
+                {t(`ob.step.${name}`)}
               </li>
             ))}
           </ol>
@@ -49,21 +49,20 @@ export function Onboarding({ state }: { state: BrowserState }) {
         <div className="ob-body">
           {step === 0 && (
             <>
-              <p className="ob-lead">
-                Each style is modelled on a browser you know, and its colours and shapes were measured from the copy installed on this PC. You can change this any
-                time in Settings.
-              </p>
+              <p className="ob-lead">{t('ob.lead.look')}</p>
               <ThemePicker value={s.theme} env={env} />
               <Toggle
                 checked={s.spaceColors}
                 onChange={(spaceColors) => cmd({ type: 'settings:set', patch: { spaceColors } })}
-                label="Colour the window with each space"
-                hint="Zen's signature tint. Turn off to keep the style's own accent."
+                label={t('set.spaceColors')}
+                hint={t('set.spaceColorsHint')}
               />
             </>
           )}
 
-          {step === 1 && (
+          {step === 1 && <ImportPanel />}
+
+          {step === 2 && (
             <div className="engine-list">
               {(Object.keys(SEARCH_ENGINES) as SearchEngineId[]).map((id) => (
                 <label key={id} className={cx('source-option', s.searchEngine === id && 'selected')}>
@@ -82,24 +81,21 @@ export function Onboarding({ state }: { state: BrowserState }) {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
-              <p className="ob-lead">
-                Drift runs on Chromium {env?.versions.chrome ?? ''}. Google ships a new Chrome every 4 weeks, and Electron, Drift's engine, packages each new
-                Chromium about every 8 weeks with security fixes in between. New engines reach you inside Drift updates, from the source you pick here.
-              </p>
+              <p className="ob-lead">{t('ob.lead.updates', { chrome: env?.versions.chrome ?? '' })}</p>
               <UpdateSourceForm u={s.updates} />
               <Toggle
                 checked={s.updates.autoCheck}
                 onChange={(autoCheck) => cmd({ type: 'settings:set', patch: { updates: { autoCheck } } })}
-                label="Check for updates automatically"
-                hint="On startup and every 6 hours."
+                label={t('set.autoCheck')}
+                hint={t('set.autoCheckHint')}
               />
               <Toggle
                 checked={s.updates.engineAlerts}
                 onChange={(engineAlerts) => cmd({ type: 'settings:set', patch: { updates: { engineAlerts } } })}
-                label="Tell me when a newer Chromium is out"
-                hint="Compares Drift's engine with the latest Electron and Chrome releases."
+                label={t('set.engineAlerts')}
+                hint={t('set.engineAlertsHint')}
               />
             </>
           )}
@@ -107,16 +103,16 @@ export function Onboarding({ state }: { state: BrowserState }) {
 
         <footer className="ob-footer">
           <button className="btn ghost" onClick={finish}>
-            Skip setup
+            {t('ob.skip')}
           </button>
           <div className="ob-nav">
             {step > 0 && (
               <button className="btn" onClick={() => setStep(step - 1)}>
-                Back
+                {t('ob.back')}
               </button>
             )}
             <button className="btn primary" onClick={() => (last ? finish() : setStep(step + 1))}>
-              {last ? 'Start browsing' : 'Next'}
+              {last ? t('ob.start') : t('ob.next')}
             </button>
           </div>
         </footer>

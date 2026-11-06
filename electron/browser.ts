@@ -20,6 +20,10 @@ import {
   type DropPosition,
   type DropZone,
   type GlanceState,
+  type ImportBrowser,
+  type ImportOptions,
+  type ImportResult,
+  type MediaState,
   type Pane,
   type Snapshot,
   type SpaceState,
@@ -31,10 +35,14 @@ import { SEARCH_ENGINES, type Settings, type SettingsPatch } from '../shared/set
 import { contentRadiusFor } from '../shared/themes';
 import { SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
+import { AdBlock, hostOfUrl } from './adblock';
+import { HistoryIndex } from './history';
+import { readSource, sourceName } from './importer';
 import { Permissions, originOf } from './permissions';
 import { applyPatch, loadSettings, saveSettings } from './settings';
 import * as store from './store';
 import { Updater } from './updater';
+import { I18n } from './i18n';
 
 export const PARTITION = 'persist:drift';
 
@@ -76,15 +84,32 @@ export class Browser {
 
   readonly permissions: Permissions;
   readonly updater: Updater;
+  readonly history = new HistoryIndex();
+  readonly adblock: AdBlock;
   private settings: Settings = loadSettings();
+  readonly i18n = new I18n(() => this.settings.language);
+  private media?: MediaState;
 
   constructor(private win: BrowserWindow) {
-    this.updater = new Updater(() => this.settings, () => this.emit());
+    this.updater = new Updater(() => this.settings, () => this.emit(), (k) => this.i18n.t(k));
     this.permissions = new Permissions({
       tabIdFor: (wc) => [...this.views].find(([, v]) => v.webContents === wc)?.[0],
       changed: () => this.emit(),
     });
     this.permissions.install(session.fromPartition(PARTITION));
+    this.adblock = new AdBlock({
+      enabled: () => this.settings.adblock,
+      isPaused: (url) => this.sitePaused(url),
+      blocked: (wcId, count) => {
+        const id = this.tabIdForWc(wcId);
+        const t = this.tab(id);
+        if (t && t.blocked !== count) {
+          t.blocked = count;
+          this.emit();
+        }
+      },
+    });
+    void this.adblock.init(session.fromPartition(PARTITION));
     this.restore(store.load());
     win.on('resize', () => this.fullscreenTab && this.applyLayout());
     this.updater.schedule();
@@ -106,6 +131,8 @@ export class Browser {
       for (const v of this.views.values()) (v as unknown as { setBorderRadius?: (r: number) => void }).setBorderRadius?.(this.contentRadius);
     }
     if (patch.updates || patch.onboarded !== undefined) this.updater.schedule();
+    if (patch.adblock !== undefined) this.adblock.apply();
+    if (patch.language !== undefined) this.i18n.reload();
     this.emit();
   }
 
@@ -135,7 +162,7 @@ export class Browser {
       }
       return;
     }
-    const home: SpaceState = { id: newId(), name: 'Home', icon: ICONS[0], accent: ACCENTS[0] };
+    const home: SpaceState = { id: newId(), name: this.i18n.t('spaces.home'), icon: ICONS[0], accent: ACCENTS[0] };
     this.spaces = [home];
     this.activeSpaceId = home.id;
     this.createTab({ url: this.settings.homePage });
@@ -168,6 +195,7 @@ export class Browser {
       split: this.split,
       glance: this.glance,
       prompts: this.permissions.prompts,
+      media: this.media,
       settings: this.settings,
       updates: this.updater.status,
       compact: this.compact,
@@ -276,6 +304,7 @@ export class Browser {
     }
     this.tabs = this.tabs.filter((x) => x.id !== id);
     this.permissions.dismissTab(id);
+    if (this.media?.tabId === id) this.media = undefined;
     this.destroyView(id);
     this.emit();
   }
@@ -425,6 +454,15 @@ export class Browser {
       case 'updates:install':
         this.updater.install();
         break;
+      case 'adblock:site': {
+        const list = this.settings.adblockPaused.filter((h) => h !== c.host);
+        this.setSettings({ adblockPaused: c.paused ? [...list, c.host] : list });
+        this.wc()?.reload();
+        break;
+      }
+      case 'media:control':
+        this.mediaControl(c.id, c.action);
+        break;
       case 'permission:respond':
         this.permissions.respond(c.id, c.allow, c.remember);
         break;
@@ -444,7 +482,7 @@ export class Browser {
       }
       case 'space:new': {
         const n = this.spaces.length;
-        const s: SpaceState = { id: newId(), name: `Space ${n + 1}`, icon: ICONS[n % ICONS.length], accent: ACCENTS[n % ACCENTS.length] };
+        const s: SpaceState = { id: newId(), name: this.i18n.t('spaces.default', { n: n + 1 }), icon: ICONS[n % ICONS.length], accent: ACCENTS[n % ACCENTS.length] };
         this.spaces.push(s);
         this.activeSpaceId = s.id;
         this.emit();
@@ -634,16 +672,36 @@ export class Browser {
 
     wc.on('did-start-loading', () => patch({ loading: true }));
     wc.on('did-stop-loading', () => patch({ loading: false, ...nav() }));
+    wc.on('did-start-navigation', (e) => {
+      if (e.isMainFrame && !e.isSameDocument) {
+        this.adblock.reset(wc.id);
+        patch({ blocked: 0 });
+      }
+    });
     wc.on('did-navigate', () => {
       // A new document can't answer the old page's prompts.
       this.permissions.dismissTab(id);
+      if (this.media?.tabId === id) this.media = undefined;
       patch(nav());
+      if (!this.tab(id)?.glanceOf) this.history.visit(wc.getURL(), wc.getTitle());
     });
-    wc.on('did-navigate-in-page', () => patch(nav()));
-    wc.on('page-title-updated', (_e, title) => patch({ title }));
+    wc.on('did-navigate-in-page', (_e, _url, isMainFrame) => {
+      patch(nav());
+      if (isMainFrame) this.history.visit(wc.getURL(), wc.getTitle());
+    });
+    wc.on('page-title-updated', (_e, title) => {
+      patch({ title });
+      this.history.title(wc.getURL(), title);
+    });
     wc.on('page-favicon-updated', (_e, icons) => icons[0] && patch({ favicon: icons[0] }));
-    wc.on('media-started-playing', () => patch({ audible: true }));
-    wc.on('media-paused', () => patch({ audible: false }));
+    wc.on('media-started-playing', () => {
+      this.media = { tabId: id, playing: true };
+      patch({ audible: true });
+    });
+    wc.on('media-paused', () => {
+      if (this.media?.tabId === id) this.media = { tabId: id, playing: false };
+      patch({ audible: false });
+    });
     wc.on('enter-html-full-screen', () => {
       this.fullscreenTab = id;
       this.win.setFullScreen(true);
@@ -799,25 +857,25 @@ export class Browser {
     const active = this.activeTabId;
     const inSplit = !!this.split?.tabIds.includes(id);
     const items: MenuItemConstructorOptions[] = [
-      { label: t.essential ? 'Remove from Essentials' : 'Add to Essentials', click: () => this.run({ type: 'tab:set', id, essential: !t.essential }) },
-      { label: t.pinned ? 'Unpin Tab' : 'Pin Tab', enabled: !t.essential, click: () => this.run({ type: 'tab:set', id, pinned: !t.pinned }) },
+      { label: t.essential ? this.i18n.t('menu.removeEssential') : this.i18n.t('menu.addEssential'), click: () => this.run({ type: 'tab:set', id, essential: !t.essential }) },
+      { label: t.pinned ? this.i18n.t('menu.unpin') : this.i18n.t('menu.pin'), enabled: !t.essential, click: () => this.run({ type: 'tab:set', id, pinned: !t.pinned }) },
       inSplit
-        ? { label: 'Close Split View', click: () => this.run({ type: 'split:close' }) }
-        : { label: 'Split with Current Tab', enabled: !!active && active !== id, click: () => active && this.run({ type: 'split:create', ids: [active, id] }) },
+        ? { label: this.i18n.t('menu.closeSplit'), click: () => this.run({ type: 'split:close' }) }
+        : { label: this.i18n.t('menu.splitWithCurrent'), enabled: !!active && active !== id, click: () => active && this.run({ type: 'split:create', ids: [active, id] }) },
       { type: 'separator' },
-      { label: t.muted ? 'Unmute Tab' : 'Mute Tab', click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
-      { label: 'Reload', click: () => this.run({ type: 'tab:reload', id }) },
-      { label: 'Duplicate', click: () => this.createTab({ url: t.url, afterId: id }) },
-      { label: 'Copy Link', click: () => clipboard.writeText(t.url) },
+      { label: t.muted ? this.i18n.t('menu.unmute') : this.i18n.t('menu.mute'), click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
+      { label: this.i18n.t('menu.reload'), click: () => this.run({ type: 'tab:reload', id }) },
+      { label: this.i18n.t('menu.duplicate'), click: () => this.createTab({ url: t.url, afterId: id }) },
+      { label: this.i18n.t('menu.copyLink'), click: () => clipboard.writeText(t.url) },
       {
-        label: 'Move to Space',
+        label: this.i18n.t('menu.moveTo'),
         enabled: this.spaces.length > 1,
         submenu: this.spaces
           .filter((s) => s.id !== t.spaceId || t.essential)
           .map((s) => ({ label: `${s.icon}  ${s.name}`, click: () => this.run({ type: 'tab:set', id, spaceId: s.id }) })),
       },
       { type: 'separator' },
-      { label: 'Close Tab', accelerator: 'Ctrl+W', click: () => this.run({ type: 'tab:close', id }) },
+      { label: this.i18n.t('menu.closeTab'), accelerator: 'Ctrl+W', click: () => this.run({ type: 'tab:close', id }) },
     ];
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }
@@ -829,41 +887,176 @@ export class Browser {
     const origin = originOf(t.url);
     const decisions = this.permissions.siteDecisions(origin);
     const items: MenuItemConstructorOptions[] = [{ label: hostOf(origin), enabled: false }, { type: 'separator' }];
-    if (decisions.length === 0) items.push({ label: 'No permissions remembered for this site', enabled: false });
+    if (decisions.length === 0) items.push({ label: this.i18n.t('menu.noPermissions'), enabled: false });
     for (const [kind, d] of decisions) {
       items.push({
-        label: `${permissionShortName(kind)}: ${d === 'allow' ? 'Allowed' : 'Blocked'}`,
+        label: `${permissionShortName(kind, this.i18n.t)}: ${d === 'allow' ? this.i18n.t('menu.allowed') : this.i18n.t('menu.blocked')}`,
         submenu: [
-          { label: 'Allow', type: 'radio', checked: d === 'allow', click: () => this.permissions.setDecision(origin, kind, 'allow') },
-          { label: 'Block', type: 'radio', checked: d === 'block', click: () => this.permissions.setDecision(origin, kind, 'block') },
+          { label: this.i18n.t('menu.allow'), type: 'radio', checked: d === 'allow', click: () => this.permissions.setDecision(origin, kind, 'allow') },
+          { label: this.i18n.t('menu.block'), type: 'radio', checked: d === 'block', click: () => this.permissions.setDecision(origin, kind, 'block') },
           { type: 'separator' },
-          { label: 'Ask next time', click: () => this.permissions.setDecision(origin, kind, undefined) },
+          { label: this.i18n.t('menu.askNext'), click: () => this.permissions.setDecision(origin, kind, undefined) },
         ],
       });
     }
     if (decisions.length > 0) {
       items.push(
         { type: 'separator' },
-        { label: 'Reset all and reload', click: () => (this.permissions.clearSite(origin), this.wc(t.id)?.reload()) },
+        { label: this.i18n.t('menu.resetReload'), click: () => (this.permissions.clearSite(origin), this.wc(t.id)?.reload()) },
       );
     }
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }
 
+  // ---------------------------------------------------------------- ad blocking
+
+  private tabIdForWc(wcId: number) {
+    for (const [id, v] of this.views) if (!v.webContents.isDestroyed() && v.webContents.id === wcId) return id;
+    return undefined;
+  }
+
+  /** Paused for this site or any parent domain (pausing example.com covers www.example.com). */
+  private sitePaused(url: string) {
+    const host = hostOfUrl(url);
+    return !!host && this.settings.adblockPaused.some((h) => host === h || host.endsWith('.' + h));
+  }
+
+  adblockActiveFor(url: string) {
+    return this.adblock.activeFor(url);
+  }
+
+  /** The shield in the address bar: blocked count and per-site switch, like Brave Shields. */
+  shieldMenu() {
+    const t = this.tab(this.glance?.id ?? this.activeTabId);
+    const host = t ? hostOfUrl(t.url) : '';
+    const on = this.settings.adblock;
+    const paused = !!host && this.sitePaused(t!.url);
+    const items: MenuItemConstructorOptions[] = [
+      { label: host ? `${this.i18n.t('menu.shields')} · ${host}` : this.i18n.t('menu.shields'), enabled: false },
+      {
+        label: !on ? this.i18n.t('menu.shieldsOff') : !this.adblock.ready ? this.i18n.t('menu.shieldsLoading') : paused ? this.i18n.t('menu.shieldsPaused') : this.i18n.t('menu.shieldsCount', { count: t?.blocked ?? 0 }),
+        enabled: false,
+      },
+      { type: 'separator' },
+      {
+        label: this.i18n.t('menu.blockSite'),
+        type: 'checkbox',
+        checked: on && !paused,
+        enabled: on && !!host,
+        click: () => this.run({ type: 'adblock:site', host, paused: !paused }),
+      },
+      {
+        label: this.i18n.t('menu.blockAll'),
+        type: 'checkbox',
+        checked: on,
+        click: () => {
+          this.setSettings({ adblock: !on });
+          this.wc()?.reload();
+        },
+      },
+      { type: 'separator' },
+      { label: this.i18n.t('menu.adSettings'), click: () => this.openSettings() },
+    ];
+    Menu.buildFromTemplate(items).popup({ window: this.win });
+  }
+
+  // ---------------------------------------------------------------- media
+
+  /** Play/pause and next/previous for the page playing audio or video (YouTube, Spotify, SoundCloud…). */
+  private mediaControl(id: string, action: 'toggle' | 'next' | 'prev') {
+    const wc = this.wc(id);
+    if (!wc) return;
+    const scripts = {
+      toggle: `(() => { const all = [...document.querySelectorAll('video, audio')]; const m = all.find((x) => !x.paused) || all[0]; if (m) m.paused ? m.play() : m.pause(); })()`,
+      next: `(() => { const b = document.querySelector('.ytp-next-button, [data-testid=control-button-skip-forward], .skipControl__next'); if (b) b.click(); })()`,
+      prev: `(() => { const v = document.querySelector('video, audio'); if (v && v.currentTime > 3) { v.currentTime = 0; return; } const b = document.querySelector('.ytp-prev-button, [data-testid=control-button-skip-back], .skipControl__previous'); if (b) b.click(); })()`,
+    };
+    void wc.executeJavaScript(scripts[action], true).catch(() => {});
+  }
+
+  // ---------------------------------------------------------------- import
+
+  /** Bring bookmarks, history and (from Zen) spaces and pinned tabs from another browser. */
+  async runImport(source: ImportBrowser, options: ImportOptions): Promise<ImportResult> {
+    const r: ImportResult = { source, bookmarks: 0, history: 0, spaces: 0, pinned: 0, essentials: 0, tabs: 0 };
+    let data: ReturnType<typeof readSource>;
+    try {
+      data = readSource(source);
+    } catch (e) {
+      r.error = String((e as Error)?.message ?? e);
+      return r;
+    }
+    const name = sourceName(source);
+    this.history.add(data.bookmarks, name);
+    this.history.add(data.history, name);
+    r.bookmarks = data.bookmarks.length;
+    r.history = data.history.length;
+
+    // Tabs from another browser start unloaded and load when you open them.
+    const addTab = (url: string, title: string, spaceId: string, flags: Partial<TabState>) => {
+      const t = { ...this.newTabState(url, spaceId), title: title || url, ...flags };
+      this.tabs.push(t);
+      return t;
+    };
+    const icon: Record<ImportBrowser, string> = { zen: '🧘', firefox: '🦊', chrome: '🌐', brave: '🦁', edge: '🌊' };
+
+    if (data.zen && options.zenSpaces && data.zen.tabs.length) {
+      const ids = new Map<string, string>();
+      data.zen.spaces.forEach((zs, i) => {
+        const n = this.spaces.length;
+        const s: SpaceState = { id: newId(), name: zs.name, icon: i === 0 ? icon.zen : ICONS[n % ICONS.length], accent: ACCENTS[n % ACCENTS.length] };
+        this.spaces.push(s);
+        ids.set(zs.id, s.id);
+        r.spaces++;
+      });
+      const fallback = ids.values().next().value ?? this.activeSpaceId;
+      let room = ESSENTIALS_MAX - this.tabs.filter((t) => t.essential).length;
+      const seenEssentials = new Set(this.tabs.filter((t) => t.essential).map((t) => t.url));
+      for (const zt of data.zen.tabs) {
+        const spaceId = ids.get(zt.spaceId) ?? fallback;
+        if (zt.essential) {
+          if (room > 0 && !seenEssentials.has(zt.url)) {
+            addTab(zt.url, zt.title, spaceId, { essential: true, favicon: zt.favicon });
+            seenEssentials.add(zt.url);
+            room--;
+            r.essentials++;
+          }
+        } else if (zt.pinned) {
+          addTab(zt.url, zt.title, spaceId, { pinned: true, favicon: zt.favicon });
+          r.pinned++;
+        } else if (r.tabs < 200) {
+          addTab(zt.url, zt.title, spaceId, { favicon: zt.favicon });
+          r.tabs++;
+        }
+      }
+    } else if (options.bookmarksAsPinned && data.bookmarkBar.length) {
+      const n = this.spaces.length;
+      const s: SpaceState = { id: newId(), name: this.i18n.t('imp.from', { browser: name }), icon: icon[source], accent: ACCENTS[n % ACCENTS.length] };
+      this.spaces.push(s);
+      r.spaces = 1;
+      for (const b of data.bookmarkBar.slice(0, 40)) {
+        addTab(b.url, b.title, s.id, { pinned: true });
+        r.pinned++;
+      }
+    }
+    this.emit();
+    return r;
+  }
+
   /** The ⋮ menu in top-tab layouts. */
   appMenu() {
     const items: MenuItemConstructorOptions[] = [
-      { label: 'New tab', accelerator: 'Ctrl+T', click: () => this.ui({ type: 'commandbar', mode: 'new' }) },
-      { label: 'Reopen closed tab', accelerator: 'Ctrl+Shift+T', enabled: this.closed.length > 0, click: () => this.run({ type: 'tab:reopen' }) },
-      { label: 'New space', click: () => this.run({ type: 'space:new' }) },
+      { label: this.i18n.t('menu.newTab'), accelerator: 'Ctrl+T', click: () => this.ui({ type: 'commandbar', mode: 'new' }) },
+      { label: this.i18n.t('menu.reopen'), accelerator: 'Ctrl+Shift+T', enabled: this.closed.length > 0, click: () => this.run({ type: 'tab:reopen' }) },
+      { label: this.i18n.t('menu.newSpace'), click: () => this.run({ type: 'space:new' }) },
       { type: 'separator' },
-      { label: 'Vertical tabs', type: 'checkbox', checked: this.settings.verticalTabs, click: () => this.setSettings({ verticalTabs: !this.settings.verticalTabs }) },
-      { label: 'Split with next tab', accelerator: 'Ctrl+Alt+V', click: () => this.shortcut({ type: 'keyDown', key: 'v', control: true, alt: true } as Input) },
+      { label: this.i18n.t('menu.verticalTabs'), type: 'checkbox', checked: this.settings.verticalTabs, click: () => this.setSettings({ verticalTabs: !this.settings.verticalTabs }) },
+      { label: this.i18n.t('menu.splitNext'), accelerator: 'Ctrl+Alt+V', click: () => this.shortcut({ type: 'keyDown', key: 'v', control: true, alt: true } as Input) },
       { type: 'separator' },
-      { label: 'Settings', accelerator: 'Ctrl+,', click: () => this.openSettings() },
-      { label: 'Developer tools', accelerator: 'F12', click: () => this.shortcut({ type: 'keyDown', key: 'F12' } as Input) },
+      { label: this.i18n.t('menu.settings'), accelerator: 'Ctrl+,', click: () => this.openSettings() },
+      { label: this.i18n.t('menu.devtools'), accelerator: 'F12', click: () => this.shortcut({ type: 'keyDown', key: 'F12' } as Input) },
       { type: 'separator' },
-      { label: 'Exit', click: () => this.win.close() },
+      { label: this.i18n.t('menu.exit'), click: () => this.win.close() },
     ];
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }
@@ -878,8 +1071,8 @@ export class Browser {
     }));
     items.push(
       { type: 'separator' },
-      { label: 'New space', click: () => this.run({ type: 'space:new' }) },
-      { label: 'Edit this space…', click: () => this.spaceMenu(this.activeSpaceId) },
+      { label: this.i18n.t('menu.newSpace'), click: () => this.run({ type: 'space:new' }) },
+      { label: this.i18n.t('menu.editSpace'), click: () => this.spaceMenu(this.activeSpaceId) },
     );
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }
@@ -888,12 +1081,12 @@ export class Browser {
     const s = this.spaces.find((x) => x.id === id);
     if (!s) return;
     const items: MenuItemConstructorOptions[] = [
-      { label: 'Rename Space', click: () => this.ui({ type: 'space:rename', id }) },
-      { label: 'Icon', submenu: ICONS.map((icon) => ({ label: icon, type: 'radio', checked: s.icon === icon, click: () => this.run({ type: 'space:set', id, icon }) })) },
-      { label: 'Colour', submenu: ACCENTS.map((accent) => ({ label: accent, type: 'radio', checked: s.accent === accent, click: () => this.run({ type: 'space:set', id, accent }) })) },
+      { label: this.i18n.t('menu.renameSpace'), click: () => this.ui({ type: 'space:rename', id }) },
+      { label: this.i18n.t('menu.icon'), submenu: ICONS.map((icon) => ({ label: icon, type: 'radio', checked: s.icon === icon, click: () => this.run({ type: 'space:set', id, icon }) })) },
+      { label: this.i18n.t('menu.colour'), submenu: ACCENTS.map((accent) => ({ label: accent, type: 'radio', checked: s.accent === accent, click: () => this.run({ type: 'space:set', id, accent }) })) },
       { type: 'separator' },
-      { label: 'Close Unpinned Tabs', click: () => this.run({ type: 'space:clear', id }) },
-      { label: 'Delete Space', enabled: this.spaces.length > 1, click: () => this.run({ type: 'space:delete', id }) },
+      { label: this.i18n.t('menu.clearSpace'), click: () => this.run({ type: 'space:clear', id }) },
+      { label: this.i18n.t('menu.deleteSpace'), enabled: this.spaces.length > 1, click: () => this.run({ type: 'space:delete', id }) },
     ];
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }
@@ -903,23 +1096,23 @@ export class Browser {
     const sep: MenuItemConstructorOptions = { type: 'separator' };
     if (p.linkURL) {
       items.push(
-        { label: 'Open Link in New Tab', click: () => this.createTab({ url: p.linkURL, afterId: id, background: true }) },
-        { label: 'Open Link in Glance', sublabel: 'Alt+Click', click: () => void this.openGlance(id, p.linkURL, { x: p.x, y: p.y }) },
+        { label: this.i18n.t('menu.openNewTab'), click: () => this.createTab({ url: p.linkURL, afterId: id, background: true }) },
+        { label: this.i18n.t('menu.openGlance'), sublabel: 'Alt+Click', click: () => void this.openGlance(id, p.linkURL, { x: p.x, y: p.y }) },
         {
-          label: 'Open Link in Split View',
+          label: this.i18n.t('menu.openSplit'),
           click: () => {
             const t = this.createTab({ url: p.linkURL, afterId: id, background: true });
             this.run({ type: 'split:create', ids: [id, t.id] });
           },
         },
-        { label: 'Copy Link', click: () => clipboard.writeText(p.linkURL) },
+        { label: this.i18n.t('menu.copyLink'), click: () => clipboard.writeText(p.linkURL) },
         sep,
       );
     }
     if (p.mediaType === 'image' && p.srcURL) {
       items.push(
-        { label: 'Open Image in New Tab', click: () => this.createTab({ url: p.srcURL, afterId: id }) },
-        { label: 'Copy Image', click: () => wc.copyImageAt(p.x, p.y) },
+        { label: this.i18n.t('menu.openImage'), click: () => this.createTab({ url: p.srcURL, afterId: id }) },
+        { label: this.i18n.t('menu.copyImage'), click: () => wc.copyImageAt(p.x, p.y) },
         sep,
       );
     }
@@ -927,14 +1120,14 @@ export class Browser {
       items.push({ role: 'undo' }, { role: 'redo' }, sep, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }, sep);
     } else if (p.selectionText.trim()) {
       const q = p.selectionText.trim();
-      items.push({ role: 'copy' }, { label: `Search for “${q.length > 30 ? q.slice(0, 30) + '…' : q}”`, click: () => this.createTab({ url: q, afterId: id }) }, sep);
+      items.push({ role: 'copy' }, { label: this.i18n.t('menu.searchFor', { text: q.length > 30 ? q.slice(0, 30) + '…' : q }), click: () => this.createTab({ url: q, afterId: id }) }, sep);
     }
     items.push(
-      { label: 'Back', enabled: wc.navigationHistory.canGoBack(), click: () => wc.navigationHistory.goBack() },
-      { label: 'Forward', enabled: wc.navigationHistory.canGoForward(), click: () => wc.navigationHistory.goForward() },
-      { label: 'Reload', click: () => wc.reload() },
+      { label: this.i18n.t('menu.back'), enabled: wc.navigationHistory.canGoBack(), click: () => wc.navigationHistory.goBack() },
+      { label: this.i18n.t('menu.forward'), enabled: wc.navigationHistory.canGoForward(), click: () => wc.navigationHistory.goForward() },
+      { label: this.i18n.t('menu.reload'), click: () => wc.reload() },
       sep,
-      { label: 'Inspect', click: () => wc.inspectElement(p.x, p.y) },
+      { label: this.i18n.t('menu.inspect'), click: () => wc.inspectElement(p.x, p.y) },
     );
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }

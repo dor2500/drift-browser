@@ -12,12 +12,15 @@ function sanitize(s: Settings): Settings {
   const u = s.updates;
   return {
     onboarded: !!s.onboarded,
+    language: typeof s.language === 'string' && /^(auto|[a-z]{2,3}(-[A-Za-z]{2,4})?)$/.test(s.language) ? s.language : 'auto',
     theme: s.theme in THEMES ? s.theme : d.theme,
     spaceColors: typeof s.spaceColors === 'boolean' ? s.spaceColors : d.spaceColors,
     verticalTabs: typeof s.verticalTabs === 'boolean' ? s.verticalTabs : THEMES[s.theme in THEMES ? s.theme : d.theme].verticalTabs,
     searchEngine: s.searchEngine in SEARCH_ENGINES ? s.searchEngine : d.searchEngine,
     homePage: typeof s.homePage === 'string' && /^(https?|drift):/i.test(s.homePage) ? s.homePage : d.homePage,
     restoreSession: typeof s.restoreSession === 'boolean' ? s.restoreSession : d.restoreSession,
+    adblock: typeof s.adblock === 'boolean' ? s.adblock : d.adblock,
+    adblockPaused: Array.isArray(s.adblockPaused) ? [...new Set(s.adblockPaused.filter((h) => typeof h === 'string' && h.length < 256))] : [],
     updates: {
       source: ['github', 'custom', 'off'].includes(u?.source) ? u.source : d.updates.source,
       githubRepo: typeof u?.githubRepo === 'string' ? u.githubRepo.trim() : '',

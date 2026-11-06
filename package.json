@@ -1,7 +1,7 @@
 {
   "name": "drift-browser",
   "productName": "Drift",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Chromium-based browser with vertical tabs, spaces and split view, in the style of Zen.",
   "private": true,
   "main": "dist-electron/electron/main.js",
@@ -11,11 +11,12 @@
     "start": "electron .",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.electron.json --noEmit",
     "update-engine": "node scripts/update-engine.mjs",
-    "dist": "npm run build && electron-builder --win --publish never",
+    "dist": "npm run build && electron-builder --publish never",
     "icons": "node scripts/build-icons.mjs",
-    "release": "npm run build && electron-builder --win --publish always"
+    "release": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.3",
     "electron-updater": "^6.8.11",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
@@ -62,13 +63,44 @@
         "provider": "github",
         "owner": "dor2500",
         "repo": "drift-browser",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
-    ]
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "assets/png/icon-1024.png",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/png",
+      "category": "Network;WebBrowser",
+      "maintainer": "dor2500"
+    }
   },
-  "author": "dor2500",
+  "author": {
+    "name": "dor2500",
+    "email": "dor2500a@users.noreply.github.com"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/dor2500/drift-browser.git"
-  }
+  },
+  "homepage": "https://github.com/dor2500/drift-browser"
 }

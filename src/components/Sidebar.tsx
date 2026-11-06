@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent as RPointerEvent, type WheelEvent } from 'react';
 import { SIDEBAR_MAX, SIDEBAR_MIN, type BrowserState, type DropPosition, type DropZone, type SpaceState, type TabState } from '../../shared/types';
-import { displayUrl } from '../../shared/url';
+import { displayUrl, isInternalUrl } from '../../shared/url';
 import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { MediaBar, PageActions } from './PageActions';
 import { PermissionCard } from './PermissionCard';
 import { TabItem } from './TabItem';
 import { hasUpdateBadge } from './UpdatePanels';
+import { t } from '../i18n';
 
 interface Props {
   state: BrowserState;
@@ -58,7 +60,8 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
     const startW = state.sidebarWidth;
     let w = startW;
     const move = (ev: PointerEvent) => {
-      w = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW + ev.clientX - startX));
+      const dx = document.documentElement.dir === 'rtl' ? startX - ev.clientX : ev.clientX - startX;
+      w = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW + dx));
       setLiveWidth(w);
     };
     const up = () => {
@@ -77,26 +80,29 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
       onWheel={onWheel}
     >
       <div className="sidebar-top drag">
-        <button className="icon-btn" title="Compact mode (Ctrl+Alt+C)" onClick={() => cmd({ type: 'ui:compact' })}>
+        <button className="icon-btn" title={t('nav.menu')} onClick={() => window.drift.appMenu()}>
+          <Icon name="moreh" />
+        </button>
+        <button className="icon-btn" title={t('nav.compact')} onClick={() => cmd({ type: 'ui:compact' })}>
           <Icon name="sidebar" />
         </button>
-        <button className="icon-btn" title="Back (Alt+Left)" disabled={!active?.canGoBack} onClick={() => cmd({ type: 'tab:back' })}>
+        <button className="icon-btn" title={`${t('nav.back')} (Alt+←)`} disabled={!active?.canGoBack} onClick={() => cmd({ type: 'tab:back' })}>
           <Icon name="back" />
         </button>
-        <button className="icon-btn" title="Forward (Alt+Right)" disabled={!active?.canGoForward} onClick={() => cmd({ type: 'tab:forward' })}>
+        <button className="icon-btn" title={`${t('nav.forward')} (Alt+→)`} disabled={!active?.canGoForward} onClick={() => cmd({ type: 'tab:forward' })}>
           <Icon name="forward" />
         </button>
-        <button className="icon-btn" title="Reload (Ctrl+R)" disabled={!active} onClick={() => cmd({ type: 'tab:reload' })}>
+        <button className="icon-btn" title={`${t('nav.reload')} (Ctrl+R)`} disabled={!active} onClick={() => cmd({ type: 'tab:reload' })}>
           <Icon name="reload" />
         </button>
         <div className="spacer" />
-        <button className="icon-btn" title="Minimize" onClick={() => cmd({ type: 'win:minimize' })}>
+        <button className="icon-btn win-ctl" title={t('win.minimize')} onClick={() => cmd({ type: 'win:minimize' })}>
           <Icon name="minimize" size={14} />
         </button>
-        <button className="icon-btn" title="Maximize" onClick={() => cmd({ type: 'win:maximize' })}>
+        <button className="icon-btn win-ctl" title={t('win.maximize')} onClick={() => cmd({ type: 'win:maximize' })}>
           <Icon name="maximize" size={14} />
         </button>
-        <button className="icon-btn win-close" title="Close" onClick={() => cmd({ type: 'win:close' })}>
+        <button className="icon-btn win-ctl win-close" title={t('win.close')} onClick={() => cmd({ type: 'win:close' })}>
           <Icon name="x" size={15} />
         </button>
       </div>
@@ -104,15 +110,16 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
       <div className="urlbar-pill">
         <button
           className="site-btn"
-          title="Site permissions"
+          title={t('url.sitePermissions')}
           disabled={!active || !/^https?:/.test(active.url)}
           onClick={() => window.drift.siteMenu()}
         >
           <Icon name={active?.url.startsWith('https:') ? 'lock' : 'search'} size={14} />
         </button>
         <button className="urlbar-text" title="Ctrl+L" onClick={() => onOpenBar('current')}>
-          {active ? displayUrl(active.url) : 'Search or enter address'}
+          {active ? (isInternalUrl(active.url) ? t('set.title') : displayUrl(active.url)) : t('url.placeholder')}
         </button>
+        <PageActions tab={active} state={state} />
       </div>
 
       {myPrompts[0] && <PermissionCard key={myPrompts[0].id} prompt={myPrompts[0]} extra={myPrompts.length - 1} />}
@@ -125,21 +132,22 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
           <TabSection zone="pinned" tabs={pinned} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} />
           <div className="pinned-separator">
             {regular.length > 0 && (
-              <button title="Close all unpinned tabs in this space" onClick={() => cmd({ type: 'space:clear', id: space.id })}>
-                Clear
+              <button title={t('tabs.clearHint')} onClick={() => cmd({ type: 'space:clear', id: space.id })}>
+                {t('tabs.clear')}
               </button>
             )}
           </div>
           <button className="new-tab" onClick={() => onOpenBar('new')}>
             <Icon name="plus" />
-            <span className="tab-label">New Tab</span>
+            <span className="tab-label">{t('tabs.new')}</span>
           </button>
           <TabSection zone="tabs" tabs={regular} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} />
         </div>
       </div>
 
+      <MediaBar state={state} />
       <div className="sidebar-bottom">
-        <button className="icon-btn settings-btn" title="Settings (Ctrl+,)" onClick={() => cmd({ type: 'settings:open' })}>
+        <button className="icon-btn settings-btn" title={t('settings.open')} onClick={() => cmd({ type: 'settings:open' })}>
           <Icon name="gear" size={15} />
           {hasUpdateBadge(state.updates, state.settings.updates.engineAlerts) && <span className="update-dot" />}
         </button>
@@ -276,7 +284,7 @@ function SpaceSwitcher({ spaces, activeId }: { spaces: SpaceState[]; activeId: s
           {s.icon}
         </button>
       ))}
-      <button className="icon-btn" title="New space" onClick={() => cmd({ type: 'space:new' })}>
+      <button className="icon-btn" title={t('spaces.new')} onClick={() => cmd({ type: 'space:new' })}>
         <Icon name="plus" size={15} />
       </button>
     </div>

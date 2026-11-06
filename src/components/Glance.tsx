@@ -4,6 +4,7 @@ import { displayUrl } from '../../shared/url';
 import { cmd } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { t } from '../i18n';
 
 interface Props {
   glance: GlanceState;
@@ -53,13 +54,13 @@ export function Glance({ glance, tab, ready, snapshot, onReady }: Props) {
         )}
       </div>
       <div className="glance-actions">
-        <button className="glance-btn" title="Close (Esc)" onClick={() => cmd({ type: 'glance:close' })}>
+        <button className="glance-btn" title={t('glance.close')} onClick={() => cmd({ type: 'glance:close' })}>
           <Icon name="x" />
         </button>
-        <button className="glance-btn" title="Open as tab" onClick={() => cmd({ type: 'glance:expand' })}>
+        <button className="glance-btn" title={t('glance.expand')} onClick={() => cmd({ type: 'glance:expand' })}>
           <Icon name="expand" />
         </button>
-        <button className="glance-btn" title="Open in split view" onClick={() => cmd({ type: 'glance:split' })}>
+        <button className="glance-btn" title={t('glance.split')} onClick={() => cmd({ type: 'glance:split' })}>
           <Icon name="split" />
         </button>
       </div>

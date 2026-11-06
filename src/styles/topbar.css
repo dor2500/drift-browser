@@ -71,7 +71,7 @@
 
 .topbar { flex: 0 0 auto; display: flex; flex-direction: column; background: var(--hstrip-bg); }
 
-.tabstrip { display: flex; height: var(--strip-h); padding-left: 8px; }
+.tabstrip { display: flex; height: var(--strip-h); padding-inline-start: 8px; }
 .htabs {
   display: flex;
   align-items: center;
@@ -120,7 +120,8 @@
   min-width: 56px;
   max-width: 240px;
   height: var(--htab-h);
-  padding: 0 6px 0 12px;
+  padding-block: 0;
+  padding-inline: 12px 6px;
   border-radius: var(--htab-radius);
   color: var(--text-dim);
   transition: background 0.1s, color 0.1s;
@@ -229,7 +230,7 @@
   min-width: 0;
   height: 100%;
   padding: 0 8px;
-  text-align: left;
+  text-align: start;
   color: var(--text);
   overflow: hidden;
   white-space: nowrap;

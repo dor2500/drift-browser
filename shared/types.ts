@@ -1,4 +1,5 @@
 // Types shared by the Electron main process, the preload bridge and the React shell.
+import type { LanguageInfo, LocaleBundle } from './i18n';
 import type { Settings, SettingsPatch } from './settings';
 
 export interface Rect {
@@ -24,6 +25,8 @@ export interface TabState {
   muted: boolean;
   /** Set while the tab is a Glance preview floating over this parent tab. */
   glanceOf?: string;
+  /** Ads and trackers blocked on the current page. */
+  blocked?: number;
 }
 
 export interface SpaceState {
@@ -88,6 +91,46 @@ export interface DriftEnv {
 
 export type SitePermissions = Record<string, Record<string, 'allow' | 'block'>>;
 
+/** The tab whose audio/video the media controls act on. */
+export interface MediaState {
+  tabId: string;
+  playing: boolean;
+}
+
+export type ImportBrowser = 'zen' | 'firefox' | 'chrome' | 'brave' | 'edge';
+
+export interface ImportSource {
+  id: ImportBrowser;
+  name: string;
+  /** Zen sessions also carry spaces, pinned tabs and Essentials. */
+  hasSpaces: boolean;
+}
+
+export interface ImportOptions {
+  /** Chrome/Brave/Edge/Firefox: bookmarks-bar items become pinned tabs in a new space (like Arc). */
+  bookmarksAsPinned: boolean;
+  /** Zen: bring its spaces, pinned tabs, Essentials and open tabs. */
+  zenSpaces: boolean;
+}
+
+export interface ImportResult {
+  source: ImportBrowser;
+  bookmarks: number;
+  history: number;
+  spaces: number;
+  pinned: number;
+  essentials: number;
+  tabs: number;
+  error?: string;
+}
+
+export interface Suggestion {
+  url: string;
+  title: string;
+  kind: 'bookmark' | 'history';
+  source?: string;
+}
+
 export interface BrowserState {
   tabs: TabState[];
   spaces: SpaceState[];
@@ -96,6 +139,7 @@ export interface BrowserState {
   split?: SplitState;
   glance?: GlanceState;
   prompts: PermissionPrompt[];
+  media?: MediaState;
   settings: Settings;
   updates: UpdateStatus;
   compact: boolean;
@@ -135,6 +179,8 @@ export type Command =
   | { type: 'settings:set'; patch: SettingsPatch }
   | { type: 'settings:open' }
   | { type: 'updates:check' }
+  | { type: 'adblock:site'; host: string; paused: boolean }
+  | { type: 'media:control'; id: string; action: 'toggle' | 'next' | 'prev' }
   | { type: 'updates:install' }
   | { type: 'space:new' }
   | { type: 'space:activate'; id: string }
@@ -153,6 +199,8 @@ export type UiEvent =
   | { type: 'glance:backdrop'; snapshots: Snapshot[] };
 
 export interface DriftApi {
+  /** process.platform: 'win32' | 'darwin' | 'linux'. */
+  platform: string;
   getState(): Promise<BrowserState>;
   cmd(c: Command): Promise<void>;
   layout(panes: Pane[]): void;
@@ -164,6 +212,13 @@ export interface DriftApi {
   spacesMenu(): void;
   env(): Promise<DriftEnv>;
   sitePermissions(): Promise<SitePermissions>;
+  shieldMenu(): void;
+  locale(): Promise<LocaleBundle>;
+  languages(): Promise<{ languages: LanguageInfo[]; offline: boolean }>;
+  installLanguage(code: string): Promise<boolean>;
+  suggest(query: string): Promise<Suggestion[]>;
+  importSources(): Promise<ImportSource[]>;
+  runImport(source: ImportBrowser, options: ImportOptions): Promise<ImportResult>;
   onState(cb: (s: BrowserState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
