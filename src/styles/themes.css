@@ -1,0 +1,101 @@
+/*
+ * Theme presets. tokens.css holds the Zen defaults; each block below
+ * overrides them. Firefox and Brave values were measured from the browsers
+ * installed on this PC (Zen, Firefox, Brave, Chrome). --accent and
+ * --content-radius are set inline by App.tsx from shared/themes.ts.
+ */
+
+:root {
+  --glow-1: 20%;
+  --glow-2: 9%;
+}
+
+/* Firefox 159 — design-system tokens + browser-colors.css (dark). */
+:root[data-theme='firefox'] {
+  --glow-1: 0%;
+  --glow-2: 0%;
+  --branding-bg: #15141a;          /* gray-100 */
+  --window-bg: #1c1b22;            /* gray-90: toolbox + sidebar */
+  --surface: #2b2a33;              /* content background */
+  --panel: #2b2a33;
+  --urlbar-bg: #1c1b22;
+  --text: #fbfbfe;
+  --text-dim: rgba(251, 251, 254, 0.72);
+  --text-faint: rgba(251, 251, 254, 0.45);
+  --hover: color-mix(in srgb, #fbfbfe 10%, transparent);
+  --pressed: color-mix(in srgb, #fbfbfe 18%, transparent);
+  --element-bg: rgba(0, 0, 0, 0.3); /* --toolbar-field-background-color (dark) */
+  --tab-selected: #42414d;
+  --tab-selected-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  --essential-bg: rgba(251, 251, 254, 0.06);
+  --essential-selected: #42414d;
+  --border-contrast: rgba(251, 251, 254, 0.1);
+  --radius: 8px;                   /* --border-radius-medium */
+  --sep: 6px;
+  --tab-radius: 8px;
+  --tile-radius: 8px;
+  --button-radius: 8px;            /* --button-border-radius */
+  --tab-height: 36px;              /* vertical --tab-min-height */
+  --content-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Brave 1.99 — Leo design tokens (dark scheme). */
+:root[data-theme='brave'] {
+  --glow-1: 0%;
+  --glow-2: 0%;
+  --branding-bg: #000000;
+  --window-bg: #141415;            /* page-background: neutral-5 */
+  --surface: #1c1c1d;              /* container-background: neutral-10 */
+  --panel: #252527;                /* container-highlight: neutral-15 */
+  --urlbar-bg: #252527;
+  --text: #e4e4e5;                 /* on-surface: neutral-90 */
+  --text-dim: rgba(228, 228, 229, 0.7);
+  --text-faint: rgba(228, 228, 229, 0.42);
+  --hover: rgba(255, 255, 255, 0.08); /* elevation-primary (dark) */
+  --pressed: rgba(255, 255, 255, 0.13);
+  --element-bg: #252527;
+  --tab-selected: #303032;         /* divider-subtle: neutral-20 */
+  --tab-selected-shadow: none;
+  --essential-bg: #1c1c1d;
+  --essential-selected: #39393b;   /* neutral-25 */
+  --border-contrast: #303032;
+  --radius: 8px;                   /* radius-m */
+  --sep: 4px;
+  --tab-radius: 8px;
+  --tile-radius: 12px;             /* radius-l */
+  --button-radius: 8px;
+  --tab-height: 34px;
+  --content-shadow: 0 0 0 1px #303032;
+  --font: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Chrome 156 — cr_elements colour fallbacks (dark), resources.pak. */
+:root[data-theme='chrome'] {
+  --glow-1: 0%;
+  --glow-2: 0%;
+  --branding-bg: #131314;
+  --window-bg: #1f1f1f;            /* color-surface */
+  --surface: #27282a;              /* color-surface1 */
+  --panel: #282828;                /* color-neutral-container */
+  --urlbar-bg: #282828;
+  --text: #e3e3e3;                 /* color-on-surface */
+  --text-dim: #c7c7c7;             /* color-on-surface-subtle */
+  --text-faint: rgba(227, 227, 227, 0.45);
+  --hover: rgba(227, 227, 227, 0.08);
+  --pressed: rgba(227, 227, 227, 0.12);
+  --element-bg: #282828;
+  --tab-selected: #333438;         /* color-surface3 */
+  --tab-selected-shadow: none;
+  --essential-bg: #282828;
+  --essential-selected: #333438;
+  --border-contrast: rgba(94, 94, 94, 0.6); /* color-divider #5e5e5e */
+  --radius: 8px;
+  --sep: 0px;
+  --tab-radius: 16px;              /* cr-card-border-radius: pill-shaped rows */
+  --tile-radius: 16px;
+  --button-radius: 16px;
+  --tab-height: 36px;
+  --content-shadow: none;
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}

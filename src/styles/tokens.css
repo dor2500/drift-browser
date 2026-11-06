@@ -1,0 +1,73 @@
+/*
+ * Design tokens, measured from Zen 1.24b's zen-theme.css, vertical-tabs.css,
+ * zen-workspaces.css and zen-split-view.css (dark scheme on Windows).
+ * Values are re-implemented here, not copied; the Zen name in comments
+ * shows where each one comes from.
+ */
+
+/* Registered so the window gradient can animate between space colours. */
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #8aa4ff;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* --- Base palette (zen-branding-dark / zen-main-browser-background) --- */
+  --branding-bg: #101010;
+  --window-bg: #141414;
+  --surface: #1b1b1b;            /* behind web content before it paints */
+  --panel: rgb(31, 31, 31);      /* --arrowpanel-background */
+  --dialog: #1c1c1c;
+
+  /* --- Accent-derived colours (zen-colors-primary/secondary) --- */
+  --accent: #8aa4ff;
+  --colors-primary: color-mix(in srgb, var(--accent) 20%, var(--branding-bg));
+  --colors-secondary: color-mix(in srgb, var(--accent) 30%, var(--branding-bg));
+  --border: color-mix(in srgb, var(--colors-secondary) 20%, rgb(79, 79, 79));
+  --border-contrast: rgba(255, 255, 255, 0.11);
+  --urlbar-bg: color-mix(in srgb, var(--accent) 4%, rgb(24, 24, 24));
+
+  /* --- Text --- */
+  --text: rgba(255, 255, 255, 0.88);
+  --text-dim: rgba(255, 255, 255, 0.6);
+  --text-faint: rgba(255, 255, 255, 0.38);
+
+  /* --- Interaction fills (toolbarbutton-background-color-hover/active) --- */
+  --hover: color-mix(in srgb, #e2e2e2 7%, transparent);
+  --pressed: color-mix(in srgb, #e2e2e2 10%, transparent);
+  --element-bg: color-mix(in oklch, var(--text) 9%, transparent);
+
+  /* --- Tabs (zen-workspaces.css) --- */
+  --tab-selected: color-mix(in srgb, rgba(255, 255, 255, 0.18) 95%, var(--accent));
+  --tab-selected-shadow: 0 0.8px 1.5px 0 rgba(0, 0, 0, 0.05);
+  --essential-bg: rgba(255, 255, 255, 0.06);
+  --essential-selected: rgba(68, 64, 64, 0.85);
+  --drop-indicator: color-mix(in srgb, var(--accent) 60%, white);
+
+  /* --- Geometry --- */
+  --radius: 7px;                 /* --zen-border-radius */
+  --sep: 8px;                    /* --zen-element-separation */
+  --content-radius: 8px;         /* default; App.tsx sets it from the theme (shared/themes.ts) */
+  --tab-radius: 10px;
+  --tile-radius: 12px;
+  --button-radius: 6px;          /* --toolbarbutton-border-radius */
+  --toolbar-height: 38px;        /* --zen-toolbar-height */
+  --tab-height: 36px;
+  --tile-height: 46px;           /* essentials --tab-min-height */
+  --space-indicator-height: 44px;/* --zen-workspace-indicator-height */
+  --toolbox-padding: 6px;        /* --zen-toolbox-padding */
+  --active-scale: 0.98;          /* --zen-active-tab-scale */
+
+  /* --- Elevation --- */
+  --shadow-big: rgba(0, 0, 0, 0.24) 0 3px 8px;
+  --content-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 2px 10px rgba(0, 0, 0, 0.35);
+
+  /* --- Motion --- */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --compact-time: 0.25s;         /* --zen-compact-mode-time */
+
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}

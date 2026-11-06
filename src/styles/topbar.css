@@ -1,0 +1,274 @@
+/*
+ * Top-tab layout (Chrome, Firefox and Brave styles, or any style with
+ * vertical tabs turned off). Geometry differs per browser:
+ *   Chrome  — selected tab merges into the toolbar (rounded top + flared base),
+ *             pill omnibox, round toolbar buttons.
+ *   Firefox — separate darker tab strip, floating rounded tabs with a shadow,
+ *             rounded-rectangle URL bar.
+ *   Brave   — Chromium layout with Leo colours and floating rounded tabs.
+ */
+
+:root {
+  --hstrip-bg: var(--window-bg);
+  --toolbar-bg: var(--surface);
+  --strip-h: 42px;
+  --htab-h: 34px;
+  --htab-radius: 8px;
+  --htab-selected: var(--tab-selected);
+  --toolbar-h: 44px;
+  --tb-radius: 8px;
+  --omni-h: 34px;
+  --omni-radius: 8px;
+  --omni-bg: var(--urlbar-bg);
+}
+
+:root[data-theme='chrome'] {
+  --hstrip-bg: #1f1f1f;   /* color-surface */
+  --toolbar-bg: #282828;  /* color-base-container: toolbar and selected tab */
+  --strip-h: 41px;
+  --htab-h: 34px;
+  --htab-radius: 10px;
+  --htab-selected: #282828;
+  --toolbar-h: 48px;
+  --tb-radius: 50%;
+  --omni-h: 36px;
+  --omni-radius: 18px;
+  --omni-bg: #1f1f1f;
+}
+
+:root[data-theme='firefox'] {
+  --hstrip-bg: #1c1b22;   /* gray-90 tab strip */
+  --toolbar-bg: #2b2a33;  /* nav-bar */
+  --strip-h: 44px;
+  --htab-h: 36px;
+  --htab-radius: 8px;     /* --tab-border-radius = button radius (8px) */
+  --htab-selected: #42414d;
+  --toolbar-h: 42px;
+  --tb-radius: 8px;
+  --omni-h: 32px;
+  --omni-radius: 8px;
+  --omni-bg: #1c1b22;
+}
+
+:root[data-theme='brave'] {
+  --hstrip-bg: #141415;   /* page-background */
+  --toolbar-bg: #1c1c1d;  /* container-background */
+  --strip-h: 42px;
+  --htab-h: 32px;
+  --htab-radius: 8px;     /* radius-m */
+  --htab-selected: #303032;
+  --toolbar-h: 46px;
+  --tb-radius: 8px;
+  --omni-h: 36px;
+  --omni-radius: 12px;    /* radius-l */
+  --omni-bg: #252527;
+}
+
+/* ------------------------------------------------------------------ frame */
+
+.app.horizontal { flex-direction: column; background: var(--hstrip-bg); }
+.app.horizontal .content { margin: 0; flex: 1; min-height: 0; }
+
+.topbar { flex: 0 0 auto; display: flex; flex-direction: column; background: var(--hstrip-bg); }
+
+.tabstrip { display: flex; height: var(--strip-h); padding-left: 8px; }
+.htabs {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 2px;
+  padding-top: 4px;
+  -webkit-app-region: no-drag;
+}
+.strip-spacer { flex: 1; min-width: 40px; }
+
+.strip-btn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin: 0 4px;
+  border-radius: var(--tb-radius);
+  color: var(--text-dim);
+  -webkit-app-region: no-drag;
+}
+.strip-btn:hover { background: var(--hover); color: var(--text); }
+.space-btn { align-self: center; margin-top: 4px; font-size: 14px; }
+
+.caption-buttons { display: flex; align-self: flex-start; height: 32px; -webkit-app-region: no-drag; }
+.caption-buttons button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.caption-buttons button:hover { background: rgba(255, 255, 255, 0.08); }
+.caption-buttons button.close:hover { background: #c42b1c; color: white; }
+
+/* ------------------------------------------------------------------ tabs */
+
+.htab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 240px;
+  min-width: 56px;
+  max-width: 240px;
+  height: var(--htab-h);
+  padding: 0 6px 0 12px;
+  border-radius: var(--htab-radius);
+  color: var(--text-dim);
+  transition: background 0.1s, color 0.1s;
+}
+.htab.compact { flex: 0 0 auto; width: 42px; min-width: 42px; padding: 0; justify-content: center; }
+.htab:hover { color: var(--text); }
+.htab.selected { color: var(--text); background: var(--htab-selected); }
+.htab-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.htab-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-dim);
+}
+.htab-icon:hover { background: var(--hover); color: var(--text); }
+.htab:not(.selected):not(:hover) .htab-close { opacity: 0; }
+.htab.drop-before { box-shadow: inset 2px 0 0 var(--drop-indicator); }
+.htab.drop-after { box-shadow: inset -2px 0 0 var(--drop-indicator); }
+.htab .tab-attention { margin: 0; }
+
+/* Floating tabs (Firefox, Brave, and Zen with top tabs). */
+.htab:not(.selected):hover { background: var(--hover); }
+:root[data-theme='firefox'] .htab.selected { box-shadow: 0 0 4px rgba(0, 0, 0, 0.4); }
+
+/* Chrome: the selected tab is part of the toolbar. */
+:root[data-theme='chrome'] .htabs { align-items: flex-end; gap: 0; padding-top: 7px; }
+:root[data-theme='chrome'] .htab { border-radius: var(--htab-radius) var(--htab-radius) 0 0; }
+:root[data-theme='chrome'] .htab:not(.selected):hover {
+  background: rgba(227, 227, 227, 0.07);
+  box-shadow: inset 0 0 0 4px var(--hstrip-bg);
+  border-radius: 12px;
+}
+:root[data-theme='chrome'] .htab.selected::before,
+:root[data-theme='chrome'] .htab.selected::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+:root[data-theme='chrome'] .htab.selected::before {
+  left: -10px;
+  background: radial-gradient(circle at 0 0, transparent 9.5px, var(--toolbar-bg) 10px);
+}
+:root[data-theme='chrome'] .htab.selected::after {
+  right: -10px;
+  background: radial-gradient(circle at 100% 0, transparent 9.5px, var(--toolbar-bg) 10px);
+}
+:root[data-theme='chrome'] .newtab-btn { align-self: center; border-radius: 50%; }
+
+/* ------------------------------------------------------------------ toolbar */
+
+.toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--toolbar-h);
+  padding: 0 8px;
+  background: var(--toolbar-bg);
+}
+.tb-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--tb-radius);
+  color: var(--text);
+}
+.tb-btn:hover:not(:disabled) { background: var(--hover); }
+.tb-btn:active:not(:disabled) { background: var(--pressed); }
+.tb-btn:disabled { opacity: 0.38; }
+.menu-btn .update-dot { top: 6px; right: 6px; box-shadow: 0 0 0 2px var(--toolbar-bg); }
+
+.omnibox {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: var(--omni-h);
+  margin: 0 8px;
+  padding: 0 4px;
+  border-radius: var(--omni-radius);
+  background: var(--omni-bg);
+  transition: background 0.12s;
+}
+.omnibox:hover { background: color-mix(in srgb, var(--omni-bg) 85%, white); }
+.omnibox-site {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-dim);
+}
+.omnibox-site:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.omnibox-text {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  text-align: left;
+  color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ permission bar */
+
+.permission-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 14px;
+  background: var(--toolbar-bg);
+  border-top: 1px solid var(--border-contrast);
+  color: var(--text);
+  animation: fade-in 0.15s ease-out;
+}
+.permission-bar > svg { flex: 0 0 auto; color: var(--accent); }
+.pb-text { flex: 1; min-width: 0; }
+.permission-bar .perm-remember { margin: 0; }
+
+/* ------------------------------------------------------------------ omnibox dropdown */
+
+.commandbar-backdrop.anchored { display: block; padding: 0; }
+.commandbar-backdrop.anchored .commandbar {
+  position: absolute;
+  border-radius: calc(var(--omni-radius) + 4px);
+  background: var(--omni-bg);
+  animation: fade-in 0.1s ease-out;
+}
+:root[data-theme='chrome'] .commandbar-backdrop.anchored .commandbar { border-radius: 22px; background: #282828; }
+.commandbar-backdrop.anchored .commandbar-input { height: calc(var(--omni-h) + 8px); padding: 0 14px; }
+.commandbar-backdrop.anchored .commandbar-input input { font-size: 14px; }
+
+/* ------------------------------------------------------------------ theme picker preview */
+
+.theme-preview.top-tabs { flex-direction: column; padding-top: 0; }
+.theme-preview.top-tabs .tp-sidebar { display: flex; width: 100%; height: 26px; padding: 8px 8px 0; gap: 4px; align-items: flex-end; }
+.theme-preview.top-tabs .tp-sidebar i { width: 44px; height: 14px; border-radius: 4px 4px 0 0; }
+.theme-preview.top-tabs .tp-page { margin: 0 !important; border-radius: 0 !important; }

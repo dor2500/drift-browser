@@ -1,0 +1,49 @@
+# Keeps Drift's Chromium current with Chrome's security fixes.
+#
+# Chromium security fixes reach Drift through Electron, which ships patched
+# releases a few days after each Chrome stable update. Every day this checks
+# for a newer stable Electron. When there is one, it upgrades, bumps Drift's
+# version, tags it, and runs the Release workflow. Installed copies then
+# update themselves from GitHub Releases.
+name: Chromium security updates
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - id: bump
+        run: node scripts/engine-bump.mjs
+
+      - name: Commit and tag
+        if: steps.bump.outputs.tag != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "engine: Electron ${{ steps.bump.outputs.electron }} (Chromium ${{ steps.bump.outputs.chrome }})"
+          git tag "${{ steps.bump.outputs.tag }}"
+          git push origin HEAD "${{ steps.bump.outputs.tag }}"
+
+  release:
+    needs: check
+    if: needs.check.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      ref: ${{ needs.check.outputs.tag }}
+    permissions:
+      contents: write

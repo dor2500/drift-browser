@@ -1,0 +1,74 @@
+{
+  "name": "drift-browser",
+  "productName": "Drift",
+  "version": "0.1.0",
+  "description": "A Chromium-based browser with vertical tabs, spaces and split view, in the style of Zen.",
+  "private": true,
+  "main": "dist-electron/electron/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build && tsc -p tsconfig.electron.json",
+    "start": "electron .",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.electron.json --noEmit",
+    "update-engine": "node scripts/update-engine.mjs",
+    "dist": "npm run build && electron-builder --win --publish never",
+    "icons": "node scripts/build-icons.mjs",
+    "release": "npm run build && electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "build": {
+    "appId": "app.drift.browser",
+    "productName": "Drift",
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "assets/icon.png",
+      "assets/icon.ico",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "shortcutName": "Drift"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "dor2500",
+        "repo": "drift-browser",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "author": "dor2500",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dor2500/drift-browser.git"
+  }
+}

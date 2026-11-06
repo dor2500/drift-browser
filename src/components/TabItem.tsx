@@ -1,0 +1,62 @@
+import type { SyntheticEvent } from 'react';
+import type { DropPosition, TabState } from '../../shared/types';
+import { cmd, cx, endTabDrag, isTabDrag, startTabDrag } from '../lib';
+import { Favicon } from './Favicon';
+import { Icon } from './Icon';
+
+interface Props {
+  tab: TabState;
+  selected: boolean;
+  inSplit: boolean;
+  /** A permission prompt is waiting in this background tab. */
+  attention?: boolean;
+  dropPos?: DropPosition;
+  onDragOverItem: (pos: DropPosition) => void;
+}
+
+const stop = (e: SyntheticEvent) => e.stopPropagation();
+
+export function TabItem({ tab, selected, inSplit, attention, dropPos, onDragOverItem }: Props) {
+  return (
+    <div
+      className={cx('tab', selected && 'selected', inSplit && 'in-split', dropPos && `drop-${dropPos}`)}
+      title={`${tab.title}\n${tab.url}`}
+      draggable
+      onDragStart={(e) => startTabDrag(e, tab.id)}
+      onDragEnd={endTabDrag}
+      onDragOver={(e) => {
+        if (!isTabDrag(e)) return;
+        e.preventDefault();
+        const r = e.currentTarget.getBoundingClientRect();
+        onDragOverItem(e.clientY < r.top + r.height / 2 ? 'before' : 'after');
+      }}
+      // Browsers switch tabs on press, not release.
+      onMouseDown={(e) => e.button === 0 && cmd({ type: 'tab:activate', id: tab.id })}
+      onAuxClick={(e) => e.button === 1 && cmd({ type: 'tab:close', id: tab.id })}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        window.drift.tabMenu(tab.id);
+      }}
+    >
+      <Favicon tab={tab} />
+      <span className="tab-label">{tab.title || tab.url}</span>
+      {attention && <span className="tab-attention" title="This site is asking for a permission" />}
+      {(tab.audible || tab.muted) && (
+        <button className="tab-audio" title={tab.muted ? 'Unmute' : 'Mute'} onMouseDown={stop} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>
+          <Icon name={tab.muted ? 'muted' : 'speaker'} size={14} />
+        </button>
+      )}
+      <button
+        className="tab-close"
+        title="Close tab (Ctrl+W)"
+        onMouseDown={stop}
+        onClick={(e) => {
+          e.stopPropagation();
+          cmd({ type: 'tab:close', id: tab.id });
+        }}
+      >
+        <Icon name="x" size={14} />
+      </button>
+    </div>
+  );
+}

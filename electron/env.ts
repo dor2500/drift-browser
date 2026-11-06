@@ -1,0 +1,39 @@
+import { app } from 'electron';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { DriftEnv } from '../shared/types';
+
+const PF = process.env.ProgramFiles ?? 'C:\\Program Files';
+const PF86 = process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
+const LOCAL = process.env.LOCALAPPDATA ?? '';
+
+/** Known install locations, used to label "installed on this PC" in the theme picker. */
+const CANDIDATES: Record<keyof DriftEnv['browsers'], string[]> = {
+  zen: [path.join(PF, 'Zen Browser', 'zen.exe'), path.join(LOCAL, 'Zen Browser', 'zen.exe')],
+  firefox: [path.join(PF, 'Mozilla Firefox', 'firefox.exe'), path.join(PF86, 'Mozilla Firefox', 'firefox.exe')],
+  brave: [
+    path.join(PF, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+    path.join(LOCAL, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+  ],
+  chrome: [
+    path.join(PF, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(PF86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(LOCAL, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+  ],
+};
+
+export function readEnv(): DriftEnv {
+  const browsers = Object.fromEntries(
+    Object.entries(CANDIDATES).map(([k, paths]) => [k, process.platform === 'win32' && paths.some((p) => p && fs.existsSync(p))]),
+  ) as DriftEnv['browsers'];
+  return {
+    browsers,
+    packaged: app.isPackaged,
+    versions: {
+      app: app.getVersion(),
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+    },
+  };
+}

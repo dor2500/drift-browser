@@ -1,0 +1,40 @@
+export const SEARCH_URL = 'https://www.google.com/search?q=';
+export const HOME_URL = 'https://www.google.com/';
+
+const SCHEME = /^(https?|file|about|chrome|data|view-source|drift):/i;
+
+/** Pages drawn by the shell itself instead of a web view. */
+export const SETTINGS_URL = 'drift://settings';
+export const isInternalUrl = (url: string) => url.startsWith('drift://');
+export const internalTitle = (url: string) => (url.startsWith(SETTINGS_URL) ? 'Settings' : 'Drift');
+
+const SEARCH_HOSTS = /(^|\.)(google\.[a-z.]+|duckduckgo\.com|bing\.com|search\.brave\.com|startpage\.com)$/i;
+const HOST_LIKE = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i;
+const DOMAIN = /^[^/\s]+\.[a-z]{2,}(:\d+)?([/?#].*)?$/i;
+
+export function looksLikeUrl(input: string): boolean {
+  const s = input.trim();
+  if (!s || /\s/.test(s)) return false;
+  return SCHEME.test(s) || HOST_LIKE.test(s) || DOMAIN.test(s);
+}
+
+/** Turns omnibox input into a URL: keeps real URLs, adds a scheme, or builds a search. */
+export function normalizeInput(input: string, searchUrl = SEARCH_URL): string {
+  const s = input.trim();
+  if (!looksLikeUrl(s)) return searchUrl + encodeURIComponent(s);
+  if (SCHEME.test(s)) return s;
+  return (HOST_LIKE.test(s) ? 'http://' : 'https://') + s;
+}
+
+/** Short form for the sidebar URL pill: host + path, or the search query. */
+export function displayUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (isInternalUrl(url)) return internalTitle(url);
+    if (SEARCH_HOSTS.test(u.hostname) && u.searchParams.get('q')) return u.searchParams.get('q')!;
+    const path = u.pathname === '/' ? '' : u.pathname;
+    return (u.host || u.protocol) + path;
+  } catch {
+    return url;
+  }
+}
