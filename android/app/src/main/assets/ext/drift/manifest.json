@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "Drift",
+  "version": "1.0",
+  "description": "Drift's YouTube ad skipper for the Gecko engine.",
+  "browser_specific_settings": { "gecko": { "id": "drift@drift.app" } },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["youtube.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

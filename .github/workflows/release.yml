@@ -87,6 +87,8 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Android 17 QPR2 SDK (GeckoView needs it)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.2" > /dev/null
       - name: Restore signing key
         run: echo "${{ secrets.DRIFT_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/drift.jks"
       - name: Build APK
@@ -99,8 +101,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk "Drift-${TAG#v}.apk"
-          gh release upload "$TAG" "Drift-${TAG#v}.apk" -R "$GITHUB_REPOSITORY" --clobber
+          # One APK per processor type (each carries one copy of Gecko). 64-bit ARM, nearly every
+          # phone, is plain Drift-x.apk and goes up first, so older Drift versions find it first.
+          out=android/app/build/outputs/apk/release
+          v="${TAG#v}"
+          cp "$out/app-arm64-v8a-release.apk" "Drift-$v.apk"
+          cp "$out/app-armeabi-v7a-release.apk" "Drift-$v-armeabi-v7a.apk"
+          cp "$out/app-x86_64-release.apk" "Drift-$v-x86_64.apk"
+          gh release upload "$TAG" "Drift-$v.apk" -R "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" "Drift-$v-armeabi-v7a.apk" "Drift-$v-x86_64.apk" -R "$GITHUB_REPOSITORY" --clobber
 
   publish:
     needs: [build, android]

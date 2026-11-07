@@ -18,7 +18,10 @@ val storePass = System.getenv("DRIFT_KEYSTORE_PASSWORD") ?: localPass.takeIf { i
 
 android {
     namespace = "app.drift.browser"
-    compileSdk = 37
+    // GeckoView 159 needs the Android 17 QPR2 SDK (37.2).
+    compileSdk {
+        version = release(37) { minorApiLevel = 2 }
+    }
 
     defaultConfig {
         applicationId = "app.drift.browser"
@@ -37,6 +40,22 @@ android {
                 keyPassword = storePass
             }
         }
+    }
+
+    // One APK per processor type: each carries one copy of Gecko instead of four.
+    // CI renames arm64-v8a (nearly every phone) to Drift-x.apk.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
+    packaging {
+        // Compressed native libraries: a much smaller download for a sideloaded APK.
+        jniLibs { useLegacyPackaging = true }
     }
 
     buildTypes {
@@ -71,5 +90,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-ktx:1.19.1")
-    implementation("androidx.webkit:webkit:1.14.0")
+    implementation("androidx.webkit:webkit:1.18.0")
+    // Gecko, the engine of Firefox; same release train as Firefox for Android.
+    implementation("org.mozilla.geckoview:geckoview:159.0.20261102144711")
+    implementation("org.jsoup:jsoup:1.24.1")
 }

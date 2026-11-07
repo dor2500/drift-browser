@@ -50,7 +50,7 @@ Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppIm
   ![Ocean theme with the find bar](docs/screenshots/theme-ocean-find.png)
 
 - **Google sign-in** for Gmail, YouTube and Drive. Chrome Sync is Chrome-only. **Open page in** any other installed browser, with per-site "always open in…" rules.
-- **Two engines.** Chromium is built in. **Gecko** (the Firefox engine) runs Firefox with a Drift-managed, LibreWolf-style hardened profile: no telemetry or studies, strict tracking protection, native vertical tabs and a dark Drift look. Switch in Settings → Engine; your tabs move both ways. Drift uses the Firefox on your PC or downloads the official build from Mozilla.
+- **Two engines.** Chromium is built in. **Gecko** (the Firefox engine) runs Firefox with a Drift-managed, LibreWolf-style hardened profile that follows Drift's own settings: your privacy choices, search engine, style (vertical tabs for Zen, top tabs for Chrome/Brave/Firefox), ad blocking with uBlock Origin, and a Drift start page with your pinned tabs and top sites. Switch in Settings → Engine; your tabs move both ways. Drift uses the Firefox on your PC or downloads the official build from Mozilla.
 - **Privacy by default.** No telemetry, analytics or crash reporting. HTTPS-First, tracking-parameter stripping, third-party cookie blocking, Global Privacy Control and Do Not Track, and WebRTC IP protection. Settings lists every server Drift contacts on its own, and each one can be switched off.
 - **New-tab pages per style.** Chrome (search pill and shortcuts), Brave (trackers blocked, time saved and a clock), Firefox Home, and a calm Zen clock. Settings pages follow the style too, with "Search settings" that works in any language.
 - **Media controls** in the sidebar for whatever is playing.
@@ -67,20 +67,27 @@ Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppIm
 
 ## Drift for Android
 
-A native Kotlin + Jetpack Compose app in [`android/`](android/), built on Android's Chromium WebView, with:
+A native Kotlin + Jetpack Compose app in [`android/`](android/) with **two engines built in**: Chromium (Android System WebView) and **Gecko** (Mozilla's GeckoView, the engine of Firefox for Android). Each tab runs on either one: pick the engine for new tabs in Settings, or move any tab from the menu. Also:
 - **Material You** design: colours from your wallpaper (Android 12+, or your space's colour), light, dark or system theme, Material 3 components throughout, and a themed icon.
 - A rounded floating page and a thumb-friendly bottom bar (address pill with a shield, tab counter, menu sheet with quick actions).
 - Tabs in spaces, kept across restarts, and a tab grid.
-- Ad and tracker blocking plus the YouTube ad skipper; downloads; find in page; desktop-site mode; share.
+- Ad and tracker blocking on both engines (Drift's list on Chromium, Firefox's Enhanced Tracking Protection on Gecko) plus the YouTube ad skipper.
+- **Private tabs** (Incognito): nothing saved, screenshots blocked, a separate cookie jar.
+- **History** and **bookmarks** (on the phone only), a start page with your most-visited sites, suggestions as you type.
+- **Reader view**, translate page, print or save as PDF, add to home screen, find in page, desktop site, long-press menus for links and images, video full screen, file uploads and downloads.
+- Settings: search engine (Google, DuckDuckGo, Brave Search, Startpage, Bing, Ecosia, Qwant), text size, dark web pages, HTTPS-Only, Global Privacy Control, third-party cookies, JavaScript, clear browsing data.
 - Google sign-in that works (the WebView's `; wv` marker that Google blocks is removed).
-- A settings screen (theme, wallpaper colours, ad blocking, version and updates).
 - English and Hebrew.
 
-Build locally with `cd android` then `gradlew assembleRelease`. CI builds a signed APK for every release.
+Download `Drift-x.y.z.apk` for most phones (64-bit ARM); `-armeabi-v7a` and `-x86_64` builds are there for older phones and emulators. Each APK is about 90 MB because it carries Gecko. Build locally with `cd android` then `gradlew assembleRelease`; CI builds signed APKs for every release.
 
 | Light | Menu | Dark tabs | Settings |
 |---|---|---|---|
 | ![Android light](docs/screenshots/android-material-light.png) | ![Android menu](docs/screenshots/android-material-menu.png) | ![Android dark tabs](docs/screenshots/android-material-dark-tabs.png) | ![Android settings](docs/screenshots/android-material-settings.png) |
+
+| Gecko engine | Engine per tab | Engines in Settings | Reader view |
+|---|---|---|---|
+| ![Gecko](docs/screenshots/android-gecko.png) | ![Engine menu](docs/screenshots/android-engine-menu.png) | ![Engines](docs/screenshots/android-settings-engines.png) | ![Reader](docs/screenshots/android-reader.png) |
 
 ## Updates and Chromium security
 

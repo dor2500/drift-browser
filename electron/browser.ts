@@ -1275,7 +1275,28 @@ export class Browser {
     ];
     this.setSettings({ engine: 'gecko' });
     store.saveNow(this.persisted());
-    if (launchGecko(urls, this.language, this.accentColor)) setTimeout(() => app.quit(), 300);
+    void launchGecko(urls, { lang: this.language, accent: this.accentColor, settings: this.settings, shortcuts: this.geckoShortcuts() }).then((ok) => {
+      if (ok) setTimeout(() => app.quit(), 300);
+    });
+  }
+
+  /** Essentials, pinned tabs and most-visited sites, for the Gecko engine's start page. */
+  private geckoShortcuts() {
+    const seen = new Set<string>();
+    const list: { title: string; url: string }[] = [];
+    const add = (url: string, title: string) => {
+      if (!/^https?:/.test(url) || seen.has(url) || list.length >= 12) return;
+      seen.add(url);
+      list.push({ url, title });
+    };
+    for (const t of this.tabs) if (t.essential || t.pinned) add(t.url, t.title);
+    for (const s of this.history.topSites(12)) add(s.url, s.title);
+    return list;
+  }
+
+  /** Settings for code outside this class that needs them (the Gecko engine download). */
+  get currentSettings() {
+    return this.settings;
   }
 
   /** Back from Gecko (drift-engine://chromium): reopen the Gecko session's tabs here. */

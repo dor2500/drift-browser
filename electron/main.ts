@@ -100,7 +100,7 @@ ipcMain.handle('drift:gecko-status', (e) => (fromShell(e) ? geckoStatus() : unde
 ipcMain.handle('drift:gecko-download', async (e) => {
   if (!fromShell(e) || !browser) return undefined;
   try {
-    return await downloadGecko(browser.language);
+    return await downloadGecko(browser.language, browser.currentSettings);
   } catch (err) {
     return { available: false, error: String((err as Error)?.message ?? err) };
   }
@@ -136,7 +136,7 @@ app.on('open-url', (e, url) => {
   if (url.startsWith(ENGINE_LINK)) browser?.returnFromGecko();
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   detectRtl(app.getLocale());
 
   // The Gecko engine's start page links back here with drift-engine://chromium.
@@ -148,7 +148,7 @@ app.whenReady().then(() => {
   const returning = !!engineLink(process.argv);
   if (s.engine === 'gecko' && !returning && !process.argv.includes('--chromium') && geckoStatus().available) {
     const lang = s.language === 'auto' ? app.getLocale().split('-')[0] : s.language;
-    launchGecko([], lang, s.customAccent || THEMES[s.theme].accent);
+    await launchGecko([], { lang, accent: s.customAccent || THEMES[s.theme].accent, settings: s });
     app.quit();
     return;
   }

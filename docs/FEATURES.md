@@ -39,8 +39,8 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | New-tab page with shortcuts | Chrome, Brave, Firefox | ✅ per style; Brave's shows blocked trackers and time saved |
 | Search settings | Chrome, Brave, Firefox | ✅ (matches English words in any language) |
 | History suggestions in the address bar | all | ✅ (plus imported history) |
-| Reader mode | Firefox, Safari, Edge | 🔜 |
-| Bookmarks manager | all | ➖ Drift uses pins, Essentials and searchable imported bookmarks instead |
+| Reader mode | Firefox, Safari, Edge | ✅ Android · 🔜 desktop |
+| Bookmarks manager | all | ✅ Android · desktop uses pins, Essentials and searchable imported bookmarks |
 | Reading list | Chrome, Safari, Edge | 🔜 |
 | Sidebar web panels | Vivaldi, Opera, Edge, Zen | 🔜 |
 | Mouse gestures | Vivaldi, Opera | 🔜 |
@@ -52,7 +52,7 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | Ad and tracker blocking | Brave, Opera, Vivaldi | ✅ with per-site pause and YouTube ad skipping |
 | Permission prompts, per-site memory | all | ✅ |
 | Automatic engine security updates | all | ✅ daily Electron/Chromium watch + auto-update |
-| Private window | all | 🔜 as a "private space" with a throwaway session |
+| Private window | all | ✅ Android private tabs (no history, separate cookies, screenshots blocked) · 🔜 desktop "private space" |
 | Containers per space | Firefox, Zen | 🔜 |
 | HTTPS-only mode | Firefox, Brave, Chrome | ✅ HTTPS-First with fallback |
 | Strip tracking parameters | Firefox, Brave | ✅ |
@@ -80,5 +80,5 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | Sign in to Google sites | all | ✅ (Google's sign-in page works) |
 | Chrome Sync | Chrome only | ➖ Google allows it only in Chrome |
 | Import from other browsers | all | ✅ Zen, Firefox, Chrome, Brave, Edge |
-| Choice of rendering engine | – | ✅ Chromium (built in) or Gecko (Firefox with a Drift-managed, hardened profile); plus "Open page in" any installed browser |
+| Choice of rendering engine | – | ✅ Android: Chromium and Gecko (GeckoView) both built in, per tab · Desktop: Chromium built in or Gecko (Firefox with a Drift-managed profile that follows Drift's settings, with uBlock Origin); plus "Open page in" any installed browser |
 | Extensions | Chrome, Edge, Firefox, Brave | 🔜 partial (Electron supports a subset of Chrome extensions) |
