@@ -64,6 +64,15 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       {web && (
         <button
           className="page-action"
+          title="תמונה בתוך תמונה · Picture in Picture (Alt+P)"
+          onClick={() => cmd({ type: 'page:pip' })}
+        >
+          <Icon name="pip" size={14} />
+        </button>
+      )}
+      {web && (
+        <button
+          className="page-action"
           title="תרגם דף זה באמצעות Google Translate"
           onClick={() => cmd({ type: 'page:translate' })}
         >

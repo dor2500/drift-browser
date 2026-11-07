@@ -150,13 +150,22 @@ export function TopBar({ state, onOpenBar }: Props) {
           <PageActions tab={focus} state={state} />
         </div>
         {state.media && (
-          <button
-            className="tb-btn"
-            title={state.media.playing ? t('media.pause') : t('media.play')}
-            onClick={() => cmd({ type: 'media:control', id: state.media!.tabId, action: 'toggle' })}
-          >
-            <Icon name={state.media.playing ? 'pause' : 'play'} size={16} />
-          </button>
+          <>
+            <button
+              className="tb-btn"
+              title={state.media.playing ? t('media.pause') : t('media.play')}
+              onClick={() => cmd({ type: 'media:control', id: state.media!.tabId, action: 'toggle' })}
+            >
+              <Icon name={state.media.playing ? 'pause' : 'play'} size={16} />
+            </button>
+            <button
+              className="tb-btn"
+              title="תמונה בתוך תמונה · Picture in Picture (Alt+P)"
+              onClick={() => cmd({ type: 'page:pip' })}
+            >
+              <Icon name="pip" size={16} />
+            </button>
+          </>
         )}
         {state.settings.theme === 'tor' && (
           <button className="tb-btn" title={t('nid.button')} onClick={() => cmd({ type: 'privacy:newIdentity' })}>

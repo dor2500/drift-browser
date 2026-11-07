@@ -864,14 +864,45 @@ export class Browser {
         }
         break;
       }
-      case 'page:pip':
-        void this.wc(this.media?.tabId ?? this.activeTabId)
-          ?.executeJavaScript(
-            `(async () => { if (document.pictureInPictureElement) return document.exitPictureInPicture(); const all = [...document.querySelectorAll('video')]; const v = all.find((x) => !x.paused) || all[0]; if (v) { v.disablePictureInPicture = false; await v.requestPictureInPicture(); } })()`,
-            true,
-          )
-          .catch(() => {});
+      case 'page:pip': {
+        const targetWc = this.wc(this.media?.tabId ?? this.activeTabId);
+        if (!targetWc) break;
+        const pipScript = `(async () => {
+          try {
+            if (document.pictureInPictureElement) {
+              await document.exitPictureInPicture();
+              return;
+            }
+            const ytVid = document.querySelector('#movie_player video, .html5-video-player video');
+            if (ytVid) {
+              ytVid.disablePictureInPicture = false;
+              await ytVid.requestPictureInPicture();
+              return;
+            }
+            const allVideos = Array.from(document.querySelectorAll('video'));
+            const playing = allVideos.find((v) => !v.paused && v.readyState >= 1) || allVideos[0];
+            if (playing) {
+              playing.disablePictureInPicture = false;
+              await playing.requestPictureInPicture();
+              return;
+            }
+            for (const el of document.querySelectorAll('*')) {
+              if (el.shadowRoot) {
+                const sv = el.shadowRoot.querySelector('video');
+                if (sv) {
+                  sv.disablePictureInPicture = false;
+                  await sv.requestPictureInPicture();
+                  return;
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('[drift pip error]', e);
+          }
+        })()`;
+        void targetWc.executeJavaScript(pipScript, true).catch(() => {});
         break;
+      }
       case 'split:toggle': {
         if (this.split?.tabIds.includes(this.activeTabId ?? '')) {
           this.run({ type: 'split:close' });
@@ -1319,6 +1350,7 @@ export class Browser {
     if (ctrl && !i.alt && (k === '-' || k === '_')) return run({ type: 'zoom', dir: -1 });
     if (ctrl && !i.alt && !i.shift && k === '0') return run({ type: 'zoom', dir: 0 });
     if (ctrl && !i.alt && !i.shift && k === 'p') return run({ type: 'page:print' });
+    if (i.alt && !ctrl && !i.shift && k === 'p') return run({ type: 'page:pip' });
     if (ctrl && !i.alt && !i.shift && k === 'u') return run({ type: 'page:source' });
     if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:screenshot' });
     if (ctrl && i.shift && !i.alt && k === 'a') return run({ type: 'ai:toggle' });
@@ -2269,6 +2301,12 @@ export class Browser {
         sep,
       );
     }
+    if (p.mediaType === 'video' || p.mediaType === 'audio') {
+      items.push(
+        { label: 'תמונה בתוך תמונה · Picture in Picture (Alt+P)', accelerator: 'Alt+P', click: () => this.run({ type: 'page:pip' }) },
+        sep,
+      );
+    }
     if (p.mediaType === 'image' && p.srcURL) {
       items.push(
         {
@@ -2324,6 +2362,7 @@ export class Browser {
       this.openInMenu(wc.getURL()),
       { type: 'separator' },
       { label: this.i18n.t('act.print'), accelerator: 'Ctrl+P', click: () => wc.print() },
+      { label: 'תמונה בתוך תמונה · Picture in Picture', accelerator: 'Alt+P', click: () => this.run({ type: 'page:pip' }) },
       { label: this.i18n.t('act.screenshot'), accelerator: 'Ctrl+Shift+S', click: () => void this.screenshot(id) },
       { label: this.i18n.t('act.translate'), click: () => this.run({ type: 'page:translate' }) },
       { label: this.i18n.t('act.source'), accelerator: 'Ctrl+U', click: () => this.run({ type: 'page:source' }) },
