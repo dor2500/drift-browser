@@ -183,6 +183,12 @@ export class Browser {
       otherDevicesChanged: () => this.emit(),
       openSignIn: (url) => this.createTab({ url }).id,
       closeSignIn: (id) => this.closeTab(id, false),
+      focusWindow: () => {
+        if (!this.win.isDestroyed()) {
+          if (this.win.isMinimized()) this.win.restore();
+          this.win.focus();
+        }
+      },
     });
     void this.sync.start();
     this.clipboardMonitor.start();
@@ -1621,13 +1627,8 @@ export class Browser {
     };
   }
 
-  /**
-   * Google blocks sign-in from browsers it doesn't recognise, which includes
-   * Electron apps. Its sign-in pages get a Firefox user agent (a known
-   * workaround); every other site keeps Drift's normal Chrome-style agent.
-   */
-  private signInUserAgent(wc: WebContents, url: string) {
-    const useGecko = this.settings.engine === 'gecko' || hostOfUrl(url) === 'accounts.google.com';
+  private signInUserAgent(wc: WebContents, _url: string) {
+    const useGecko = this.settings.engine === 'gecko';
     const want = useGecko ? getGeckoUserAgent() : app.userAgentFallback;
     if (wc.getUserAgent() !== want) wc.setUserAgent(want);
   }

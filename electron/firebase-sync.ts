@@ -1,4 +1,4 @@
-import { app, BrowserWindow, net, safeStorage, session } from 'electron';
+import { app, net, safeStorage, shell } from 'electron';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -32,8 +32,10 @@ import type {
 import type { SyncDomain } from './state-manager';
 
 /**
- * Drift Cloud Sync powered by **Firebase Authentication (Google Sign-In provider)**
- * and **Cloud Firestore** real-time synchronization.
+ * Drift Cloud Sync powered by **Google OAuth 2.0 PKCE (RFC 8252)**,
+ * **Firebase Authentication (Google Sign-In provider)**, and **Cloud Firestore**
+ * real-time synchronization (with automatic fallback to Google Drive `appDataFolder`
+ * when using the built-in Google OAuth release key without a custom Firebase project).
  *
  * Firestore schema per authenticated user (`users/{uid}/sync/{docId}`):
  *  - `users/{uid}/sync/bookmarks` : Spaces, Pinned Tabs, Essentials, and Bookmarks
@@ -44,7 +46,18 @@ import type { SyncDomain } from './state-manager';
  *  - `users/{uid}/sync/clipboard` : Universal Cloud Clipboard snippets
  */
 
-const GOOGLE_SCOPES = ['openid', 'email', 'profile'];
+const GOOGLE_SCOPES = [
+  'openid',
+  'email',
+  'profile',
+  'https://www.googleapis.com/auth/drive.appdata',
+];
+const DRIVE_SYNC_FILE = 'drift-sync.json';
+
+export interface GoogleOAuthClient {
+  clientId: string;
+  clientSecret: string;
+}
 
 export interface SyncedTab {
   url: string;
@@ -92,8 +105,19 @@ export interface Incoming {
   handoffTabs?: HandoffItem[];
 }
 
+interface DriveSyncDoc {
+  v: 2;
+  devices: Record<string, { id?: string; name: string; platform: string; updated: number; tabs: SyncedTab[] }>;
+  spaces?: { updated: number; list: SyncedSpace[] };
+  pins?: { updated: number; list: SyncedPin[] };
+  settings?: { updated: number; values: Record<string, unknown> };
+  history?: { updated: number; list: SyncedVisit[] };
+  clipboard?: { updated: number; items: ClipboardItemEntry[] };
+  handoff?: { updated: number; queue: HandoffItem[] };
+}
+
 interface StoredSyncState {
-  /** Encrypted Google OAuth refresh token or credential payload via OS keychain (safeStorage). */
+  /** Encrypted Google OAuth refresh token via OS keychain (safeStorage). */
   refreshToken?: string;
   idToken?: string;
   accessToken?: string;
@@ -107,6 +131,7 @@ interface StoredSyncState {
   sections: Record<string, { hash: string; updated: number }>;
   what: SyncState['what'];
   firebaseConfig?: FirebaseClientConfig;
+  client?: GoogleOAuthClient;
 }
 
 const storeFile = () => path.join(app.getPath('userData'), 'firebase-sync.json');
@@ -114,17 +139,52 @@ const legacyStoreFile = () => path.join(app.getPath('userData'), 'gsync.json');
 const MAX_HISTORY = 4000;
 const hash = (v: unknown) => crypto.createHash('sha1').update(JSON.stringify(v)).digest('hex');
 
-/** Reads built-in Firebase / Google configuration if bundled by CI or placed in project root. */
-function builtInFirebaseConfig(): FirebaseClientConfig | undefined {
-  const candidates = [
+function candidateDirs(): string[] {
+  return [
     __dirname,
     path.join(__dirname, '..'),
     path.join(__dirname, '../..'),
     app.getAppPath(),
     process.resourcesPath ?? '',
-  ];
-  for (const dir of candidates) {
-    if (!dir) continue;
+  ].filter(Boolean);
+}
+
+/**
+ * Reads the built-in Google OAuth Desktop Client key (`google-client.json`)
+ * bundled into official GitHub Releases from `DRIFT_GOOGLE_CLIENT_ID` & `DRIFT_GOOGLE_CLIENT_SECRET`.
+ */
+function builtInGoogleClient(): GoogleOAuthClient | undefined {
+  for (const dir of candidateDirs()) {
+    try {
+      const c = JSON.parse(fs.readFileSync(path.join(dir, 'google-client.json'), 'utf8')) as Partial<GoogleOAuthClient>;
+      if (c.clientId && c.clientSecret) {
+        return { clientId: c.clientId.trim(), clientSecret: c.clientSecret.trim() };
+      }
+    } catch {
+      /* continue */
+    }
+    try {
+      const f = JSON.parse(fs.readFileSync(path.join(dir, 'firebase-config.json'), 'utf8')) as Partial<FirebaseClientConfig>;
+      if (f.googleClientId && f.googleClientSecret) {
+        return { clientId: f.googleClientId.trim(), clientSecret: f.googleClientSecret.trim() };
+      }
+    } catch {
+      /* continue */
+    }
+  }
+  if (process.env.DRIFT_GOOGLE_CLIENT_ID && process.env.DRIFT_GOOGLE_CLIENT_SECRET) {
+    return {
+      clientId: process.env.DRIFT_GOOGLE_CLIENT_ID.trim(),
+      clientSecret: process.env.DRIFT_GOOGLE_CLIENT_SECRET.trim(),
+    };
+  }
+  return undefined;
+}
+
+/** Reads built-in Firebase configuration if bundled by CI (`firebase-config.json`) or placed in project root. */
+function builtInFirebaseConfig(): FirebaseClientConfig | undefined {
+  const gClient = builtInGoogleClient();
+  for (const dir of candidateDirs()) {
     try {
       const f = JSON.parse(fs.readFileSync(path.join(dir, 'firebase-config.json'), 'utf8')) as Partial<FirebaseClientConfig>;
       if (f.apiKey && f.projectId) {
@@ -135,8 +195,8 @@ function builtInFirebaseConfig(): FirebaseClientConfig | undefined {
           storageBucket: f.storageBucket || `${f.projectId}.appspot.com`,
           messagingSenderId: f.messagingSenderId,
           appId: f.appId,
-          googleClientId: f.googleClientId,
-          googleClientSecret: f.googleClientSecret,
+          googleClientId: f.googleClientId ?? gClient?.clientId,
+          googleClientSecret: f.googleClientSecret ?? gClient?.clientSecret,
         };
       }
     } catch {
@@ -155,8 +215,8 @@ function builtInFirebaseConfig(): FirebaseClientConfig | undefined {
           apiKey: g.apiKey,
           authDomain: g.authDomain || `${g.projectId}.firebaseapp.com`,
           projectId: g.projectId,
-          googleClientId: g.clientId,
-          googleClientSecret: g.clientSecret,
+          googleClientId: g.clientId ?? gClient?.clientId,
+          googleClientSecret: g.clientSecret ?? gClient?.clientSecret,
         };
       }
     } catch {
@@ -172,8 +232,8 @@ function builtInFirebaseConfig(): FirebaseClientConfig | undefined {
       storageBucket: process.env.DRIFT_FIREBASE_STORAGE_BUCKET || `${pid}.appspot.com`,
       messagingSenderId: process.env.DRIFT_FIREBASE_MESSAGING_SENDER_ID,
       appId: process.env.DRIFT_FIREBASE_APP_ID,
-      googleClientId: process.env.DRIFT_GOOGLE_CLIENT_ID,
-      googleClientSecret: process.env.DRIFT_GOOGLE_CLIENT_SECRET,
+      googleClientId: gClient?.clientId,
+      googleClientSecret: gClient?.clientSecret,
     };
   }
   return undefined;
@@ -206,6 +266,7 @@ export class FirebaseSyncManager {
   private fbAuth?: Auth;
   private fbDb?: Firestore;
   private unsubscribeSnapshot?: Unsubscribe;
+  private cachedAccess?: { token: string; expires: number };
   private pushTimer?: NodeJS.Timeout;
   private heartbeatTimer?: NodeJS.Timeout;
   private pendingDomains = new Set<SyncDomain>();
@@ -223,19 +284,58 @@ export class FirebaseSyncManager {
       otherDevicesChanged: () => void;
       openSignIn: (url: string) => string | undefined;
       closeSignIn: (tabId: string) => void;
+      focusWindow?: () => void;
     },
   ) {
     let stored: Partial<StoredSyncState> = {};
     try {
       if (fs.existsSync(storeFile())) {
         stored = JSON.parse(fs.readFileSync(storeFile(), 'utf8')) as StoredSyncState;
-      } else if (fs.existsSync(legacyStoreFile())) {
-        const leg = JSON.parse(fs.readFileSync(legacyStoreFile(), 'utf8')) as Record<string, unknown>;
-        stored = { deviceId: typeof leg.deviceId === 'string' ? leg.deviceId : undefined };
       }
     } catch {
-      /* first run */
+      /* ignore corrupt file */
     }
+    // Migrate existing session or OAuth client from legacy gsync.json if present
+    try {
+      if (fs.existsSync(legacyStoreFile())) {
+        const leg = JSON.parse(fs.readFileSync(legacyStoreFile(), 'utf8')) as Partial<StoredSyncState>;
+        if (!stored.deviceId && typeof leg.deviceId === 'string') stored.deviceId = leg.deviceId;
+        if (!stored.refreshToken && typeof leg.refreshToken === 'string') {
+          stored.refreshToken = leg.refreshToken;
+          stored.email = leg.email;
+          stored.name = leg.name;
+          stored.picture = leg.picture;
+          stored.uid = leg.email
+            ? crypto.createHash('sha256').update(leg.email.toLowerCase()).digest('hex').slice(0, 28)
+            : 'google-user';
+        }
+        if (!stored.client && leg.client?.clientId && leg.client?.clientSecret) {
+          stored.client = leg.client;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    // Clean up any broken local-only token from v0.8.0's embedded popup attempt
+    if (stored.idToken) {
+      try {
+        const raw = stored.idToken.startsWith('enc:')
+          ? safeStorage.decryptString(Buffer.from(stored.idToken.slice(4), 'base64'))
+          : Buffer.from(stored.idToken.slice(4), 'base64').toString();
+        if (raw.startsWith('google-direct:')) {
+          stored.idToken = undefined;
+          if (!stored.refreshToken) {
+            stored.uid = undefined;
+            stored.email = undefined;
+            stored.name = undefined;
+            stored.picture = undefined;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     this.s = {
       deviceId: stored.deviceId ?? crypto.randomUUID(),
       sections: stored.sections ?? {},
@@ -260,17 +360,40 @@ export class FirebaseSyncManager {
     return getDeviceName();
   }
 
+  get googleClient(): GoogleOAuthClient | undefined {
+    const builtIn = builtInGoogleClient();
+    if (builtIn) return builtIn;
+    if (this.s.firebaseConfig?.googleClientId && this.s.firebaseConfig?.googleClientSecret) {
+      return {
+        clientId: this.s.firebaseConfig.googleClientId,
+        clientSecret: this.s.firebaseConfig.googleClientSecret,
+      };
+    }
+    if (this.s.client?.clientId && this.s.client?.clientSecret) {
+      return this.s.client;
+    }
+    return undefined;
+  }
+
   get config(): FirebaseClientConfig | undefined {
-    return builtInFirebaseConfig() ?? this.s.firebaseConfig;
+    const base = builtInFirebaseConfig() ?? this.s.firebaseConfig;
+    if (!base) return undefined;
+    const g = this.googleClient;
+    return {
+      ...base,
+      googleClientId: base.googleClientId ?? g?.clientId,
+      googleClientSecret: base.googleClientSecret ?? g?.clientSecret,
+    };
   }
 
   state(): SyncState {
     const cfg = this.config;
-    const isSignedIn = !!(this.s.uid && (this.s.refreshToken || this.s.idToken));
+    const gClient = this.googleClient;
+    const isSignedIn = !!(this.s.refreshToken || (this.s.uid && this.s.idToken));
     return {
       provider: 'firebase',
-      configured: true,
-      builtInKey: true,
+      configured: !!(cfg || gClient),
+      builtInKey: !!(builtInFirebaseConfig() || builtInGoogleClient()),
       signedIn: isSignedIn,
       uid: this.s.uid,
       email: this.s.email,
@@ -284,10 +407,10 @@ export class FirebaseSyncManager {
       syncing: !!this.running,
       what: this.s.what,
       firebaseConfig: cfg,
-      otherDevices: Object.values(this.remoteDevices)
-        .filter((d) => d && d.id !== this.s.deviceId)
-        .map((d) => ({
-          id: d.id,
+      otherDevices: Object.entries(this.remoteDevices)
+        .filter(([id, d]) => d && id !== this.s.deviceId && (d.id ?? id) !== this.s.deviceId)
+        .map(([id, d]) => ({
+          id: d.id || id,
           name: d.name,
           platform: d.platform,
           updated: d.updated,
@@ -322,8 +445,8 @@ export class FirebaseSyncManager {
         storageBucket: cfg.storageBucket?.trim() || `${pid}.appspot.com`,
         messagingSenderId: cfg.messagingSenderId?.trim(),
         appId: cfg.appId?.trim(),
-        googleClientId: cfg.googleClientId?.trim(),
-        googleClientSecret: cfg.googleClientSecret?.trim(),
+        googleClientId: cfg.googleClientId?.trim() || this.s.client?.clientId,
+        googleClientSecret: cfg.googleClientSecret?.trim() || this.s.client?.clientSecret,
       };
     }
     this.s.lastError = undefined;
@@ -331,15 +454,23 @@ export class FirebaseSyncManager {
     this.hooks.changed();
   }
 
-  /** Legacy helper for setting Google OAuth client ID/secret alongside Firebase config. */
+  /** Set Google OAuth Desktop Client ID & Secret. */
   setClient(client: { clientId: string; clientSecret: string } | undefined) {
-    if (!client) return;
-    const cur = this.config ?? { apiKey: '', authDomain: '', projectId: '' };
-    this.setFirebaseConfig({
-      ...cur,
-      googleClientId: client.clientId.trim(),
-      googleClientSecret: client.clientSecret.trim(),
-    });
+    if (!client || !client.clientId.trim() || !client.clientSecret.trim()) {
+      this.s.client = undefined;
+    } else {
+      this.s.client = {
+        clientId: client.clientId.trim(),
+        clientSecret: client.clientSecret.trim(),
+      };
+      if (this.s.firebaseConfig) {
+        this.s.firebaseConfig.googleClientId = this.s.client.clientId;
+        this.s.firebaseConfig.googleClientSecret = this.s.client.clientSecret;
+      }
+    }
+    this.s.lastError = undefined;
+    this.persist();
+    this.hooks.changed();
   }
 
   // ---------------------------------------------------------------- Firebase SDK Initialization
@@ -347,7 +478,7 @@ export class FirebaseSyncManager {
   private async ensureFirebase(): Promise<{ app: FirebaseApp; auth: Auth; db: Firestore }> {
     const cfg = this.config;
     if (!cfg || !cfg.apiKey || !cfg.projectId) {
-      throw new Error('Firebase configuration missing. Add your Firebase Project config in Settings → Sync.');
+      throw new Error('Firebase configuration missing.');
     }
     if (this.fbApp && this.fbAuth && this.fbDb) {
       return { app: this.fbApp, auth: this.fbAuth, db: this.fbDb };
@@ -368,24 +499,21 @@ export class FirebaseSyncManager {
     return { app: this.fbApp, auth: this.fbAuth, db: this.fbDb };
   }
 
-  /** Start Firebase Cloud Sync and attach real-time Firestore snapshot listeners. */
+  /** Start Cloud Sync and attach real-time listeners. */
   async start(): Promise<void> {
     if (!this.s.refreshToken && !this.s.idToken) return;
-    if (!this.config) {
-      if (this.s.uid) {
-        this.realtimeConnected = true;
-        this.hooks.changed();
-      }
-      return;
-    }
     try {
-      await this.restoreAuthSession();
-      if (this.fbAuth?.currentUser) {
-        this.attachRealtimeListeners(this.fbAuth.currentUser.uid);
-        await this.syncNow();
-        clearInterval(this.heartbeatTimer);
-        this.heartbeatTimer = setInterval(() => void this.syncNow(), 3 * 60_000);
+      if (this.config?.apiKey && this.config?.projectId) {
+        await this.restoreAuthSession();
+        if (this.fbAuth?.currentUser) {
+          this.attachRealtimeListeners(this.fbAuth.currentUser.uid);
+        }
+      } else {
+        this.realtimeConnected = true;
       }
+      await this.syncNow();
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = setInterval(() => void this.syncNow(), 2 * 60_000);
     } catch (err) {
       this.s.lastError = err instanceof Error ? err.message : String(err);
       this.persist();
@@ -393,60 +521,99 @@ export class FirebaseSyncManager {
     }
   }
 
-  /** Notify Firebase Sync Manager that a local domain changed so it pushes to Firestore in real time. */
+  /** Notify Sync Manager that a local domain changed so it pushes to the cloud in real time. */
   notifyLocalChange(domain: SyncDomain) {
-    if (!this.s.uid) return;
+    if (!this.s.refreshToken && !this.s.idToken) return;
     this.pendingDomains.add(domain);
     clearTimeout(this.pushTimer);
     this.pushTimer = setTimeout(() => {
       void this.syncNow();
-    }, 900);
+    }, 1200);
   }
 
-  // ---------------------------------------------------------------- Google Sign-In (Zero-Config WebAuthn / Passkey + Firebase Auth)
+  // ---------------------------------------------------------------- Google OAuth 2.0 PKCE + Firebase Sign-In
 
   async signIn(): Promise<void> {
+    const gClient = this.googleClient;
     const cfg = this.config;
-    if (!cfg || !cfg.apiKey || !cfg.projectId) {
-      // Zero-config direct Google Sign-In with Passkey / Hardware Security Key (WebAuthn) support
-      const profile = await this.runDirectGoogleWebAuth();
-      this.s.uid = profile.uid;
-      this.s.email = profile.email;
-      this.s.name = profile.name;
-      this.s.picture = profile.picture;
-      this.s.idToken = this.seal(`google-direct:${profile.uid}:${Date.now()}`);
+
+    this.s.lastError = undefined;
+    this.hooks.changed();
+
+    // 1. Primary Sanctioned Desktop Flow: Google OAuth 2.0 PKCE Loopback (RFC 8252)
+    // Uses the built-in release key (google-client.json from GitHub Secrets) or user-configured OAuth Client.
+    // Opens in the system browser via shell.openExternal so Passkeys, Windows Hello & FIDO2 Security Keys work natively!
+    if (gClient?.clientId && gClient?.clientSecret) {
+      const tokens = await this.runGoogleLoopbackOAuth(gClient.clientId, gClient.clientSecret);
+      if (tokens.refresh_token) {
+        this.s.refreshToken = this.seal(tokens.refresh_token);
+      }
+      if (tokens.id_token) {
+        this.s.idToken = this.seal(tokens.id_token);
+      }
+      if (tokens.access_token) {
+        this.s.accessToken = this.seal(tokens.access_token);
+        this.cachedAccess = {
+          token: tokens.access_token,
+          expires: Date.now() + ((tokens.expires_in ?? 3600) - 60) * 1000,
+        };
+      }
+
+      // Fetch user's verified Google profile
+      const me = (await this.googleApi('https://openidconnect.googleapis.com/v1/userinfo')) as {
+        sub?: string;
+        email?: string;
+        name?: string;
+        picture?: string;
+      };
+      this.s.uid =
+        me.sub ||
+        (me.email
+          ? crypto.createHash('sha256').update(me.email.toLowerCase()).digest('hex').slice(0, 28)
+          : crypto.randomUUID());
+      this.s.email = me.email;
+      this.s.name = me.name || me.email?.split('@')[0];
+      this.s.picture = me.picture;
+
+      // If Firebase project is also configured, authenticate with Firebase Auth & attach Firestore listeners
+      if (cfg?.apiKey && cfg?.projectId) {
+        const { auth } = await this.ensureFirebase();
+        const credential = GoogleAuthProvider.credential(tokens.id_token ?? null, tokens.access_token);
+        const userCred = await signInWithCredential(auth, credential);
+        this.s.uid = userCred.user.uid;
+        this.attachRealtimeListeners(userCred.user.uid);
+      } else {
+        this.realtimeConnected = true;
+      }
+
       this.s.lastError = undefined;
       this.s.sections = {};
-      this.realtimeConnected = true;
       this.persist();
       this.hooks.changed();
+      this.hooks.focusWindow?.();
+
       await this.syncNow();
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = setInterval(() => void this.syncNow(), 2 * 60_000);
       return;
     }
-    const { auth } = await this.ensureFirebase();
 
-    let idToken: string | undefined;
-    let accessToken: string | undefined;
-    let googleRefreshToken: string | undefined;
-
-    if (cfg.googleClientId && cfg.googleClientSecret) {
-      // Desktop Loopback OAuth 2.0 PKCE Flow -> exchanges for Google ID token -> Firebase signInWithCredential
-      const tokens = await this.runGoogleLoopbackOAuth(cfg.googleClientId, cfg.googleClientSecret);
-      idToken = tokens.id_token;
-      accessToken = tokens.access_token;
-      googleRefreshToken = tokens.refresh_token;
-    } else {
-      // Web-based Firebase Auth Google Sign-In hosted on a temporary loopback page
-      const tokens = await this.runFirebaseLoopbackWebSignIn(cfg);
-      idToken = tokens.idToken;
-      accessToken = tokens.accessToken;
+    // 2. Firebase Web Loopback Sign-In (opens on http://localhost:<port> in the system browser,
+    // supporting Passkeys & FIDO2 Security Keys, and allowing one-step Firebase config if not yet set)
+    const tokens = await this.runFirebaseLoopbackWebSignIn(cfg);
+    if (tokens.apiKey && tokens.projectId && (!cfg || !cfg.apiKey || !cfg.projectId)) {
+      this.setFirebaseConfig({
+        apiKey: tokens.apiKey,
+        projectId: tokens.projectId,
+        authDomain: tokens.authDomain || `${tokens.projectId}.firebaseapp.com`,
+      });
     }
-
-    if (!idToken && !accessToken) {
+    if (!tokens.idToken && !tokens.accessToken) {
       throw new Error('Google Sign-In did not return a valid token.');
     }
 
-    const credential = GoogleAuthProvider.credential(idToken ?? null, accessToken);
+    const { auth } = await this.ensureFirebase();
+    const credential = GoogleAuthProvider.credential(tokens.idToken ?? null, tokens.accessToken);
     const userCred = await signInWithCredential(auth, credential);
     const user = userCred.user;
 
@@ -454,47 +621,57 @@ export class FirebaseSyncManager {
     this.s.email = user.email ?? undefined;
     this.s.name = user.displayName ?? undefined;
     this.s.picture = user.photoURL ?? undefined;
-    if (googleRefreshToken) {
-      this.s.refreshToken = this.seal(googleRefreshToken);
-    }
-    if (idToken) this.s.idToken = this.seal(idToken);
-    if (accessToken) this.s.accessToken = this.seal(accessToken);
+    if (tokens.idToken) this.s.idToken = this.seal(tokens.idToken);
+    if (tokens.accessToken) this.s.accessToken = this.seal(tokens.accessToken);
     this.s.lastError = undefined;
     this.s.sections = {};
     this.persist();
     this.hooks.changed();
+    this.hooks.focusWindow?.();
 
     this.attachRealtimeListeners(user.uid);
     await this.syncNow();
     clearInterval(this.heartbeatTimer);
-    this.heartbeatTimer = setInterval(() => void this.syncNow(), 3 * 60_000);
+    this.heartbeatTimer = setInterval(() => void this.syncNow(), 2 * 60_000);
   }
 
   private async restoreAuthSession(): Promise<void> {
     const cfg = this.config;
-    if (!cfg) return;
+    if (!cfg || !cfg.apiKey || !cfg.projectId) return;
     const { auth } = await this.ensureFirebase();
     if (auth.currentUser) return;
 
-    if (this.s.refreshToken && cfg.googleClientId && cfg.googleClientSecret) {
+    const gClient = this.googleClient;
+    if (this.s.refreshToken && gClient?.clientId && gClient?.clientSecret) {
       const refresh = this.unseal(this.s.refreshToken);
       const res = await net.fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           refresh_token: refresh,
-          client_id: cfg.googleClientId,
-          client_secret: cfg.googleClientSecret,
+          client_id: gClient.clientId,
+          client_secret: gClient.clientSecret,
           grant_type: 'refresh_token',
         }).toString(),
       });
-      const data = (await res.json()) as { id_token?: string; access_token?: string; error?: string };
+      const data = (await res.json()) as {
+        id_token?: string;
+        access_token?: string;
+        expires_in?: number;
+        error?: string;
+      };
       if (!res.ok || (!data.id_token && !data.access_token)) {
         if (data.error === 'invalid_grant') {
           this.s.refreshToken = undefined;
           this.persist();
         }
         throw new Error(`Session expired (${data.error ?? res.status}). Please sign in again.`);
+      }
+      if (data.access_token) {
+        this.cachedAccess = {
+          token: data.access_token,
+          expires: Date.now() + ((data.expires_in ?? 3600) - 60) * 1000,
+        };
       }
       const cred = GoogleAuthProvider.credential(data.id_token ?? null, data.access_token);
       const userCred = await signInWithCredential(auth, cred);
@@ -511,10 +688,15 @@ export class FirebaseSyncManager {
     }
   }
 
+  /**
+   * RFC 8252 OAuth 2.0 for Native Apps (PKCE + 127.0.0.1 Loopback Server).
+   * Opens in the system browser (`shell.openExternal`) so Google permits full sign-in,
+   * Passkeys, Windows Hello, and FIDO2 Hardware Security Keys without embedded-webview blocks.
+   */
   private async runGoogleLoopbackOAuth(
     clientId: string,
     clientSecret: string,
-  ): Promise<{ access_token: string; id_token?: string; refresh_token?: string }> {
+  ): Promise<{ access_token: string; id_token?: string; refresh_token?: string; expires_in?: number }> {
     const verifier = crypto.randomBytes(48).toString('base64url');
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     const stateParam = crypto.randomBytes(16).toString('hex');
@@ -523,6 +705,11 @@ export class FirebaseSyncManager {
     const { code, redirectUri } = await new Promise<{ code: string; redirectUri: string }>((resolve, reject) => {
       const server = http.createServer((req, res) => {
         const u = new URL(req.url ?? '/', 'http://127.0.0.1');
+        if (u.pathname === '/favicon.ico') {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
         const got = u.searchParams.get('code');
         const err = u.searchParams.get('error');
         const ok = !!got && u.searchParams.get('state') === stateParam;
@@ -553,7 +740,10 @@ export class FirebaseSyncManager {
           prompt: 'consent',
           state: stateParam,
         }).toString();
-        signInTab = this.hooks.openSignIn(authUrl.toString());
+        // Open in the system browser per RFC 8252 so Google allows Passkeys & FIDO2 Security Keys
+        shell.openExternal(authUrl.toString()).catch(() => {
+          signInTab = this.hooks.openSignIn(authUrl.toString());
+        });
       });
     });
 
@@ -575,6 +765,7 @@ export class FirebaseSyncManager {
       access_token?: string;
       id_token?: string;
       refresh_token?: string;
+      expires_in?: number;
       error?: string;
       error_description?: string;
     };
@@ -585,31 +776,46 @@ export class FirebaseSyncManager {
       access_token: tokens.access_token,
       id_token: tokens.id_token,
       refresh_token: tokens.refresh_token,
+      expires_in: tokens.expires_in ?? 3600,
     };
   }
 
   /**
    * Loopback web page that runs Firebase JS SDK's `signInWithPopup(auth, new GoogleAuthProvider())`
-   * on `http://localhost:<port>` (authorized by default in every Firebase project!) and sends the
-   * resulting Google OAuth `idToken` + `accessToken` back to the Electron main process.
+   * on `http://localhost:<port>` in the system browser (`shell.openExternal`) and returns the
+   * Google OAuth `idToken` + `accessToken` (plus optional `apiKey` & `projectId`) back to Drift.
    */
   private async runFirebaseLoopbackWebSignIn(
-    cfg: FirebaseClientConfig,
-  ): Promise<{ idToken?: string; accessToken?: string }> {
+    cfg?: FirebaseClientConfig,
+  ): Promise<{ idToken?: string; accessToken?: string; apiKey?: string; projectId?: string; authDomain?: string }> {
     let signInTab: string | undefined;
-    const tokens = await new Promise<{ idToken?: string; accessToken?: string }>((resolve, reject) => {
+    const tokens = await new Promise<{
+      idToken?: string;
+      accessToken?: string;
+      apiKey?: string;
+      projectId?: string;
+      authDomain?: string;
+    }>((resolve, reject) => {
       const server = http.createServer((req, res) => {
         const u = new URL(req.url ?? '/', 'http://localhost');
+        if (u.pathname === '/favicon.ico') {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
         if (u.pathname === '/callback') {
           const idToken = u.searchParams.get('idToken') ?? undefined;
           const accessToken = u.searchParams.get('accessToken') ?? undefined;
+          const apiKey = u.searchParams.get('apiKey') ?? undefined;
+          const projectId = u.searchParams.get('projectId') ?? undefined;
+          const authDomain = u.searchParams.get('authDomain') ?? undefined;
           const err = u.searchParams.get('error');
           const ok = !!(idToken || accessToken);
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(doneHtml(ok));
           server.close();
           clearTimeout(timeout);
-          if (ok) resolve({ idToken, accessToken });
+          if (ok) resolve({ idToken, accessToken, apiKey, projectId, authDomain });
           else reject(new Error(err ?? 'Firebase Google Sign-In failed'));
           return;
         }
@@ -622,135 +828,18 @@ export class FirebaseSyncManager {
       }, 5 * 60_000);
       server.listen(0, '127.0.0.1', () => {
         const port = (server.address() as { port: number }).port;
-        signInTab = this.hooks.openSignIn(`http://localhost:${port}/`);
+        const url = `http://localhost:${port}/`;
+        shell.openExternal(url).catch(() => {
+          signInTab = this.hooks.openSignIn(url);
+        });
       });
     });
     if (signInTab) setTimeout(() => this.hooks.closeSignIn(signInTab!), 1500);
     return tokens;
   }
 
-  /**
-   * Zero-Config One-Click Google Authentication with full WebAuthn / Passkey / FIDO2 Security Key support.
-   * Opens Google's official sign-in dialog in a dedicated window sharing Drift's session partition,
-   * waits for authentication (including Security Keys, Passkeys, or 2FA), and extracts the user's Google profile.
-   */
-  private async runDirectGoogleWebAuth(): Promise<{
-    uid: string;
-    email: string;
-    name: string;
-    picture?: string;
-  }> {
-    const PARTITION = 'persist:drift';
-    const ses = session.fromPartition(PARTITION);
-    const FIREFOX_UA = `Mozilla/5.0 (${
-      process.platform === 'darwin'
-        ? 'Macintosh; Intel Mac OS X 10.15'
-        : process.platform === 'win32'
-          ? 'Windows NT 10.0; Win64; x64'
-          : 'X11; Linux x86_64'
-    }; rv:140.0) Gecko/20100101 Firefox/140.0`;
-
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const authWin = new BrowserWindow({
-        width: 520,
-        height: 680,
-        title: 'Sign in with Google — Drift',
-        autoHideMenuBar: true,
-        backgroundColor: '#141414',
-        webPreferences: {
-          partition: PARTITION,
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: true,
-        },
-      });
-
-      authWin.webContents.setUserAgent(FIREFOX_UA);
-
-      // Allow popups needed by security key / passkey / Google 2FA challenges
-      authWin.webContents.setWindowOpenHandler(() => ({
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          autoHideMenuBar: true,
-          backgroundColor: '#141414',
-          webPreferences: {
-            partition: PARTITION,
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true,
-          },
-        },
-      }));
-
-      const finishWithProfile = async () => {
-        if (settled || authWin.isDestroyed()) return;
-        const url = authWin.webContents.getURL();
-        if (!/^https:\/\/myaccount\.google\.com/i.test(url)) return;
-
-        const cookies = await ses.cookies.get({ domain: '.google.com' });
-        const hasAuthCookie = cookies.some(
-          (c) => c.name === 'SID' || c.name === '__Secure-1PSID' || c.name === 'SAPISID',
-        );
-        if (!hasAuthCookie) return;
-
-        try {
-          const info = (await authWin.webContents.executeJavaScript(
-            `(() => {
-              const text = document.body ? document.body.innerText : '';
-              const html = document.documentElement ? document.documentElement.innerHTML : '';
-              const emailMatch =
-                text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/) ||
-                html.match(/[a-zA-Z0-9._%+-]+@(?:gmail\\.com|googlemail\\.com|[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/);
-              const email = emailMatch ? emailMatch[0].toLowerCase() : 'google-user@gmail.com';
-              const imgEl = document.querySelector('img[src*="googleusercontent.com"], img[src*="lh3.google.com"]');
-              const picture = imgEl ? imgEl.src : undefined;
-              const heading = document.querySelector('h1');
-              let name = heading ? heading.textContent.trim() : '';
-              name = name.replace(/^(Welcome,\\s*|ברוך הבא,\\s*|ברוכה הבאה,\\s*|שלום\\s*)/i, '').trim();
-              if (!name || name.length > 50) name = email.split('@')[0];
-              return { email, name, picture };
-            })()`,
-            true,
-          )) as { email: string; name: string; picture?: string };
-
-          settled = true;
-          const uid = crypto.createHash('sha256').update(info.email).digest('hex').slice(0, 28);
-          setTimeout(() => {
-            if (!authWin.isDestroyed()) authWin.close();
-          }, 300);
-          resolve({
-            uid,
-            email: info.email,
-            name: info.name || info.email.split('@')[0],
-            picture: info.picture,
-          });
-        } catch {
-          /* wait for next load event */
-        }
-      };
-
-      authWin.webContents.on('did-finish-load', () => {
-        void finishWithProfile();
-      });
-      authWin.webContents.on('did-navigate', () => {
-        void finishWithProfile();
-      });
-
-      authWin.on('closed', () => {
-        if (!settled) {
-          settled = true;
-          reject(new Error('Sign-in window was closed before completing authentication.'));
-        }
-      });
-
-      void authWin.loadURL(
-        'https://accounts.google.com/AccountChooser?service=accountsettings&continue=https%3A%2F%2Fmyaccount.google.com%2F',
-      );
-    });
-  }
-
   async signOut(): Promise<void> {
+    const refresh = this.s.refreshToken ? this.unseal(this.s.refreshToken) : undefined;
     clearInterval(this.heartbeatTimer);
     clearTimeout(this.pushTimer);
     if (this.unsubscribeSnapshot) {
@@ -761,6 +850,7 @@ export class FirebaseSyncManager {
       await fbSignOut(this.fbAuth).catch(() => {});
     }
     this.realtimeConnected = false;
+    this.cachedAccess = undefined;
     this.s.refreshToken = undefined;
     this.s.idToken = undefined;
     this.s.accessToken = undefined;
@@ -772,6 +862,11 @@ export class FirebaseSyncManager {
     this.handoffQueue = [];
     this.persist();
     this.hooks.changed();
+    if (refresh) {
+      await net
+        .fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refresh)}`, { method: 'POST' })
+        .catch(() => undefined);
+    }
   }
 
   // ---------------------------------------------------------------- Firestore Real-Time Snapshot Listener
@@ -845,7 +940,6 @@ export class FirebaseSyncManager {
               for (const item of forMe) this.processedHandoffs.add(item.id);
               incoming.handoffTabs = forMe;
               hasIncoming = true;
-              // Clean delivered items addressed specifically to this device
               const remaining = queue.filter((item) => item.toDeviceId !== this.s.deviceId);
               if (remaining.length !== queue.length && this.fbDb) {
                 void setDoc(doc(this.fbDb, 'users', uid, 'sync', 'handoff'), {
@@ -876,8 +970,8 @@ export class FirebaseSyncManager {
   // ---------------------------------------------------------------- Cross-Device Tab Handoff
 
   async sendTabToDevice(url: string, title: string, targetDeviceId: string): Promise<void> {
-    if (!this.s.uid || !this.fbDb) {
-      throw new Error('Sign in to Firebase Cloud Sync to send tabs between devices.');
+    if (!this.s.refreshToken && !this.s.idToken) {
+      throw new Error('Sign in with Google to send tabs between devices.');
     }
     const item: HandoffItem = {
       id: crypto.randomUUID(),
@@ -890,12 +984,17 @@ export class FirebaseSyncManager {
     };
     const nextQueue = [...this.handoffQueue.filter((x) => Date.now() - x.createdAt < 7 * 86_400_000), item].slice(-30);
     this.handoffQueue = nextQueue;
-    await setDoc(doc(this.fbDb, 'users', this.s.uid, 'sync', 'handoff'), {
-      v: 2,
-      updated: Date.now(),
-      deviceId: this.s.deviceId,
-      queue: nextQueue,
-    });
+    if (this.s.uid && this.fbDb) {
+      await setDoc(doc(this.fbDb, 'users', this.s.uid, 'sync', 'handoff'), {
+        v: 2,
+        updated: Date.now(),
+        deviceId: this.s.deviceId,
+        queue: nextQueue,
+      });
+    } else {
+      this.pendingDomains.add('tabs');
+      void this.syncNow();
+    }
     this.hooks.changed();
   }
 
@@ -908,6 +1007,9 @@ export class FirebaseSyncManager {
         deviceId: this.s.deviceId,
         queue: this.handoffQueue,
       }).catch(() => {});
+    } else {
+      this.pendingDomains.add('tabs');
+      void this.syncNow();
     }
     this.hooks.changed();
   }
@@ -915,7 +1017,7 @@ export class FirebaseSyncManager {
   // ---------------------------------------------------------------- Sync Push / Reconciliation Round
 
   syncNow(): Promise<void> {
-    if (!this.s.uid) return Promise.resolve();
+    if (!this.s.refreshToken && !this.s.idToken) return Promise.resolve();
     if (this.running) return this.running;
     this.running = this.round()
       .then(() => {
@@ -935,31 +1037,10 @@ export class FirebaseSyncManager {
   }
 
   private async round(): Promise<void> {
-    if (!this.config) {
-      // Direct Google Session Sync: persist synced state snapshot locally & mark synced
-      const local = this.hooks.collect();
-      const backupFile = path.join(app.getPath('userData'), 'cloud-sync-snapshot.json');
-      try {
-        fs.writeFileSync(
-          backupFile,
-          JSON.stringify(
-            {
-              uid: this.s.uid,
-              email: this.s.email,
-              updated: Date.now(),
-              deviceId: this.s.deviceId,
-              deviceName: this.deviceName,
-              data: local,
-            },
-            null,
-            2,
-          ),
-        );
-      } catch {
-        /* ignore */
-      }
-      this.pendingDomains.clear();
-      this.realtimeConnected = true;
+    const cfg = this.config;
+    if (!cfg || !cfg.apiKey || !cfg.projectId) {
+      // Built-in Google OAuth key mode: sync all domains via Google Drive appDataFolder
+      await this.driveRound();
       return;
     }
 
@@ -972,7 +1053,6 @@ export class FirebaseSyncManager {
     const w = this.s.what;
     const syncCol = collection(this.fbDb, 'users', uid, 'sync');
 
-    // Read current cloud snapshot once on initial sync or reconciliation
     const snap = await getDocs(syncCol);
     const remoteDocs = new Map<string, Record<string, unknown>>();
     snap.forEach((d) => remoteDocs.set(d.id, d.data() as Record<string, unknown>));
@@ -1091,6 +1171,233 @@ export class FirebaseSyncManager {
     this.hooks.otherDevicesChanged();
   }
 
+  // ---------------------------------------------------------------- Google Drive appDataFolder Sync (Built-in Release Key Mode)
+
+  private async driveRound(): Promise<void> {
+    const fileId = await this.findDriveFile();
+    let remote: DriveSyncDoc = { v: 2, devices: {} };
+    if (fileId) {
+      try {
+        remote = (await this.googleApi(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`)) as DriveSyncDoc;
+        if (!remote || typeof remote !== 'object') remote = { v: 2, devices: {} };
+        remote.devices ??= {};
+      } catch {
+        remote = { v: 2, devices: {} };
+      }
+    }
+
+    const local = this.hooks.collect();
+    const incoming: Incoming = {};
+    const now = Date.now();
+    const w = this.s.what;
+
+    const reconcile = <T>(
+      key: string,
+      enabled: boolean,
+      mine: T,
+      theirs: { updated: number; data: T } | undefined,
+      accept: (v: T) => void,
+    ): { updated: number; data: T } | undefined => {
+      if (!enabled) return theirs;
+      const h = hash(mine);
+      const prev = this.s.sections[key];
+      const changed = !prev || prev.hash !== h;
+      const myTime = prev ? (changed ? now : prev.updated) : 0;
+      if (theirs && theirs.updated > myTime) {
+        accept(theirs.data);
+        this.s.sections[key] = { hash: hash(theirs.data), updated: theirs.updated };
+        return theirs;
+      }
+      const updated = changed ? now : (prev?.updated ?? now);
+      this.s.sections[key] = { hash: h, updated };
+      return { updated, data: mine };
+    };
+
+    const spaces = reconcile(
+      'spaces',
+      w.bookmarks,
+      local.spaces,
+      remote.spaces && { updated: remote.spaces.updated, data: remote.spaces.list },
+      (v) => (incoming.spaces = v),
+    );
+    if (spaces) remote.spaces = { updated: spaces.updated, list: spaces.data };
+
+    const pins = reconcile(
+      'pins',
+      w.bookmarks,
+      local.pins,
+      remote.pins && { updated: remote.pins.updated, data: remote.pins.list },
+      (v) => (incoming.pins = v),
+    );
+    if (pins) remote.pins = { updated: pins.updated, list: pins.data };
+
+    const settings = reconcile(
+      'settings',
+      w.settings,
+      local.settings,
+      remote.settings && { updated: remote.settings.updated, data: remote.settings.values },
+      (v) => (incoming.settings = v),
+    );
+    if (settings) remote.settings = { updated: settings.updated, values: settings.data };
+
+    if (w.history) {
+      const merged = mergeHistory(remote.history?.list ?? [], local.history);
+      incoming.history = merged;
+      const h = hash(merged);
+      const updated = this.s.sections.history?.hash === h ? this.s.sections.history.updated : now;
+      this.s.sections.history = { hash: h, updated };
+      remote.history = { updated, list: merged };
+    }
+
+    if (w.clipboard) {
+      if (remote.clipboard?.items?.length) {
+        incoming.clipboard = remote.clipboard.items;
+      }
+      const h = hash(local.clipboard);
+      const updated = this.s.sections.clipboard?.hash === h ? this.s.sections.clipboard.updated : now;
+      this.s.sections.clipboard = { hash: h, updated };
+      remote.clipboard = { updated, items: local.clipboard.slice(0, 30) };
+    }
+
+    // Cross-Device Tab Handoff via Drive SyncDoc
+    const remoteQueue = Array.isArray(remote.handoff?.queue) ? remote.handoff.queue : [];
+    const mergedQueueMap = new Map<string, HandoffItem>();
+    for (const item of [...remoteQueue, ...this.handoffQueue]) {
+      if (item && item.id && now - item.createdAt < 7 * 86_400_000) {
+        mergedQueueMap.set(item.id, item);
+      }
+    }
+    const mergedQueue = [...mergedQueueMap.values()].slice(-30);
+    const forMe = mergedQueue.filter(
+      (item) =>
+        (item.toDeviceId === this.s.deviceId || item.toDeviceId === 'all') &&
+        item.fromDeviceId !== this.s.deviceId &&
+        !this.processedHandoffs.has(item.id),
+    );
+    if (forMe.length > 0) {
+      for (const item of forMe) this.processedHandoffs.add(item.id);
+      incoming.handoffTabs = forMe;
+    }
+    const remainingQueue = mergedQueue.filter((item) => item.toDeviceId !== this.s.deviceId);
+    this.handoffQueue = remainingQueue;
+    remote.handoff = { updated: now, queue: remainingQueue };
+
+    // Open tabs per device
+    remote.devices[this.s.deviceId] = {
+      id: this.s.deviceId,
+      name: this.deviceName,
+      platform: process.platform,
+      updated: now,
+      tabs: w.tabs ? local.tabs.slice(0, 200) : [],
+    };
+    for (const [id, d] of Object.entries(remote.devices)) {
+      if (!d || now - d.updated > 60 * 86_400_000) delete remote.devices[id];
+    }
+
+    await this.uploadDriveFile(fileId, remote);
+
+    this.remoteDevices = Object.fromEntries(
+      Object.entries(remote.devices).map(([id, d]) => [
+        id,
+        { id: d.id ?? id, name: d.name, platform: d.platform, updated: d.updated, tabs: d.tabs ?? [] },
+      ]),
+    );
+    this.realtimeConnected = true;
+    this.pendingDomains.clear();
+    this.hooks.apply(incoming);
+    this.hooks.otherDevicesChanged();
+  }
+
+  private async findDriveFile(): Promise<string | undefined> {
+    const q = new URLSearchParams({
+      spaces: 'appDataFolder',
+      q: `name='${DRIVE_SYNC_FILE}'`,
+      fields: 'files(id,modifiedTime)',
+      pageSize: '10',
+    });
+    const r = (await this.googleApi(`https://www.googleapis.com/drive/v3/files?${q}`)) as {
+      files?: { id: string }[];
+    };
+    return r.files?.[0]?.id;
+  }
+
+  private async uploadDriveFile(id: string | undefined, docData: DriveSyncDoc) {
+    const body = JSON.stringify(docData);
+    if (id) {
+      await this.googleApi(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, {
+        method: 'PATCH',
+        body,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return;
+    }
+    const boundary = `drift${crypto.randomBytes(8).toString('hex')}`;
+    const multipart =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      JSON.stringify({ name: DRIVE_SYNC_FILE, parents: ['appDataFolder'] }) +
+      `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`;
+    await this.googleApi('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      body: multipart,
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    });
+  }
+
+  private async googleApi(
+    url: string,
+    init: { method?: string; body?: string; headers?: Record<string, string> } = {},
+  ): Promise<unknown> {
+    const token = await this.getGoogleAccessToken();
+    const res = await net.fetch(url, {
+      ...init,
+      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401) this.cachedAccess = undefined;
+    if (!res.ok) throw new Error(`Google API responded with status ${res.status}`);
+    const text = await res.text();
+    return text ? JSON.parse(text) : {};
+  }
+
+  private async getGoogleAccessToken(): Promise<string> {
+    if (this.cachedAccess && this.cachedAccess.expires > Date.now()) {
+      return this.cachedAccess.token;
+    }
+    if (!this.s.refreshToken) {
+      if (this.s.accessToken) return this.unseal(this.s.accessToken);
+      throw new Error('Not signed in');
+    }
+    const gClient = this.googleClient;
+    if (!gClient) throw new Error('No Google connection key configured');
+    const res = await net.fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: this.unseal(this.s.refreshToken),
+        client_id: gClient.clientId,
+        client_secret: gClient.clientSecret,
+        grant_type: 'refresh_token',
+      }).toString(),
+    });
+    const j = (await res.json()) as {
+      access_token?: string;
+      expires_in?: number;
+      error?: string;
+      error_description?: string;
+    };
+    if (!res.ok || !j.access_token) {
+      if (j.error === 'invalid_grant') {
+        this.s.refreshToken = undefined;
+        this.persist();
+      }
+      throw new Error(j.error_description ?? j.error ?? `Token refresh failed (${res.status})`);
+    }
+    this.cachedAccess = {
+      token: j.access_token,
+      expires: Date.now() + ((j.expires_in ?? 3600) - 60) * 1000,
+    };
+    return j.access_token;
+  }
+
   // ---------------------------------------------------------------- OS Keychain Persistence
 
   private seal(v: string) {
@@ -1119,66 +1426,110 @@ function getDeviceName() {
 }
 
 function doneHtml(ok: boolean) {
-  return `<!doctype html><meta charset="utf-8"><title>Drift Firebase Sync</title>
+  return `<!doctype html><meta charset="utf-8"><title>Drift Cloud Sync</title>
 <body style="margin:0;height:100vh;display:grid;place-items:center;background:#141414;color:#e8e8e8;font:16px system-ui,sans-serif;text-align:center">
 <div><div style="font-size:42px;font-weight:600;color:#8aa4ff">Drift Cloud Sync</div>
 <p>${
     ok
-      ? 'You’re signed in with Google & Firebase. You can close this tab and return to Drift. · נכנסת לחשבון. אפשר לסגור את הכרטיסייה ולחזור ל-Drift.'
+      ? 'You’re signed in with Google. You can close this tab and return to Drift. · נכנסת לחשבון בהצלחה! אפשר לסגור את הכרטיסייה ולחזור ל-Drift.'
       : 'Sign-in didn’t finish. You can close this tab and try again in Drift. · הכניסה לא הושלמה. אפשר לסגור את הכרטיסייה ולנסות שוב ב-Drift.'
-  }</p></div></body>`;
+  }</p></div>
+<script>if (${ok ? 'true' : 'false'}) { setTimeout(() => { try { window.close(); } catch {} }, 1200); }</script>
+</body>`;
 }
 
-function firebaseLoopbackAuthHtml(cfg: FirebaseClientConfig) {
+function firebaseLoopbackAuthHtml(cfg?: FirebaseClientConfig) {
   const safeCfg = JSON.stringify({
-    apiKey: cfg.apiKey,
-    authDomain: cfg.authDomain || `${cfg.projectId}.firebaseapp.com`,
-    projectId: cfg.projectId,
+    apiKey: cfg?.apiKey || '',
+    authDomain: cfg?.authDomain || (cfg?.projectId ? `${cfg.projectId}.firebaseapp.com` : ''),
+    projectId: cfg?.projectId || '',
   });
   return `<!doctype html>
-<html>
+<html dir="rtl" lang="he">
 <head>
   <meta charset="utf-8">
-  <title>Drift – Sign in with Google (Firebase)</title>
+  <title>Drift – כניסה עם Google (Firebase Cloud Sync)</title>
   <style>
-    body { margin:0; height:100vh; display:grid; place-items:center; background:#141414; color:#e8e8e8; font:15px system-ui,sans-serif; text-align:center; }
-    .card { padding:32px; border-radius:16px; background:#1f2128; box-shadow:0 20px 60px rgba(0,0,0,0.5); max-width:420px; }
-    h1 { margin:0 0 10px; color:#8aa4ff; font-size:26px; }
-    p { color:#b0b4c0; line-height:1.5; margin-bottom:20px; }
-    button { padding:10px 22px; border-radius:20px; border:0; background:#8aa4ff; color:#111; font-weight:600; font-size:15px; cursor:pointer; }
-    .err { color:#ff8a80; margin-top:14px; font-size:13px; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:#141414; color:#e8e8e8; font:15px system-ui,sans-serif; text-align:center; padding:20px; box-sizing:border-box; }
+    .card { padding:32px; border-radius:16px; background:#1f2128; box-shadow:0 20px 60px rgba(0,0,0,0.5); max-width:480px; width:100%; }
+    h1 { margin:0 0 10px; color:#8aa4ff; font-size:24px; }
+    p { color:#b0b4c0; line-height:1.5; margin-bottom:18px; font-size:14px; }
+    input, textarea { width:100%; box-sizing:border-box; padding:10px 12px; margin-bottom:10px; border-radius:10px; border:1px solid #343846; background:#15171c; color:#e8e8e8; font:13px monospace; direction:ltr; text-align:left; }
+    button { padding:11px 24px; border-radius:20px; border:0; background:#8aa4ff; color:#111; font-weight:600; font-size:15px; cursor:pointer; width:100%; margin-top:6px; }
+    button:hover { opacity:0.92; }
+    .err { color:#ff8a80; margin-top:14px; font-size:13px; direction:ltr; }
+    .setup { text-align:right; margin-bottom:14px; }
+    .setup label { display:block; font-size:12px; color:#9aa0b0; margin-bottom:6px; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Drift Cloud Sync</h1>
-    <p>Sign in with your Google account to enable real-time Cloud Firestore synchronization.</p>
-    <button id="btn">Continue with Google</button>
+    <p>התחברות מאובטחת עם חשבון Google בדפדפן המערכת (כולל תמיכה מלאה ב-Passkeys, Windows Hello ומפתחות אבטחה פיזיים FIDO2).</p>
+    <div id="setupBox" class="setup" style="display:none">
+      <label>הדביקו כאן את ה-firebaseConfig של הפרויקט שלכם (או apiKey ו-projectId):</label>
+      <textarea id="snippet" rows="3" placeholder="Paste firebaseConfig snippet or JSON (apiKey + projectId)..."></textarea>
+      <input id="apiKey" placeholder="Firebase apiKey (AIzaSy...)" />
+      <input id="projectId" placeholder="Firebase projectId (e.g. drift-sync)" />
+    </div>
+    <button id="btn">כניסה עם Google · Continue with Google</button>
     <div id="err" class="err"></div>
   </div>
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
+    import { initializeApp, getApps, deleteApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
-    const app = initializeApp(${safeCfg});
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+    const initial = ${safeCfg};
+    const setupBox = document.getElementById('setupBox');
+    const apiKeyInput = document.getElementById('apiKey');
+    const projectIdInput = document.getElementById('projectId');
+    const snippetInput = document.getElementById('snippet');
+
+    apiKeyInput.value = initial.apiKey || '';
+    projectIdInput.value = initial.projectId || '';
+    if (!initial.apiKey || !initial.projectId) {
+      setupBox.style.display = 'block';
+    }
+
+    snippetInput.addEventListener('input', () => {
+      const raw = snippetInput.value;
+      const k = raw.match(/apiKey\\s*[:=]\\s*["']([^"']+)["']/)?.[1];
+      const p = raw.match(/projectId\\s*[:=]\\s*["']([^"']+)["']/)?.[1];
+      if (k) apiKeyInput.value = k;
+      if (p) projectIdInput.value = p;
+    });
+
     async function run() {
       document.getElementById('err').textContent = '';
+      const apiKey = apiKeyInput.value.trim();
+      const projectId = projectIdInput.value.trim();
+      if (!apiKey || !projectId) {
+        setupBox.style.display = 'block';
+        document.getElementById('err').textContent = 'Please enter your Firebase apiKey and projectId first.';
+        return;
+      }
+      const authDomain = initial.authDomain || (projectId + '.firebaseapp.com');
       try {
+        for (const existing of getApps()) await deleteApp(existing);
+        const app = initializeApp({ apiKey, authDomain, projectId });
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
         const cred = GoogleAuthProvider.credentialFromResult(result);
         const params = new URLSearchParams();
         if (cred?.idToken) params.set('idToken', cred.idToken);
         if (cred?.accessToken) params.set('accessToken', cred.accessToken);
+        params.set('apiKey', apiKey);
+        params.set('projectId', projectId);
+        params.set('authDomain', authDomain);
         location.href = '/callback?' + params.toString();
       } catch (e) {
+        setupBox.style.display = 'block';
         document.getElementById('err').textContent = e?.message || String(e);
       }
     }
     document.getElementById('btn').addEventListener('click', run);
-    run();
+    if (initial.apiKey && initial.projectId) run();
   </script>
 </body>
 </html>`;
 }
-
