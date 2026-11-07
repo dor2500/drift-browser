@@ -314,6 +314,11 @@ export type Command =
   | { type: 'win:taskManager' }
   | { type: 'bookmark:toggle'; url?: string; title?: string }
   | { type: 'page:readingMode' }
+  | { type: 'page:qr'; url?: string }
+  | { type: 'tab:duplicate'; id: string }
+  | { type: 'tab:muteOthers'; id: string }
+  | { type: 'tab:closeRight'; id: string }
+  | { type: 'tab:closeOthers'; id: string }
   | { type: 'sync:signin' }
   | { type: 'sync:signout' }
   | { type: 'sync:now' }

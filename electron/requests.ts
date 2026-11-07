@@ -115,6 +115,11 @@ export class RequestHub {
       if (hooks.engine() === 'gecko') {
         headers['User-Agent'] = hooks.geckoUA();
         for (const k of Object.keys(headers)) if (/^sec-ch-ua/i.test(k)) delete headers[k];
+      } else {
+        const majorVer = (process.versions.chrome || '134').split('.')[0];
+        headers['sec-ch-ua'] = `"Google Chrome";v="${majorVer}", "Chromium";v="${majorVer}", "Not?A_Brand";v="24"`;
+        headers['sec-ch-ua-mobile'] = '?0';
+        headers['sec-ch-ua-platform'] = process.platform === 'win32' ? '"Windows"' : process.platform === 'darwin' ? '"macOS"' : '"Linux"';
       }
       if (p.gpc) {
         headers['Sec-GPC'] = '1';

@@ -827,6 +827,43 @@ export class Browser {
         }
         break;
       }
+      case 'page:qr': {
+        const url = c.url || this.wc()?.getURL() || '';
+        if (url) this.openQrCodeWindow(url);
+        break;
+      }
+      case 'tab:duplicate': {
+        const t = this.tab(c.id);
+        if (t) this.createTab({ url: t.url, afterId: t.id });
+        break;
+      }
+      case 'tab:muteOthers': {
+        for (const t of this.tabs) {
+          if (t.id !== c.id && !t.muted) {
+            this.run({ type: 'tab:set', id: t.id, muted: true });
+          }
+        }
+        break;
+      }
+      case 'tab:closeRight': {
+        const spaceTabs = this.visibleIn(this.activeSpaceId).filter((t) => !t.essential && !t.pinned);
+        const idx = spaceTabs.findIndex((t) => t.id === c.id);
+        if (idx !== -1) {
+          for (let i = idx + 1; i < spaceTabs.length; i++) {
+            this.closeTab(spaceTabs[i].id, true);
+          }
+        }
+        break;
+      }
+      case 'tab:closeOthers': {
+        const spaceTabs = this.visibleIn(this.activeSpaceId).filter((t) => !t.essential && !t.pinned);
+        for (const t of spaceTabs) {
+          if (t.id !== c.id) {
+            this.closeTab(t.id, true);
+          }
+        }
+        break;
+      }
       case 'page:pip':
         void this.wc(this.media?.tabId ?? this.activeTabId)
           ?.executeJavaScript(
@@ -1329,8 +1366,10 @@ export class Browser {
         : { label: this.i18n.t('menu.splitWithCurrent'), enabled: !!active && active !== id, click: () => active && this.run({ type: 'split:create', ids: [active, id] }) },
       { type: 'separator' },
       { label: t.muted ? this.i18n.t('menu.unmute') : this.i18n.t('menu.mute'), click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
+      { label: 'השתקת כרטיסיות אחרות · Mute other tabs', click: () => this.run({ type: 'tab:muteOthers', id }) },
       { label: this.i18n.t('menu.reload'), click: () => this.run({ type: 'tab:reload', id }) },
-      { label: this.i18n.t('menu.duplicate'), click: () => this.createTab({ url: t.url, afterId: id }) },
+      { label: 'שכפול כרטיסייה · Duplicate tab', click: () => this.createTab({ url: t.url, afterId: id }) },
+      { label: 'יצירת קוד QR עבור כרטיסייה זו · Create QR code', click: () => this.run({ type: 'page:qr', url: t.url }) },
       { label: this.i18n.t('menu.copyLink'), click: () => this.clipboardMonitor.captureNow(t.url) },
       {
         label: 'Send Tab to Device',
@@ -1359,6 +1398,8 @@ export class Browser {
           .map((s) => ({ label: s.name, click: () => this.run({ type: 'tab:set', id, spaceId: s.id }) })),
       },
       { type: 'separator' },
+      { label: 'סגירת כרטיסיות מימין · Close tabs to the right', click: () => this.run({ type: 'tab:closeRight', id }) },
+      { label: 'סגירת כרטיסיות אחרות · Close other tabs', click: () => this.run({ type: 'tab:closeOthers', id }) },
       { label: this.i18n.t('menu.closeTab'), accelerator: 'Ctrl+W', click: () => this.run({ type: 'tab:close', id }) },
     ];
     Menu.buildFromTemplate(items).popup({ window: this.win });
@@ -2113,6 +2154,34 @@ export class Browser {
     void tmWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   }
 
+  private openQrCodeWindow(url: string) {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(url)}`;
+    const html = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>קוד QR לשיתוף דף</title>
+    <style>
+      body { margin:0; padding:24px; background:#202124; color:#e8eaed; font:14px system-ui,sans-serif; text-align:center; }
+      h3 { margin:0 0 10px; color:#fff; font-size:16px; font-weight:500; }
+      p { margin:0 0 16px; color:#9aa0a6; font-size:12px; word-break:break-all; max-height:36px; overflow:hidden; }
+      .qr-card { display:inline-block; background:#fff; padding:12px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.5); }
+      img { display:block; width:220px; height:220px; }
+      .btn { margin-top:16px; padding:8px 18px; border:0; border-radius:18px; background:#8ab4f8; color:#202124; font-weight:600; cursor:pointer; }
+    </style></head><body>
+      <h3>סריקת קוד QR לפתיחת הדף בנייד</h3>
+      <p>${url.length > 70 ? url.slice(0, 70) + '…' : url}</p>
+      <div class="qr-card"><img src="${qrUrl}" alt="QR Code" /></div>
+      <br>
+      <button class="btn" onclick="window.close()">סגור</button>
+    </body></html>`;
+    const qrWin = new BrowserWindow({
+      width: 360,
+      height: 440,
+      resizable: false,
+      title: 'קוד QR לשיתוף · Drift',
+      autoHideMenuBar: true,
+      backgroundColor: '#202124',
+    });
+    void qrWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  }
+
   private toggleReadingMode() {
     const wc = this.wc();
     if (!wc) return;
@@ -2199,6 +2268,10 @@ export class Browser {
     }
     if (p.mediaType === 'image' && p.srcURL) {
       items.push(
+        {
+          label: 'חפש תמונה באמצעות Google Lens · Search Image with Google Lens',
+          click: () => this.createTab({ url: `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(p.srcURL)}`, afterId: id }),
+        },
         { label: this.i18n.t('menu.openImage'), click: () => this.createTab({ url: p.srcURL, afterId: id }) },
         { label: this.i18n.t('menu.copyImage'), click: () => wc.copyImageAt(p.x, p.y) },
         sep,
@@ -2222,6 +2295,8 @@ export class Browser {
       { label: this.i18n.t('menu.back'), enabled: wc.navigationHistory.canGoBack(), click: () => wc.navigationHistory.goBack() },
       { label: this.i18n.t('menu.forward'), enabled: wc.navigationHistory.canGoForward(), click: () => wc.navigationHistory.goForward() },
       { label: this.i18n.t('menu.reload'), click: () => wc.reload() },
+      { label: 'יצירת קוד QR עבור דף זה · Create QR Code for this Page', click: () => this.run({ type: 'page:qr', url: wc.getURL() }) },
+      { label: 'תרגום דף זה עם Google Translate', click: () => this.run({ type: 'page:translate' }) },
       sep,
       {
         label: 'Local AI Assistant (Ollama)',

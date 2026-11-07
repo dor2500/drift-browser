@@ -15,12 +15,19 @@ app.setName('Drift');
 if (!app.isPackaged) app.setPath('userData', app.getPath('userData') + ' Dev');
 // Groups Drift's windows under its own taskbar icon on Windows.
 app.setAppUserModelId('app.drift.browser');
-// Some sites (Google sign-in among them) refuse user agents that mention Electron.
-app.userAgentFallback = app.userAgentFallback.replace(/\s(Electron|drift-browser|Drift)\/\S+/g, '');
+// Ensure 100% authentic Google Chrome identity across all web engines and services
+const chromeVer = process.versions.chrome || '134.0.0.0';
+app.userAgentFallback =
+  process.platform === 'win32'
+    ? `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVer} Safari/537.36`
+    : process.platform === 'darwin'
+      ? `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVer} Safari/537.36`
+      : `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVer} Safari/537.36`;
 nativeTheme.themeSource = 'dark';
 {
   const early = loadSettings();
-  if (early.forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark');
+  if (early.forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark,PlatformHEVCDecoderSupport,CanvasOopRasterization');
+  else app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport,CanvasOopRasterization');
   if (!early.smoothScrolling) app.commandLine.appendSwitch('disable-smooth-scrolling');
   if (!early.hardwareAcceleration) app.disableHardwareAcceleration();
 }

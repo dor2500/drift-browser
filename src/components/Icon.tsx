@@ -240,6 +240,14 @@ const paths = {
     </>
   ),
   cloud: <path d="M6.5 19h11a4.2 4.2 0 0 0 .5-8.4A5.8 5.8 0 0 0 6.8 9a4.8 4.8 0 0 0-.3 10z" />,
+  qr: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 19h2v2h-2z" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof paths;

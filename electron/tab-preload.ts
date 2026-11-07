@@ -2,7 +2,14 @@
 // Runs in every web page (isolated world, sandboxed):
 //  1. Alt+click on a link opens a Glance instead of downloading it.
 //  2. On YouTube, a video-ad skipper backs up the ad-block filters.
+//  3. Ensures Google Chrome vendor & runtime identity for web applications.
 import { ipcRenderer } from 'electron';
+
+try {
+  if (typeof Object.defineProperty === 'function') {
+    Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.', configurable: true });
+  }
+} catch {}
 
 window.addEventListener(
   'click',

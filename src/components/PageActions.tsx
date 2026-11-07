@@ -55,6 +55,24 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       {web && (
         <button
           className="page-action"
+          title="יצירת קוד QR לשיתוף דף עם הנייד (Create QR code)"
+          onClick={() => cmd({ type: 'page:qr', url: tab!.url })}
+        >
+          <Icon name="qr" size={14} />
+        </button>
+      )}
+      {web && (
+        <button
+          className="page-action"
+          title="תרגם דף זה באמצעות Google Translate"
+          onClick={() => cmd({ type: 'page:translate' })}
+        >
+          <Icon name="globe" size={14} />
+        </button>
+      )}
+      {web && (
+        <button
+          className="page-action"
           title={copied ? t('url.copied') : t('url.copyLink')}
           onClick={() => {
             clipboardActions.pushCurrentOrText(tab!.url);
