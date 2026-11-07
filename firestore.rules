@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Per-user isolated real-time synchronization documents:
+    // - users/{userId}/sync/bookmarks (Bookmarks, Pinned Tabs, Essentials, Spaces)
+    // - users/{userId}/sync/history   (Browsing History)
+    // - users/{userId}/sync/settings  (Browser Settings & Dark Mode Engine)
+    // - users/{userId}/sync/tabs      (Currently Open Tabs per device)
+    // - users/{userId}/sync/handoff   (Cross-Device Tab Handoff queue)
+    // - users/{userId}/sync/clipboard (Universal Cloud Clipboard snippets)
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+

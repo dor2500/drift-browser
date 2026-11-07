@@ -8,6 +8,8 @@ import { cmd, cx } from '../lib';
 import { Icon, type IconName } from './Icon';
 import { ImportPanel } from './ImportPanel';
 import { SyncPanel } from './SyncPanel';
+import { DarkModePanel } from './DarkModePanel';
+import { CloudClipboardPanel } from './CloudClipboardPanel';
 import { ColorThemePicker } from './ColorThemePicker';
 import { EnginePicker } from './EnginePicker';
 import { LanguagePicker } from './LanguagePicker';
@@ -127,7 +129,7 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         <section id="settings-sync" className="settings-section">
           <span hidden className="search-en">{englishFor('sync')}</span>
           <h2>{sectionName(s.theme, 'sync')}</h2>
-          <SyncPanel sync={state.sync} />
+          <SyncPanel sync={state.sync} activeTab={state.tabs.find((t) => t.id === state.activeTabId)} />
         </section>
         <section id="settings-appearance" className="settings-section">
           <span hidden className="search-en">{englishFor('appearance')}</span>
@@ -136,6 +138,8 @@ export function SettingsPage({ state }: { state: BrowserState }) {
           <h3>{t('set.colorTheme')}</h3>
           <p className="settings-lead">{t('set.colorThemeHint')}</p>
           <ColorThemePicker settings={s} />
+          <h3>{t('dm.title')}</h3>
+          <DarkModePanel darkMode={s.darkMode} activeUrl={state.tabs.find((t) => t.id === state.activeTabId)?.url} />
           <Toggle
             checked={s.spaceColors}
             onChange={(spaceColors) => cmd({ type: 'settings:set', patch: { spaceColors } })}
@@ -283,6 +287,40 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label={t('set.restore')}
             hint={t('set.restoreHint')}
           />
+          <h3>{t('ai.title')}</h3>
+          <p className="settings-lead">
+            Connect Drift to your local Ollama server (<code>http://localhost:11434</code>) to summarize pages, translate text, or chat privately on-device. Press <code>Ctrl+Shift+A</code> or type <code>@ai</code> in the address bar.
+          </p>
+          <div className="field">
+            <span className="field-label">Ollama API Endpoint</span>
+            <CommitInput
+              value={s.ai.endpoint}
+              placeholder="http://localhost:11434"
+              onCommit={(endpoint) => cmd({ type: 'settings:set', patch: { ai: { endpoint } } })}
+            />
+          </div>
+          <div className="field">
+            <span className="field-label">Default Ollama Model</span>
+            <CommitInput
+              value={s.ai.model}
+              placeholder="llama3.2"
+              onCommit={(model) => cmd({ type: 'settings:set', patch: { ai: { model } } })}
+            />
+          </div>
+          <div className="field">
+            <span className="field-label">Target Translation Language</span>
+            <CommitInput
+              value={s.ai.targetLanguage}
+              placeholder="English"
+              onCommit={(targetLanguage) => cmd({ type: 'settings:set', patch: { ai: { targetLanguage } } })}
+            />
+          </div>
+          <button className="btn" onClick={() => cmd({ type: 'ai:toggle', open: true })}>
+            <Icon name="sparkles" size={14} /> Open Local AI Side Panel
+          </button>
+
+          <h3>{t('clip.title')}</h3>
+          <CloudClipboardPanel items={state.clipboard} settings={s.clipboardSync} sync={state.sync} />
         </section>
 
         <section id="settings-privacy" className="settings-section">

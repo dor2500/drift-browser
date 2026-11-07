@@ -3,8 +3,7 @@ import path from 'node:path';
 import type { Command, ImportBrowser, ImportOptions, Pane } from '../shared/types';
 import { Browser, detectRtl } from './browser';
 import { otherBrowsers, readEnv } from './env';
-import { downloadGecko, geckoStatus, launchGecko } from './gecko';
-import { THEMES } from '../shared/themes';
+import { downloadGecko, geckoStatus } from './gecko';
 import { detectSources } from './importer';
 import { loadSettings } from './settings';
 import * as store from './store';
@@ -139,19 +138,10 @@ app.on('open-url', (e, url) => {
 app.whenReady().then(async () => {
   detectRtl(app.getLocale());
 
-  // The Gecko engine's start page links back here with drift-engine://chromium.
   // Only the installed app registers the link, so development runs never take it over.
   if (app.isPackaged) app.setAsDefaultProtocolClient('drift-engine');
 
-  // With Gecko chosen, starting Drift starts the Gecko engine instead of this window.
-  const s = loadSettings();
   const returning = !!engineLink(process.argv);
-  if (s.engine === 'gecko' && !returning && !process.argv.includes('--chromium') && geckoStatus().available) {
-    const lang = s.language === 'auto' ? app.getLocale().split('-')[0] : s.language;
-    await launchGecko([], { lang, accent: s.customAccent || THEMES[s.theme].accent, settings: s });
-    app.quit();
-    return;
-  }
 
   // Pages may not embed <webview> tags.
   app.on('web-contents-created', (_e, wc) => wc.on('will-attach-webview', (ev) => ev.preventDefault()));

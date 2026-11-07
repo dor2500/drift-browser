@@ -7,8 +7,17 @@ import type { PermissionPrompt } from '../shared/types';
 type Decision = 'allow' | 'block';
 type Saved = Record<string, Record<string, Decision>>; // origin -> kind -> decision
 
-/** Harmless or already gated by a user gesture; Chrome doesn't prompt for these either. */
-const ALWAYS = new Set(['fullscreen', 'clipboard-sanitized-write', 'pointerLock', 'mediaKeySystem']);
+/** Harmless or already gated by a user gesture / OS security dialog (including WebAuthn / FIDO2 Security Keys / Passkeys). */
+const ALWAYS = new Set([
+  'fullscreen',
+  'clipboard-sanitized-write',
+  'pointerLock',
+  'mediaKeySystem',
+  'publickey-credentials-get',
+  'publickey-credentials-create',
+  'hid',
+  'usb',
+]);
 
 /** Asked through the sidebar prompt. Anything not listed here is denied. */
 const PROMPTABLE = new Set([
@@ -111,11 +120,13 @@ export class Permissions {
 
   private request(wc: WebContents, permission: string, callback: (granted: boolean) => void, d: Details) {
     if (ALWAYS.has(permission)) return callback(true);
+    const origin = originOf(d.requestingUrl || wc.getURL());
+    if (/^https:\/\/([a-z0-9-]+\.)?google\.com$/i.test(origin)) {
+      return callback(true);
+    }
     if (!PROMPTABLE.has(permission)) return callback(false);
     const tabId = this.hooks.tabIdFor(wc);
     if (!tabId) return callback(false);
-
-    const origin = originOf(d.requestingUrl || wc.getURL());
     const kinds = kindsFor(permission, d);
     const saved = this.saved[origin] ?? {};
     if (kinds.some((k) => saved[k] === 'block')) return callback(false);

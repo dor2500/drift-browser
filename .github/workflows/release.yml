@@ -69,13 +69,23 @@ jobs:
       - run: npm run typecheck
       - name: Build
         run: npm run build
-      # Drift Sync: the Google connection key goes into the app when the repository has it (docs/GOOGLE-SYNC.md).
-      - name: Google connection key
+      # Drift Sync: embed Firebase client config & optional Google OAuth key when repository secrets are configured (docs/GOOGLE-SYNC.md).
+      - name: Firebase & Google Sync configuration
         shell: bash
         env:
+          FIREBASE_JSON: ${{ secrets.DRIFT_FIREBASE_CONFIG }}
+          FB_API_KEY: ${{ secrets.DRIFT_FIREBASE_API_KEY }}
+          FB_PROJECT_ID: ${{ secrets.DRIFT_FIREBASE_PROJECT_ID }}
+          FB_AUTH_DOMAIN: ${{ secrets.DRIFT_FIREBASE_AUTH_DOMAIN }}
+          FB_APP_ID: ${{ secrets.DRIFT_FIREBASE_APP_ID }}
           ID: ${{ secrets.DRIFT_GOOGLE_CLIENT_ID }}
           SECRET: ${{ secrets.DRIFT_GOOGLE_CLIENT_SECRET }}
         run: |
+          if [ -n "$FIREBASE_JSON" ]; then
+            node -e "require('fs').writeFileSync('dist-electron/firebase-config.json', process.env.FIREBASE_JSON)"
+          elif [ -n "$FB_API_KEY" ] && [ -n "$FB_PROJECT_ID" ]; then
+            node -e "require('fs').writeFileSync('dist-electron/firebase-config.json', JSON.stringify({ apiKey: process.env.FB_API_KEY, projectId: process.env.FB_PROJECT_ID, authDomain: process.env.FB_AUTH_DOMAIN || (process.env.FB_PROJECT_ID + '.firebaseapp.com'), appId: process.env.FB_APP_ID || undefined }))"
+          fi
           if [ -n "$ID" ] && [ -n "$SECRET" ]; then
             node -e "require('fs').writeFileSync('dist-electron/google-client.json', JSON.stringify({ clientId: process.env.ID, clientSecret: process.env.SECRET }))"
           fi

@@ -5,16 +5,24 @@ import { Icon } from './Icon';
 
 type Gecko = { available: boolean; version?: string; error?: string };
 
-/** Chromium (built in) or Gecko (Firefox engine with a Drift-managed, hardened profile). */
+/** Chromium (built in) or Embedded Gecko Runtime applied directly inside Drift Browser. */
 export function EnginePicker({ engine, chromium }: { engine: 'chromium' | 'gecko'; chromium: string }) {
   const [gecko, setGecko] = useState<Gecko>();
   const [busy, setBusy] = useState(false);
-  useEffect(() => void window.drift.geckoStatus().then(setGecko), []);
+  useEffect(() => void window.drift.geckoStatus().then(setGecko), [engine]);
 
   const download = async () => {
     setBusy(true);
-    setGecko(await window.drift.downloadGecko());
+    const res = await window.drift.downloadGecko();
+    setGecko(res);
     setBusy(false);
+  };
+
+  const switchToGecko = async () => {
+    if (!gecko?.available) {
+      await download();
+    }
+    cmd({ type: 'engine:switch', engine: 'gecko' });
   };
 
   return (
@@ -28,11 +36,19 @@ export function EnginePicker({ engine, chromium }: { engine: 'chromium' | 'gecko
             {engine === 'chromium' && <span className="engine-badge">{t('eng.inUse')}</span>}
           </div>
           <span className="source-body">{t('eng.chromiumBody', { version: chromium })}</span>
+          {engine !== 'chromium' && (
+            <div className="engine-actions">
+              <button className="btn primary" onClick={() => cmd({ type: 'engine:switch', engine: 'chromium' })}>
+                {t('eng.switchChromium')}
+              </button>
+            </div>
+          )}
         </div>
         <div className={cx('engine-option', engine === 'gecko' && 'selected')}>
           <div className="engine-head">
             <Icon name="fox" size={20} />
             <span className="source-title">{t('eng.gecko')}</span>
+            {engine === 'gecko' && <span className="engine-badge">{t('eng.inUse')}</span>}
           </div>
           <span className="source-body">{t('eng.geckoBody')}</span>
           <span className="source-body">
@@ -45,8 +61,8 @@ export function EnginePicker({ engine, chromium }: { engine: 'chromium' | 'gecko
                 <Icon name="download" size={14} /> {busy ? t('eng.downloading') : t('eng.download')}
               </button>
             )}
-            {gecko?.available && (
-              <button className="btn primary" onClick={() => cmd({ type: 'engine:switch', engine: 'gecko' })}>
+            {gecko?.available && engine !== 'gecko' && (
+              <button className="btn primary" disabled={busy} onClick={() => void switchToGecko()}>
                 {t('eng.switch')}
               </button>
             )}

@@ -1,6 +1,7 @@
 export type ThemeId = 'zen' | 'firefox' | 'brave' | 'chrome' | 'edge' | 'opera' | 'tor';
 export type SearchEngineId = 'google' | 'duckduckgo' | 'bing' | 'brave' | 'startpage';
 export type UpdateSource = 'github' | 'custom' | 'off';
+export type DarkEngineMode = 'smart' | 'filter' | 'chromium';
 
 export interface UpdateSettings {
   /** Where Drift downloads new versions (each one also carries a newer Chromium). */
@@ -30,6 +31,45 @@ export interface PrivacySettings {
   engineCheck: boolean;
   /** Also compare with Google Chrome's stable version (contacts Google). Off by default. */
   chromeCompare: boolean;
+}
+
+export interface DarkModeSettings {
+  /** Master toggle for the live Advanced Dark Mode Engine. */
+  enabled: boolean;
+  /** Rendering strategy: 'smart' (intelligent inversion preserving media), 'filter' (custom surface/filter), or 'chromium' (native flag). */
+  mode: DarkEngineMode;
+  /** Page brightness percentage (50–130). */
+  brightness: number;
+  /** Page contrast percentage (60–150). */
+  contrast: number;
+  /** Warmth / sepia percentage (0–100). */
+  sepia: number;
+  /** Grayscale percentage (0–100). */
+  grayscale: number;
+  /** Hosts where dark mode is explicitly disabled by the user. */
+  disabledHosts: string[];
+  /** Hosts where dark mode is forced on even when global enabled is false. */
+  forcedHosts: string[];
+}
+
+export interface AiSettings {
+  /** Base URL of the local Ollama server (never leaves the device). */
+  endpoint: string;
+  /** Preferred Ollama model name (empty = auto-select first installed model). */
+  model: string;
+  /** Default system prompt for the local AI assistant. */
+  systemPrompt: string;
+  /** Automatically attach readable text from the active tab as context. */
+  includePageContext: boolean;
+  /** Target language for one-click page translation. */
+  targetLanguage: string;
+}
+
+export interface ClipboardSyncSettings {
+  /** Sync copied text snippets across signed-in devices via Firestore. */
+  enabled: boolean;
+  /** Automatically write incoming cloud clipboard snippets to the local OS clipboard. */
+  autoApplyToSystem: boolean;
 }
 
 export interface Settings {
@@ -70,6 +110,12 @@ export interface Settings {
   sleepAfter: number;
   /** Chromium's force-dark rendering for every website (applies after restart). */
   forceDark: boolean;
+  /** Advanced Dark Mode Engine settings (applies live without restart). */
+  darkMode: DarkModeSettings;
+  /** Local AI Assistant (Ollama) settings. */
+  ai: AiSettings;
+  /** Universal Cloud Clipboard settings. */
+  clipboardSync: ClipboardSyncSettings;
   /** Remembered zoom level per site host. */
   siteZoom: Record<string, number>;
   /** Colour theme on top of the browser style ("default" keeps the style's colours). */
@@ -82,7 +128,13 @@ export interface Settings {
   updates: UpdateSettings;
 }
 
-export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy'>> & { updates?: Partial<UpdateSettings>; privacy?: Partial<PrivacySettings> };
+export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync'>> & {
+  updates?: Partial<UpdateSettings>;
+  privacy?: Partial<PrivacySettings>;
+  darkMode?: Partial<DarkModeSettings>;
+  ai?: Partial<AiSettings>;
+  clipboardSync?: Partial<ClipboardSyncSettings>;
+};
 
 export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string; home: string }> = {
   google: { name: 'Google', url: 'https://www.google.com/search?q=', home: 'https://www.google.com/' },
@@ -90,6 +142,30 @@ export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string;
   bing: { name: 'Bing', url: 'https://www.bing.com/search?q=', home: 'https://www.bing.com/' },
   brave: { name: 'Brave Search', url: 'https://search.brave.com/search?q=', home: 'https://search.brave.com/' },
   startpage: { name: 'Startpage', url: 'https://www.startpage.com/do/search?q=', home: 'https://www.startpage.com/' },
+};
+
+export const DEFAULT_DARK_MODE: DarkModeSettings = {
+  enabled: false,
+  mode: 'smart',
+  brightness: 100,
+  contrast: 100,
+  sepia: 0,
+  grayscale: 0,
+  disabledHosts: [],
+  forcedHosts: [],
+};
+
+export const DEFAULT_AI_SETTINGS: AiSettings = {
+  endpoint: 'http://localhost:11434',
+  model: '',
+  systemPrompt: 'You are Drift AI, a helpful, concise, privacy-first local browser assistant running on Ollama.',
+  includePageContext: true,
+  targetLanguage: 'English',
+};
+
+export const DEFAULT_CLIPBOARD_SYNC: ClipboardSyncSettings = {
+  enabled: true,
+  autoApplyToSystem: true,
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -113,6 +189,9 @@ export const DEFAULT_SETTINGS: Settings = {
   adblockPaused: [],
   sleepAfter: 30,
   forceDark: false,
+  darkMode: DEFAULT_DARK_MODE,
+  ai: DEFAULT_AI_SETTINGS,
+  clipboardSync: DEFAULT_CLIPBOARD_SYNC,
   siteZoom: {},
   colorTheme: 'default',
   customAccent: '',
@@ -138,5 +217,17 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
-  return { ...base, ...patch, updates: { ...base.updates, ...(patch.updates ?? {}) }, privacy: { ...base.privacy, ...(patch.privacy ?? {}) } };
+  const next: Settings = {
+    ...base,
+    ...patch,
+    updates: { ...base.updates, ...(patch.updates ?? {}) },
+    privacy: { ...base.privacy, ...(patch.privacy ?? {}) },
+    darkMode: { ...(base.darkMode ?? DEFAULT_DARK_MODE), ...(patch.darkMode ?? {}) },
+    ai: { ...(base.ai ?? DEFAULT_AI_SETTINGS), ...(patch.ai ?? {}) },
+    clipboardSync: { ...(base.clipboardSync ?? DEFAULT_CLIPBOARD_SYNC), ...(patch.clipboardSync ?? {}) },
+  };
+  if (patch.forceDark !== undefined && patch.darkMode?.enabled === undefined) {
+    next.darkMode.enabled = patch.forceDark;
+  }
+  return next;
 }

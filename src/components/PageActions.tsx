@@ -1,19 +1,31 @@
 import { useEffect, useState } from 'react';
 import type { BrowserState, TabState } from '../../shared/types';
-import { cmd, cx } from '../lib';
+import { aiActions, clipboardActions, cmd, cx } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { t } from '../i18n';
 
-/** Icons at the end of the address bar: copy link and the ad-blocking shield. */
+export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff';
+
+export const openShellPopover = (kind: PopoverKind) =>
+  window.dispatchEvent(new CustomEvent<PopoverKind>('drift:popover', { detail: kind }));
+
+/** Icons at the end of the address bar: copy link, tab handoff, cloud clipboard, dark mode, local AI, and ad-blocking shield. */
 export function PageActions({ tab, state }: { tab?: TabState; state: BrowserState }) {
   const [copied, setCopied] = useState(false);
   useEffect(() => setCopied(false), [tab?.url]);
   const web = !!tab && /^https?:/.test(tab.url);
   const on = state.settings.adblock;
-  const host = web ? new URL(tab!.url).hostname.replace(/^www\./, '') : '';
+  const host = web ? new URL(tab!.url).hostname.replace(/^www\./, '').toLowerCase() : '';
   const paused = !!host && state.settings.adblockPaused.some((h) => host === h || host.endsWith('.' + h));
   const count = tab?.blocked ?? 0;
+
+  const dm = state.settings.darkMode;
+  const siteDark =
+    web &&
+    (dm.enabled
+      ? !dm.disabledHosts.some((h) => host === h || host.endsWith('.' + h))
+      : dm.forcedHosts.some((h) => host === h || host.endsWith('.' + h)));
 
   return (
     <div className="page-actions">
@@ -27,13 +39,41 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
           className="page-action"
           title={copied ? t('url.copied') : t('url.copyLink')}
           onClick={() => {
-            void navigator.clipboard.writeText(tab!.url);
+            clipboardActions.pushCurrentOrText(tab!.url);
             setCopied(true);
           }}
         >
           <Icon name={copied ? 'check' : 'link'} size={14} />
         </button>
       )}
+      <button
+        className={cx('page-action', state.sync.otherDevices.length > 0 && 'active')}
+        title="Cross-Device Tab Handoff (Send tab or view other devices)"
+        onClick={() => openShellPopover('handoff')}
+      >
+        <Icon name="devices" size={14} />
+      </button>
+      <button
+        className={cx('page-action', state.clipboard.length > 0 && 'active')}
+        title={t('clip.title')}
+        onClick={() => openShellPopover('clipboard')}
+      >
+        <Icon name="clipboard" size={14} />
+      </button>
+      <button
+        className={cx('page-action', (siteDark || dm.enabled) && 'active')}
+        title={t('dm.title')}
+        onClick={() => openShellPopover('darkmode')}
+      >
+        <Icon name="moon" size={14} />
+      </button>
+      <button
+        className={cx('page-action', state.ai.open && 'active')}
+        title={`${t('ai.title')} (Ctrl+Shift+A)`}
+        onClick={() => aiActions.togglePanel()}
+      >
+        <Icon name="sparkles" size={14} />
+      </button>
       <button
         className={cx('page-action', 'shield', on && !paused && 'active')}
         title={!on ? t('shield.off') : paused ? t('shield.paused') : t('shield.count', { count })}

@@ -24,7 +24,7 @@ export class HistoryIndex {
   private entries = new Map<string, Entry>();
   private timer?: NodeJS.Timeout;
 
-  constructor() {
+  constructor(private onChanged?: () => void) {
     try {
       for (const e of JSON.parse(fs.readFileSync(file(), 'utf8')) as Entry[]) this.entries.set(e.url, e);
     } catch {
@@ -156,6 +156,7 @@ export class HistoryIndex {
     this.timer = setTimeout(() => {
       try {
         fs.writeFileSync(file(), JSON.stringify([...this.entries.values()]));
+        this.onChanged?.();
       } catch (err) {
         console.error('[drift] failed to save history', err);
       }

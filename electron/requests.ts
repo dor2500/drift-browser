@@ -14,12 +14,14 @@ import type { PrivacySettings } from '../shared/settings';
  */
 export interface RequestHooks {
   privacy(): PrivacySettings;
+  engine(): 'chromium' | 'gecko';
   adblockActive(): boolean;
   blocker(): ElectronBlocker | undefined;
   isPaused(pageUrl: string): boolean;
   /** Hosts whose https upgrade failed, so they load over http. */
   httpAllowed(host: string): boolean;
   firefoxUA: string;
+  geckoUA(): string;
 }
 
 const TRACKING_PARAMS =
@@ -112,8 +114,8 @@ export class RequestHub {
       const p = hooks.privacy();
       const headers: Record<string, string> = { ...details.requestHeaders };
       const host = hostOf(details.url);
-      if (host === 'accounts.google.com') {
-        headers['User-Agent'] = hooks.firefoxUA;
+      if (hooks.engine() === 'gecko' || host === 'accounts.google.com') {
+        headers['User-Agent'] = hooks.engine() === 'gecko' ? hooks.geckoUA() : hooks.firefoxUA;
         for (const k of Object.keys(headers)) if (/^sec-ch-ua/i.test(k)) delete headers[k];
       }
       if (p.gpc) {

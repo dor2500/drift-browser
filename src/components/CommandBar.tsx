@@ -4,14 +4,22 @@ import { COLOR_THEMES } from '../../shared/colorThemes';
 import { translate } from '../../shared/i18n';
 import { SEARCH_ENGINES } from '../../shared/settings';
 import { displayUrl, looksLikeUrl } from '../../shared/url';
-import { cmd, cx } from '../lib';
+import { aiActions, cmd, cx, darkModeActions } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
+import { openShellPopover } from './PageActions';
 import type { Anchor } from './TopBar';
 import { t } from '../i18n';
 
 type Action = { id: string; label: string; en: string; run: () => void };
-type Item = { kind: 'go'; input: string } | { kind: 'action'; a: Action } | { kind: 'suggest'; s: Suggestion } | { kind: 'tab'; tab: TabState };
+type RemoteTabHit = { deviceName: string; url: string; title: string };
+type Item =
+  | { kind: 'go'; input: string }
+  | { kind: 'ai'; prompt: string }
+  | { kind: 'action'; a: Action }
+  | { kind: 'suggest'; s: Suggestion }
+  | { kind: 'tab'; tab: TabState }
+  | { kind: 'remote-tab'; r: RemoteTabHit };
 
 interface Props {
   mode: 'new' | 'current';
@@ -21,7 +29,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Zen's floating URL bar: type a URL or search, or jump to an open tab. */
+/** Zen's floating URL bar: type a URL, search, ask @ai (Ollama), or jump to a local/remote tab. */
 export function CommandBar({ mode, state, anchor, onClose }: Props) {
   const active = state.tabs.find((t) => t.id === (state.glance?.id ?? state.activeTabId));
   const navigateCurrent = mode === 'current' && !!active;
@@ -33,15 +41,15 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
   // Bookmarks and history (Drift's own plus imported) matching what you type.
   useEffect(() => {
     const s = q.trim();
-    if (!s || (navigateCurrent && s === active?.url)) {
+    if (!s || s.startsWith('@ai') || s.startsWith('?') || (navigateCurrent && s === active?.url)) {
       setSuggestions([]);
       return;
     }
     let alive = true;
-    const t = setTimeout(() => void window.drift.suggest(s).then((r) => alive && setSuggestions(r)), 60);
+    const timer = setTimeout(() => void window.drift.suggest(s).then((r) => alive && setSuggestions(r)), 60);
     return () => {
       alive = false;
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [q, navigateCurrent, active?.url]);
 
@@ -53,7 +61,31 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
   // Things you can do by typing their name, like Arc's and Vivaldi's command bars.
   const actions = useMemo<Action[]>(() => {
     const id = active?.id;
+    const host = active && /^https?:/.test(active.url) ? new URL(active.url).hostname.replace(/^www\./, '').toLowerCase() : '';
     const list: Action[] = [
+      { id: 'ai-panel', label: `${t('ai.title')} (Ctrl+Shift+A)`, en: 'local ai assistant ollama panel', run: () => aiActions.togglePanel() },
+      { id: 'ai-sum', label: `${t('ai.summarize')} (Ollama)`, en: 'summarize page with local ai ollama', run: () => aiActions.summarizeCurrentPage() },
+      { id: 'ai-exp', label: `${t('ai.explain')} (Ollama)`, en: 'explain page key points with local ai ollama', run: () => aiActions.explainCurrentPage() },
+      { id: 'ai-tr', label: `${t('ai.translate')} (Ollama)`, en: 'translate page with local ai ollama', run: () => aiActions.translateCurrentPage() },
+      { id: 'darkmode', label: t('dm.title'), en: 'dark mode engine theme customize', run: () => setTimeout(() => openShellPopover('darkmode'), 40) },
+      {
+        id: 'darkmode-global',
+        label: state.settings.darkMode.enabled ? 'Disable Global Dark Mode Engine' : 'Enable Global Dark Mode Engine',
+        en: 'toggle global force dark mode engine',
+        run: () => darkModeActions.update({ enabled: !state.settings.darkMode.enabled }),
+      },
+      ...(host
+        ? [
+            {
+              id: 'darkmode-site',
+              label: t('dm.toggleSite', { host }),
+              en: `toggle dark mode for ${host}`,
+              run: () => darkModeActions.toggleForHost(host),
+            },
+          ]
+        : []),
+      { id: 'clipboard', label: t('clip.title'), en: 'universal cloud clipboard snippets', run: () => setTimeout(() => openShellPopover('clipboard'), 40) },
+      { id: 'handoff', label: 'Send Tab to Another Device / Handoff', en: 'send tab to device handoff synced tabs', run: () => setTimeout(() => openShellPopover('handoff'), 40) },
       { id: 'find', label: t('act.find'), en: translate({}, 'act.find'), run: () => setTimeout(() => window.dispatchEvent(new CustomEvent('drift:find')), 50) },
       { id: 'downloads', label: t('act.downloads'), en: translate({}, 'act.downloads'), run: () => window.drift.downloadsMenu() },
       { id: 'zoomin', label: t('act.zoomIn'), en: translate({}, 'act.zoomIn'), run: () => cmd({ type: 'zoom', dir: 1 }) },
@@ -85,17 +117,29 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       );
     }
     return list;
-  }, [active, state.settings.verticalTabs]);
+  }, [active, state.settings.verticalTabs, state.settings.darkMode.enabled]);
 
   const items = useMemo<Item[]>(() => {
     const raw = q.trim();
+    // Omnibox Local AI shortcut: `@ai <prompt>` or `? <prompt>`
+    if (/^(@ai\b|\?)/i.test(raw)) {
+      const promptText = raw.replace(/^(@ai\b|\?)\s*/i, '').trim();
+      return [
+        {
+          kind: 'ai',
+          prompt: promptText || 'Summarize this webpage',
+        },
+        ...actions.slice(0, 4).map((a) => ({ kind: 'action' as const, a })),
+      ];
+    }
+
     const actionMode = raw.startsWith('>');
     const s = actionMode ? raw.slice(1).trim() : raw;
     const needle = s.toLowerCase();
     const matching = actions.filter((a) => needle && (a.label.toLowerCase().includes(needle) || a.en.toLowerCase().includes(needle)));
     if (actionMode) return (needle ? matching : actions).slice(0, 12).map((a) => ({ kind: 'action' as const, a }));
     const out: Item[] = s ? [{ kind: 'go', input: s }] : [];
-    if (needle.length >= 3) for (const a of matching.slice(0, 3)) out.push({ kind: 'action', a });
+    if (needle.length >= 2) for (const a of matching.slice(0, 3)) out.push({ kind: 'action', a });
     const open = new Set(state.tabs.map((t) => t.url));
     for (const sg of suggestions) if (!open.has(sg.url)) out.push({ kind: 'suggest', s: sg });
     const tabs = state.tabs
@@ -103,16 +147,33 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       .filter((t) => !needle || t.title.toLowerCase().includes(needle) || t.url.toLowerCase().includes(needle))
       .slice(0, 5);
     for (const tab of tabs) out.push({ kind: 'tab', tab });
+
+    // Also include matching open tabs from other synced devices
+    if (needle.length >= 2) {
+      for (const dev of state.sync.otherDevices) {
+        for (const rt of dev.tabs) {
+          if (rt.title.toLowerCase().includes(needle) || rt.url.toLowerCase().includes(needle)) {
+            out.push({ kind: 'remote-tab', r: { deviceName: dev.name, url: rt.url, title: rt.title } });
+          }
+        }
+      }
+    }
     return out;
-  }, [q, state.tabs, state.activeTabId, suggestions, actions]);
+  }, [q, state.tabs, state.activeTabId, state.sync.otherDevices, suggestions, actions]);
 
   useEffect(() => setSel(0), [q]);
 
   const choose = (it: Item | undefined) => {
     if (!it) return;
-    if (it.kind === 'action') it.a.run();
-    else if (it.kind === 'tab') cmd({ type: 'tab:activate', id: it.tab.id });
-    else {
+    if (it.kind === 'ai') {
+      aiActions.sendPrompt(it.prompt, 'chat', true);
+    } else if (it.kind === 'action') {
+      it.a.run();
+    } else if (it.kind === 'tab') {
+      cmd({ type: 'tab:activate', id: it.tab.id });
+    } else if (it.kind === 'remote-tab') {
+      cmd({ type: 'tab:new', url: it.r.url });
+    } else {
       const target = it.kind === 'go' ? it.input : it.s.url;
       if (navigateCurrent) cmd({ type: 'tab:navigate', input: target });
       else cmd({ type: 'tab:new', url: target });
@@ -130,12 +191,16 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="commandbar-input">
-          <Icon name="search" size={18} />
+          <Icon name={/^(@ai\b|\?)/i.test(q.trim()) ? 'sparkles' : 'search'} size={18} />
           <input
             ref={input}
             value={q}
             spellCheck={false}
-            placeholder={navigateCurrent ? t('url.placeholder') : t('bar.placeholderNew')}
+            placeholder={
+              navigateCurrent
+                ? `${t('url.placeholder')} (or type @ai to ask Ollama)`
+                : `${t('bar.placeholderNew')} (or @ai to ask Ollama)`
+            }
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') onClose();
@@ -150,12 +215,32 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
         <div className="commandbar-results">
           {items.map((it, i) => (
             <div
-              key={it.kind === 'go' ? 'go' : it.kind === 'action' ? `a:${it.a.id}` : it.kind === 'suggest' ? `s:${it.s.url}` : it.tab.id}
+              key={
+                it.kind === 'go'
+                  ? 'go'
+                  : it.kind === 'ai'
+                    ? 'ai'
+                    : it.kind === 'action'
+                      ? `a:${it.a.id}`
+                      : it.kind === 'suggest'
+                        ? `s:${it.s.url}`
+                        : it.kind === 'remote-tab'
+                          ? `rt:${it.r.deviceName}:${it.r.url}`
+                          : it.tab.id
+              }
               className={cx('result', i === sel && 'selected')}
               onMouseEnter={() => setSel(i)}
               onClick={() => choose(it)}
             >
-              {it.kind === 'action' ? (
+              {it.kind === 'ai' ? (
+                <>
+                  <Icon name="sparkles" />
+                  <span className="label">
+                    Ask Local AI (Ollama): <strong>{it.prompt}</strong>
+                  </span>
+                  <span className="hint">Local AI · {state.settings.ai.model}</span>
+                </>
+              ) : it.kind === 'action' ? (
                 <>
                   <Icon name="bolt" />
                   <span className="label">{it.a.label}</span>
@@ -173,11 +258,25 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
                     {it.s.source ? ` · ${it.s.source}` : ''}
                   </span>
                 </>
+              ) : it.kind === 'remote-tab' ? (
+                <>
+                  <Icon name="devices" />
+                  <span className="label">
+                    {it.r.title}
+                    <span className="sub">{displayUrl(it.r.url)}</span>
+                  </span>
+                  <span className="hint">{it.r.deviceName} · Synced Tab</span>
+                </>
               ) : it.kind === 'go' ? (
                 <>
                   <Icon name={looksLikeUrl(it.input) ? 'globe' : 'search'} />
                   <span className="label">{it.input}</span>
-                  <span className="hint">{looksLikeUrl(it.input) ? t('bar.open') : t('bar.searchWith', { engine: SEARCH_ENGINES[state.settings.searchEngine].name })}{navigateCurrent ? '' : t('bar.inNewTab')}</span>
+                  <span className="hint">
+                    {looksLikeUrl(it.input)
+                      ? t('bar.open')
+                      : t('bar.searchWith', { engine: SEARCH_ENGINES[state.settings.searchEngine].name })}
+                    {navigateCurrent ? '' : t('bar.inNewTab')}
+                  </span>
                 </>
               ) : (
                 <>

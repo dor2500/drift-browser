@@ -29,3 +29,8 @@ export function useLocale() {
   }, []);
   return current;
 }
+
+export function useT() {
+  const locale = useLocale();
+  return { t, locale };
+}

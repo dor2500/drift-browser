@@ -1,24 +1,40 @@
-import { useEffect, useState, type DragEvent } from 'react';
-import type { BrowserState, Command } from '../shared/types';
+import { type DragEvent } from 'react';
+import {
+  aiActions,
+  browserStore,
+  clipboardActions,
+  cmd,
+  darkModeActions,
+  handoffActions,
+  syncActions,
+  useAiState,
+  useBrowserState,
+  useClipboardState,
+  useDarkModeState,
+  useSyncState,
+} from './state/BrowserStore';
 
 export const drift = () => window.drift;
-export const cmd = (c: Command) => void window.drift.cmd(c);
+export {
+  aiActions,
+  browserStore,
+  clipboardActions,
+  cmd,
+  darkModeActions,
+  handoffActions,
+  syncActions,
+  useAiState,
+  useBrowserState,
+  useClipboardState,
+  useDarkModeState,
+  useSyncState,
+};
 
 /** Title to show for a tab; internal pages (drift://settings) follow the UI language. */
 export const tabTitle = (tab: { url: string; title: string }, settingsTitle: string, newTabTitle = 'New Tab') =>
   tab.url.startsWith('drift://settings') ? settingsTitle : tab.url.startsWith('drift://newtab') ? newTabTitle : tab.title || tab.url;
 
 export const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
-
-/** Mirrors the main process's browser model. */
-export function useBrowserState() {
-  const [state, setState] = useState<BrowserState | null>(null);
-  useEffect(() => {
-    void window.drift.getState().then(setState);
-    return window.drift.onState(setState);
-  }, []);
-  return state;
-}
 
 // Tab drag & drop (HTML5 DnD inside the sidebar).
 export const TAB_MIME = 'application/x-drift-tab';

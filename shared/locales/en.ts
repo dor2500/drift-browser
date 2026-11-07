@@ -380,14 +380,15 @@ export const en = {
   'eng.lead': "The engine draws web pages. Pick the one that works best for you; your tabs move with you when you switch.",
   'eng.chromium': "Chromium",
   'eng.chromiumBody': "Built in: Chromium {version}, updated with Drift.",
-  'eng.gecko': "Gecko (the Firefox engine)",
-  'eng.geckoBody': "Mozilla's engine with Drift's settings, look and ad blocking, hardened privacy and no telemetry. Drift's settings also appear inside the engine's Settings.",
-  'eng.geckoReady': "Ready: Gecko {version}, kept in Drift's folder. Nothing is installed, and a Firefox on this PC is never used or changed.",
-  'eng.geckoMissing': "Drift downloads only the engine (Mozilla's official build, about 95 MB) into its own folder. Nothing is installed, and no new browser appears on your PC.",
+  'eng.gecko': "Gecko (Mozilla Engine Layer)",
+  'eng.geckoBody': "Downloads only the standalone Gecko engine runtime and applies it directly inside Drift Browser — keeping Drift's interface, tabs, spaces, and features without downloading or opening Firefox.",
+  'eng.geckoReady': "Ready: Gecko Runtime {version} embedded inside Drift. No external browser is installed or launched.",
+  'eng.geckoMissing': "Drift downloads only the lightweight Gecko engine runtime layer into its own folder and applies it directly onto Drift's tabs.",
   'eng.download': "Download the Gecko engine",
-  'eng.downloading': "Downloading from Mozilla…",
+  'eng.downloading': "Downloading Gecko runtime…",
   'eng.switch': "Switch to Gecko",
-  'eng.switchHint': "Your open tabs move to the Gecko engine and this window closes. To come back, use the button on the Gecko start page; your tabs come back too.",
+  'eng.switchChromium': "Switch to Chromium",
+  'eng.switchHint': "Applies the Gecko engine runtime directly to your tabs inside this Drift window without closing the browser.",
   'eng.inUse': "In use",
   'priv.title': "Tracking protection",
   'priv.https': "HTTPS-First",
@@ -503,6 +504,46 @@ export const en = {
   'updmsg.repo': 'Enter the GitHub repository that publishes Drift releases (owner/name).',
   'updmsg.url': 'Enter an https:// address for the update server.',
   'updmsg.offline': 'Could not reach the release servers.',
+
+  // Firebase Cloud Sync & Handoff
+  'sync.whatClipboard': 'Universal Cloud Clipboard (copied text snippets across devices)',
+  'sync.realtime': 'Real-time Cloud Firestore active',
+  'sync.firebaseTitle': 'Firebase Authentication & Cloud Firestore Configuration',
+  'sync.firebaseBody': 'Drift uses Firebase Authentication (Google Sign-In provider) and Cloud Firestore for real-time per-user synchronization without a custom backend.',
+  'sync.sendTab': 'Send active tab to device',
+  'sync.sendAll': 'All synced devices',
+  'sync.handoffToast': 'Tab received from {device}',
+
+  // Universal Cloud Clipboard
+  'clip.title': 'Universal Cloud Clipboard',
+  'clip.subtitle': 'Copy text on one device and access it instantly across all signed-in Drift instances.',
+  'clip.syncNow': 'Capture OS Clipboard',
+  'clip.autoApply': 'Auto-copy incoming cloud snippets to system clipboard',
+  'clip.empty': 'No clipboard snippets captured yet. Copy text or click Capture OS Clipboard.',
+  'clip.clear': 'Clear unpinned',
+
+  // Local AI Assistant (Ollama)
+  'ai.title': 'Local AI Assistant (Ollama)',
+  'ai.online': 'Ollama connected',
+  'ai.offline': 'Ollama offline (start `ollama serve` on port 11434)',
+  'ai.summarize': 'Summarize Page',
+  'ai.translate': 'Translate',
+  'ai.explain': 'Explain Key Points',
+  'ai.placeholder': 'Ask Ollama about this page or anything else… (100% local)',
+  'ai.includePage': 'Include current webpage context',
+
+  // Advanced Dark Mode Engine
+  'dm.title': 'Advanced Dark Mode Engine',
+  'dm.subtitle': 'Force customizable dark themes on websites that do not support dark mode natively.',
+  'dm.enabled': 'Enable Dark Mode Engine globally',
+  'dm.mode.smart': 'Smart Invert (preserves images & videos)',
+  'dm.mode.filter': 'Full Page Filter',
+  'dm.mode.chromium': 'Chromium Native Auto-Dark',
+  'dm.brightness': 'Brightness',
+  'dm.contrast': 'Contrast',
+  'dm.sepia': 'Warmth (Sepia)',
+  'dm.grayscale': 'Grayscale',
+  'dm.toggleSite': 'Toggle Dark Mode for {host}',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -1,15 +1,29 @@
 import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_SETTINGS, SEARCH_ENGINES, mergeSettings, type Settings, type SettingsPatch } from '../shared/settings';
+import {
+  DEFAULT_AI_SETTINGS,
+  DEFAULT_CLIPBOARD_SYNC,
+  DEFAULT_DARK_MODE,
+  DEFAULT_SETTINGS,
+  SEARCH_ENGINES,
+  mergeSettings,
+  type Settings,
+  type SettingsPatch,
+} from '../shared/settings';
 import { THEMES } from '../shared/themes';
 
 const file = () => path.join(app.getPath('userData'), 'settings.json');
+const clampNum = (v: unknown, def: number, lo: number, hi: number) =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : def;
 
 /** Drops anything invalid so a hand-edited or old file can't break startup. */
 function sanitize(s: Settings): Settings {
   const d = DEFAULT_SETTINGS;
   const u = s.updates;
+  const dm = s.darkMode ?? DEFAULT_DARK_MODE;
+  const ai = s.ai ?? DEFAULT_AI_SETTINGS;
+  const cs = s.clipboardSync ?? DEFAULT_CLIPBOARD_SYNC;
   return {
     onboarded: !!s.onboarded,
     engine: s.engine === 'gecko' ? 'gecko' : 'chromium',
@@ -31,6 +45,31 @@ function sanitize(s: Settings): Settings {
     adblockPaused: Array.isArray(s.adblockPaused) ? [...new Set(s.adblockPaused.filter((h) => typeof h === 'string' && h.length < 256))] : [],
     sleepAfter: [0, 15, 30, 60, 120].includes(s.sleepAfter) ? s.sleepAfter : d.sleepAfter,
     forceDark: !!s.forceDark,
+    darkMode: {
+      enabled: typeof dm.enabled === 'boolean' ? dm.enabled : !!s.forceDark,
+      mode: ['smart', 'filter', 'chromium'].includes(dm.mode) ? dm.mode : DEFAULT_DARK_MODE.mode,
+      brightness: clampNum(dm.brightness, DEFAULT_DARK_MODE.brightness, 50, 130),
+      contrast: clampNum(dm.contrast, DEFAULT_DARK_MODE.contrast, 60, 150),
+      sepia: clampNum(dm.sepia, DEFAULT_DARK_MODE.sepia, 0, 100),
+      grayscale: clampNum(dm.grayscale, DEFAULT_DARK_MODE.grayscale, 0, 100),
+      disabledHosts: Array.isArray(dm.disabledHosts)
+        ? [...new Set(dm.disabledHosts.filter((h) => typeof h === 'string' && h.length < 256))].slice(0, 500)
+        : [],
+      forcedHosts: Array.isArray(dm.forcedHosts)
+        ? [...new Set(dm.forcedHosts.filter((h) => typeof h === 'string' && h.length < 256))].slice(0, 500)
+        : [],
+    },
+    ai: {
+      endpoint: typeof ai.endpoint === 'string' && /^https?:\/\//i.test(ai.endpoint.trim()) ? ai.endpoint.trim().replace(/\/+$/, '') : DEFAULT_AI_SETTINGS.endpoint,
+      model: typeof ai.model === 'string' ? ai.model.trim().slice(0, 120) : '',
+      systemPrompt: typeof ai.systemPrompt === 'string' && ai.systemPrompt.trim() ? ai.systemPrompt.trim().slice(0, 2000) : DEFAULT_AI_SETTINGS.systemPrompt,
+      includePageContext: typeof ai.includePageContext === 'boolean' ? ai.includePageContext : DEFAULT_AI_SETTINGS.includePageContext,
+      targetLanguage: typeof ai.targetLanguage === 'string' && ai.targetLanguage.trim() ? ai.targetLanguage.trim().slice(0, 60) : DEFAULT_AI_SETTINGS.targetLanguage,
+    },
+    clipboardSync: {
+      enabled: typeof cs.enabled === 'boolean' ? cs.enabled : DEFAULT_CLIPBOARD_SYNC.enabled,
+      autoApplyToSystem: typeof cs.autoApplyToSystem === 'boolean' ? cs.autoApplyToSystem : DEFAULT_CLIPBOARD_SYNC.autoApplyToSystem,
+    },
     siteZoom:
       s.siteZoom && typeof s.siteZoom === 'object'
         ? Object.fromEntries(Object.entries(s.siteZoom).filter(([h, z]) => h.length < 256 && typeof z === 'number' && z >= -3 && z <= 5).slice(0, 500))
@@ -61,7 +100,14 @@ export function loadSettings(): Settings {
   try {
     return sanitize(mergeSettings(DEFAULT_SETTINGS, JSON.parse(fs.readFileSync(file(), 'utf8')) as SettingsPatch));
   } catch {
-    return { ...DEFAULT_SETTINGS, updates: { ...DEFAULT_SETTINGS.updates } };
+    return {
+      ...DEFAULT_SETTINGS,
+      updates: { ...DEFAULT_SETTINGS.updates },
+      privacy: { ...DEFAULT_SETTINGS.privacy },
+      darkMode: { ...DEFAULT_DARK_MODE },
+      ai: { ...DEFAULT_AI_SETTINGS },
+      clipboardSync: { ...DEFAULT_CLIPBOARD_SYNC },
+    };
   }
 }
 

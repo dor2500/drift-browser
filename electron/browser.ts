@@ -46,8 +46,8 @@ import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput 
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
-import { geckoStatus, launchGecko, readGeckoSession } from './gecko';
-import { GoogleSync, type Incoming, type LocalData } from './gsync';
+import { applyGeckoEngineToWebContents, downloadGecko, geckoStatus, getGeckoUserAgent } from './gecko';
+import { FirebaseSyncManager, type Incoming, type LocalData } from './firebase-sync';
 import { HistoryIndex } from './history';
 import { RequestHub } from './requests';
 import { readSource, sourceName } from './importer';
@@ -56,6 +56,10 @@ import { applyPatch, loadSettings, saveSettings } from './settings';
 import * as store from './store';
 import { Updater } from './updater';
 import { I18n } from './i18n';
+import { StateManager, type SyncDomain } from './state-manager';
+import { DarkModeEngine } from './dark-mode-engine';
+import { OllamaService } from './ollama-service';
+import { ClipboardMonitor } from './clipboard-sync';
 
 export const PARTITION = 'persist:drift';
 
@@ -101,11 +105,15 @@ export class Browser {
   private closed: { url: string; spaceId: string }[] = [];
   private emitQueued = false;
 
+  readonly stateMgr = new StateManager();
   readonly permissions: Permissions;
   readonly updater: Updater;
-  readonly history = new HistoryIndex();
+  readonly history: HistoryIndex;
   readonly adblock: AdBlock;
-  private sync!: GoogleSync;
+  readonly darkEngine: DarkModeEngine;
+  readonly ollama: OllamaService;
+  readonly clipboardMonitor: ClipboardMonitor;
+  private sync!: FirebaseSyncManager;
   private settings: Settings = loadSettings();
   /** Hosts whose https upgrade failed; they load over http. */
   private httpOk = new Set<string>();
@@ -121,6 +129,18 @@ export class Browser {
   private lastActive = new Map<string, number>();
 
   constructor(private win: BrowserWindow) {
+    this.stateMgr.settings = this.settings;
+    this.history = new HistoryIndex(() => this.stateMgr.notifyDomainChanged('history'));
+    this.darkEngine = new DarkModeEngine(() => this.settings.darkMode);
+    this.ollama = new OllamaService(this.stateMgr, () => this.wc());
+    this.clipboardMonitor = new ClipboardMonitor(this.stateMgr, () => ({
+      deviceId: this.sync?.deviceId ?? 'local',
+      deviceName: this.sync?.deviceName ?? 'This Device',
+      shouldMonitor: () => this.settings.clipboardSync.enabled,
+    }));
+    this.stateMgr.on('state:updated', () => this.emit());
+    this.stateMgr.on('domain:changed', (domain: SyncDomain) => this.sync?.notifyLocalChange(domain));
+
     this.updater = new Updater(() => this.settings, () => this.emit(), (k) => this.i18n.t(k));
     this.permissions = new Permissions({
       tabIdFor: (wc) => [...this.views].find(([, v]) => v.webContents === wc)?.[0],
@@ -145,16 +165,18 @@ export class Browser {
     });
     this.hub = new RequestHub(session.fromPartition(PARTITION), {
       privacy: () => this.settings.privacy,
+      engine: () => this.settings.engine,
       adblockActive: () => this.adblock.isActive,
       blocker: () => this.adblock.engine,
       isPaused: (url) => this.sitePaused(url),
       httpAllowed: (host) => this.httpOk.has(host),
       firefoxUA: FIREFOX_UA,
+      geckoUA: () => getGeckoUserAgent(),
     });
     this.hub.install();
     void this.adblock.init(session.fromPartition(PARTITION), this.settings.hideAnnoyances);
     this.restore(store.load());
-    this.sync = new GoogleSync({
+    this.sync = new FirebaseSyncManager({
       collect: () => this.collectForSync(),
       apply: (incoming) => this.applySynced(incoming),
       changed: () => this.emit(),
@@ -162,7 +184,9 @@ export class Browser {
       openSignIn: (url) => this.createTab({ url }).id,
       closeSignIn: (id) => this.closeTab(id, false),
     });
-    this.sync.start();
+    void this.sync.start();
+    this.clipboardMonitor.start();
+    void this.ollama.refreshModels();
     win.on('resize', () => this.fullscreenTab && this.applyLayout());
     this.updater.schedule();
     try {
@@ -192,7 +216,9 @@ export class Browser {
   private setSettings(patch: SettingsPatch) {
     const before = this.settings;
     this.settings = applyPatch(before, patch);
+    this.stateMgr.settings = this.settings;
     saveSettings(this.settings);
+    this.stateMgr.notifyDomainChanged('settings');
     if (contentRadiusFor(before) !== this.contentRadius) {
       for (const v of this.views.values()) (v as unknown as { setBorderRadius?: (r: number) => void }).setBorderRadius?.(this.contentRadius);
     }
@@ -202,8 +228,25 @@ export class Browser {
     if (patch.privacy?.webrtcProtect !== undefined) {
       for (const v of this.views.values()) v.webContents.setWebRTCIPHandlingPolicy(this.settings.privacy.webrtcProtect ? 'default_public_interface_only' : 'default');
     }
+    if (patch.darkMode !== undefined || patch.forceDark !== undefined) {
+      this.applyDarkModeToAllViews();
+    }
+    if (patch.ai?.endpoint !== undefined) {
+      void this.ollama.refreshModels();
+    }
+    if (patch.ai?.model !== undefined && patch.ai.model) {
+      this.stateMgr.ai.selectedModel = patch.ai.model;
+    }
     if (patch.language !== undefined) this.i18n.reload();
     this.emit();
+  }
+
+  private applyDarkModeToAllViews() {
+    for (const v of this.views.values()) {
+      if (!v.webContents.isDestroyed()) {
+        this.darkEngine.applyToWebContents(v.webContents);
+      }
+    }
   }
 
   private openSettings() {
@@ -273,6 +316,8 @@ export class Browser {
       compact: this.compact,
       sidebarWidth: this.sidebarWidth,
       sync: this.sync.state(),
+      clipboard: this.stateMgr.clipboard,
+      ai: this.stateMgr.ai,
     };
   }
 
@@ -327,6 +372,7 @@ export class Browser {
     if (!isInternalUrl(t.url) && this.win.webContents) this.ensureView(t);
     if (o.background) this.emit();
     else this.activate(t.id);
+    this.stateMgr.notifyDomainChanged('tabs');
     return t;
   }
 
@@ -386,6 +432,8 @@ export class Browser {
     if (this.media?.tabId === id) this.media = undefined;
     this.destroyView(id);
     this.emit();
+    this.stateMgr.notifyDomainChanged('tabs');
+    if (t.pinned || t.essential) this.stateMgr.notifyDomainChanged('bookmarks');
   }
 
   private setTab(c: Extract<Command, { type: 'tab:set' }>) {
@@ -413,6 +461,8 @@ export class Browser {
       this.views.get(t.id)?.webContents.setAudioMuted(c.muted);
     }
     this.emit();
+    this.stateMgr.notifyDomainChanged('tabs');
+    this.stateMgr.notifyDomainChanged('bookmarks');
   }
 
   private move(c: { id: string; zone: DropZone; targetId?: string; position?: DropPosition }) {
@@ -427,6 +477,8 @@ export class Browser {
     const at = target ? this.tabs.indexOf(target) + (c.position === 'after' ? 1 : 0) : this.tabs.length;
     this.tabs.splice(at, 0, t);
     this.emit();
+    this.stateMgr.notifyDomainChanged('tabs');
+    this.stateMgr.notifyDomainChanged('bookmarks');
   }
 
   private switchSpace(id: string) {
@@ -547,6 +599,59 @@ export class Browser {
       case 'sync:key':
         this.sync.setClient({ clientId: c.clientId, clientSecret: c.clientSecret });
         break;
+      case 'sync:firebase-config':
+        this.sync.setFirebaseConfig(c.config);
+        break;
+      case 'handoff:send':
+        void this.sync.sendTabToDevice(c.url, c.title, c.targetDeviceId).catch((err: Error) => this.sync.fail(err.message));
+        break;
+      case 'handoff:dismiss':
+        void this.sync.dismissHandoff(c.id);
+        break;
+      case 'clipboard:push':
+        this.clipboardMonitor.captureNow(c.text);
+        break;
+      case 'clipboard:copy': {
+        const entry = this.stateMgr.clipboard.find((x) => x.id === c.id);
+        if (entry) this.clipboardMonitor.writeSystemClipboard(entry.text);
+        break;
+      }
+      case 'clipboard:pin':
+        this.stateMgr.setClipboardPin(c.id, c.pinned);
+        break;
+      case 'clipboard:delete':
+        this.stateMgr.deleteClipboardItem(c.id);
+        break;
+      case 'clipboard:clear':
+        this.stateMgr.clearClipboard();
+        break;
+      case 'darkmode:toggle-site': {
+        const dmPatch = this.darkEngine.toggleHost(c.host);
+        this.setSettings({ darkMode: dmPatch });
+        break;
+      }
+      case 'darkmode:update':
+        this.setSettings({ darkMode: c.patch });
+        break;
+      case 'ai:toggle':
+        this.stateMgr.setAiOpen(c.open);
+        if (this.stateMgr.ai.open && !this.stateMgr.ai.ollamaOnline) {
+          void this.ollama.refreshModels();
+        }
+        break;
+      case 'ai:prompt':
+        void this.ollama.runPrompt({ prompt: c.prompt, action: c.action, includePage: c.includePage });
+        break;
+      case 'ai:clear':
+        this.ollama.stop();
+        this.stateMgr.clearAiMessages();
+        break;
+      case 'ai:stop':
+        this.ollama.stop();
+        break;
+      case 'ai:refresh-models':
+        void this.ollama.refreshModels();
+        break;
       case 'updates:check':
         void this.updater.checkApp();
         void this.updater.checkEngine();
@@ -646,8 +751,7 @@ export class Browser {
         break;
       }
       case 'engine:switch':
-        if (c.engine === 'gecko') this.switchToGecko();
-        else this.setSettings({ engine: 'chromium' });
+        void this.switchEngine(c.engine);
         break;
       case 'app:restart':
         app.relaunch();
@@ -679,6 +783,7 @@ export class Browser {
         this.spaces.push(s);
         this.activeSpaceId = s.id;
         this.emit();
+        this.stateMgr.notifyDomainChanged('bookmarks');
         this.ui({ type: 'space:rename', id: s.id });
         break;
       }
@@ -697,6 +802,7 @@ export class Browser {
         if (c.icon) s.icon = c.icon;
         if (c.accent) s.accent = c.accent;
         this.emit();
+        this.stateMgr.notifyDomainChanged('bookmarks');
         break;
       }
       case 'space:delete': {
@@ -707,6 +813,8 @@ export class Browser {
         this.spaces = this.spaces.filter((s) => s.id !== c.id);
         if (this.activeSpaceId === c.id) this.switchSpace(this.spaces[0].id);
         this.emit();
+        this.stateMgr.notifyDomainChanged('bookmarks');
+        this.stateMgr.notifyDomainChanged('tabs');
         break;
       }
       case 'space:clear':
@@ -835,6 +943,7 @@ export class Browser {
     if (this.settings.privacy.webrtcProtect) v.webContents.setWebRTCIPHandlingPolicy('default_public_interface_only');
     this.lastActive.set(t.id, Date.now());
     t.asleep = undefined;
+    this.signInUserAgent(v.webContents, t.url);
     v.webContents.loadURL(t.url).catch(() => {});
     return v;
   }
@@ -898,7 +1007,16 @@ export class Browser {
       this.media = { tabId: id, playing: true };
       patch({ audible: true });
     });
-    wc.on('did-finish-load', () => this.applySiteZoom(id));
+    wc.on('dom-ready', () => {
+      applyGeckoEngineToWebContents(wc, this.settings.engine === 'gecko');
+      this.darkEngine.applyToWebContents(wc);
+    });
+    wc.on('did-finish-load', () => {
+      this.applySiteZoom(id);
+      applyGeckoEngineToWebContents(wc, this.settings.engine === 'gecko');
+      this.darkEngine.applyToWebContents(wc);
+      this.stateMgr.notifyDomainChanged('tabs');
+    });
     wc.on('did-fail-load', (_e, code, _desc, url, isMainFrame) => {
       if (!isMainFrame || code === -3 || !this.hub.upgraded.has(url)) return; // -3: aborted
       this.hub.upgraded.delete(url);
@@ -1042,6 +1160,7 @@ export class Browser {
     if (ctrl && !i.alt && !i.shift && k === 'p') return run({ type: 'page:print' });
     if (ctrl && !i.alt && !i.shift && k === 'u') return run({ type: 'page:source' });
     if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:screenshot' });
+    if (ctrl && i.shift && !i.alt && k === 'a') return run({ type: 'ai:toggle' });
     if (ctrl && !i.alt && !i.shift && k === 'j') return this.downloadsMenu(), true;
     if (ctrl && !i.alt && !i.shift && k === 'd') {
       const t = this.tab(this.activeTabId);
@@ -1077,6 +1196,7 @@ export class Browser {
     if (!t) return;
     const active = this.activeTabId;
     const inSplit = !!this.split?.tabIds.includes(id);
+    const otherDevices = this.sync.state().otherDevices;
     const items: MenuItemConstructorOptions[] = [
       { label: t.essential ? this.i18n.t('menu.removeEssential') : this.i18n.t('menu.addEssential'), click: () => this.run({ type: 'tab:set', id, essential: !t.essential }) },
       { label: t.pinned ? this.i18n.t('menu.unpin') : this.i18n.t('menu.pin'), enabled: !t.essential, click: () => this.run({ type: 'tab:set', id, pinned: !t.pinned }) },
@@ -1087,7 +1207,26 @@ export class Browser {
       { label: t.muted ? this.i18n.t('menu.unmute') : this.i18n.t('menu.mute'), click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
       { label: this.i18n.t('menu.reload'), click: () => this.run({ type: 'tab:reload', id }) },
       { label: this.i18n.t('menu.duplicate'), click: () => this.createTab({ url: t.url, afterId: id }) },
-      { label: this.i18n.t('menu.copyLink'), click: () => clipboard.writeText(t.url) },
+      { label: this.i18n.t('menu.copyLink'), click: () => this.clipboardMonitor.captureNow(t.url) },
+      {
+        label: 'Send Tab to Device',
+        enabled: /^https?:/.test(t.url) && otherDevices.length > 0,
+        submenu: [
+          ...otherDevices.map((d) => ({
+            label: d.name,
+            click: () => this.run({ type: 'handoff:send', url: t.url, title: t.title, targetDeviceId: d.id }),
+          })),
+          ...(otherDevices.length > 1
+            ? [
+                { type: 'separator' as const },
+                {
+                  label: 'All Synced Devices',
+                  click: () => this.run({ type: 'handoff:send', url: t.url, title: t.title, targetDeviceId: 'all' }),
+                },
+              ]
+            : []),
+        ],
+      },
       {
         label: this.i18n.t('menu.moveTo'),
         enabled: this.spaces.length > 1,
@@ -1280,59 +1419,78 @@ export class Browser {
   private static readonly SYNCED_SETTINGS = [
     'theme', 'colorTheme', 'customAccent', 'spaceColors', 'verticalTabs', 'searchEngine', 'homePage', 'newTabPage',
     'restoreSession', 'confirmClose', 'smoothScrolling', 'adblock', 'adblockPaused', 'hideAnnoyances', 'clearOnExit',
-    'sleepAfter', 'forceDark', 'siteZoom', 'openInRules', 'privacy', 'language',
+    'sleepAfter', 'forceDark', 'darkMode', 'clipboardSync', 'siteZoom', 'openInRules', 'privacy', 'language',
   ] as const;
 
   private collectForSync(): LocalData {
     const s = this.settings as unknown as Record<string, unknown>;
     return {
-      tabs: this.tabs.filter((t) => !t.glanceOf && /^https?:/.test(t.url)).map((t) => ({ url: t.url, title: t.title })),
+      tabs: this.tabs.filter((t) => !t.glanceOf && /^https?:/.test(t.url)).map((t) => ({ url: t.url, title: t.title, favicon: t.favicon })),
       spaces: this.spaces.map(({ id, name, icon, accent }) => ({ id, name, icon, accent })),
       pins: this.tabs
         .filter((t) => (t.pinned || t.essential) && /^https?:/.test(t.url))
         .map((t) => ({ url: t.url, title: t.title, spaceId: t.spaceId, essential: !!t.essential })),
       settings: Object.fromEntries(Browser.SYNCED_SETTINGS.map((k) => [k, s[k]])),
       history: this.history.exportForSync(4000),
+      clipboard: this.stateMgr.clipboard,
     };
   }
 
-  /** Brings in what your other devices changed. Open tabs are never closed by sync. */
+  /** Brings in what your other devices changed in Firestore. Open tabs are never closed by sync. */
   private applySynced(inc: Incoming) {
-    if (inc.spaces?.length) {
-      const known = new Map(this.spaces.map((sp) => [sp.id, sp]));
-      this.spaces = inc.spaces.map((sp) => ({ ...known.get(sp.id), ...sp }));
-      const first = this.spaces[0].id;
-      for (const t of this.tabs) if (!t.essential && !this.spaces.some((sp) => sp.id === t.spaceId)) t.spaceId = first;
-      if (!this.spaces.some((sp) => sp.id === this.activeSpaceId)) this.activeSpaceId = first;
-    }
-    if (inc.pins) {
-      const want = new Map(inc.pins.map((p) => [p.url, p]));
-      for (const t of this.tabs) {
-        const p = want.get(t.url);
-        if (p) {
-          t.essential = p.essential;
-          t.pinned = !p.essential;
-          if (!p.essential && this.spaces.some((sp) => sp.id === p.spaceId)) t.spaceId = p.spaceId;
-          want.delete(t.url);
-        } else if (t.pinned || t.essential) {
-          // Unpinned on another device: it stays open here as a normal tab.
-          t.pinned = false;
-          t.essential = false;
+    this.stateMgr.withRemoteUpdate(() => {
+      if (inc.spaces?.length) {
+        const known = new Map(this.spaces.map((sp) => [sp.id, sp]));
+        this.spaces = inc.spaces.map((sp) => ({ ...known.get(sp.id), ...sp }));
+        const first = this.spaces[0].id;
+        for (const t of this.tabs) if (!t.essential && !this.spaces.some((sp) => sp.id === t.spaceId)) t.spaceId = first;
+        if (!this.spaces.some((sp) => sp.id === this.activeSpaceId)) this.activeSpaceId = first;
+      }
+      if (inc.pins) {
+        const want = new Map(inc.pins.map((p) => [p.url, p]));
+        for (const t of this.tabs) {
+          const p = want.get(t.url);
+          if (p) {
+            t.essential = p.essential;
+            t.pinned = !p.essential;
+            if (!p.essential && this.spaces.some((sp) => sp.id === p.spaceId)) t.spaceId = p.spaceId;
+            want.delete(t.url);
+          } else if (t.pinned || t.essential) {
+            // Unpinned on another device: it stays open here as a normal tab.
+            t.pinned = false;
+            t.essential = false;
+          }
+        }
+        for (const p of want.values()) {
+          const spaceId = this.spaces.some((sp) => sp.id === p.spaceId) ? p.spaceId : this.activeSpaceId;
+          const t = { ...this.newTabState(p.url, spaceId), title: p.title, pinned: !p.essential, essential: p.essential };
+          this.tabs.push(t);
         }
       }
-      for (const p of want.values()) {
-        const spaceId = this.spaces.some((sp) => sp.id === p.spaceId) ? p.spaceId : this.activeSpaceId;
-        const t = { ...this.newTabState(p.url, spaceId), title: p.title, pinned: !p.essential, essential: p.essential };
-        this.tabs.push(t);
+      if (inc.settings) {
+        const patch: Record<string, unknown> = {};
+        const cur = this.settings as unknown as Record<string, unknown>;
+        for (const k of Browser.SYNCED_SETTINGS) {
+          if (k in inc.settings && JSON.stringify(inc.settings[k]) !== JSON.stringify(cur[k])) {
+            patch[k] = inc.settings[k];
+          }
+        }
+        if (Object.keys(patch).length) this.setSettings(patch as SettingsPatch);
       }
-    }
-    if (inc.settings) {
-      const patch: Record<string, unknown> = {};
-      const cur = this.settings as unknown as Record<string, unknown>;
-      for (const k of Browser.SYNCED_SETTINGS) if (k in inc.settings && JSON.stringify(inc.settings[k]) !== JSON.stringify(cur[k])) patch[k] = inc.settings[k];
-      if (Object.keys(patch).length) this.setSettings(patch as SettingsPatch);
-    }
-    if (inc.history) this.history.importSynced(inc.history);
+      if (inc.history) this.history.importSynced(inc.history);
+      if (inc.clipboard) {
+        const newest = this.stateMgr.mergeRemoteClipboard(inc.clipboard);
+        if (newest && newest.deviceId !== this.sync.deviceId && this.settings.clipboardSync.autoApplyToSystem) {
+          this.clipboardMonitor.writeSystemClipboard(newest.text);
+        }
+      }
+      if (inc.handoffTabs?.length) {
+        for (const item of inc.handoffTabs) {
+          this.createTab({ url: item.url, background: false });
+          this.ui({ type: 'handoff:received', item });
+        }
+      }
+    });
     this.emit();
   }
 
@@ -1394,33 +1552,27 @@ export class Browser {
     return this.settings.customAccent || THEMES[this.settings.theme].accent;
   }
 
-  /** Hand every open tab to the Gecko engine and close Drift's Chromium window. */
-  private switchToGecko() {
-    if (!geckoStatus().available) return;
-    const active = this.tab(this.activeTabId);
-    const urls = [
-      ...(active ? [active.url] : []),
-      ...this.tabs.filter((t) => t !== active && !t.glanceOf && /^https?:/.test(t.url)).map((t) => t.url),
-    ];
-    this.setSettings({ engine: 'gecko' });
-    store.saveNow(this.persisted());
-    void launchGecko(urls, { lang: this.language, accent: this.accentColor, settings: this.settings, shortcuts: this.geckoShortcuts() }).then((ok) => {
-      if (ok) setTimeout(() => app.quit(), 300);
-    });
-  }
-
-  /** Essentials, pinned tabs and most-visited sites, for the Gecko engine's start page. */
-  private geckoShortcuts() {
-    const seen = new Set<string>();
-    const list: { title: string; url: string }[] = [];
-    const add = (url: string, title: string) => {
-      if (!/^https?:/.test(url) || seen.has(url) || list.length >= 12) return;
-      seen.add(url);
-      list.push({ url, title });
-    };
-    for (const t of this.tabs) if (t.essential || t.pinned) add(t.url, t.title);
-    for (const s of this.history.topSites(12)) add(s.url, s.title);
-    return list;
+  /**
+   * Switches the active web engine ('chromium' | 'gecko') live inside Drift Browser
+   * without opening an external Firefox window or closing Drift.
+   */
+  private async switchEngine(engine: 'chromium' | 'gecko') {
+    if (engine === 'gecko' && !geckoStatus().available) {
+      await downloadGecko(this.language, this.settings);
+    }
+    this.setSettings({ engine });
+    const wantUA = engine === 'gecko' ? getGeckoUserAgent() : app.userAgentFallback;
+    session.fromPartition(PARTITION).setUserAgent(wantUA);
+    for (const v of this.views.values()) {
+      if (v.webContents.isDestroyed()) continue;
+      this.signInUserAgent(v.webContents, v.webContents.getURL());
+      applyGeckoEngineToWebContents(v.webContents, engine === 'gecko');
+    }
+    const activeWc = this.wc();
+    if (activeWc && /^https?:/i.test(activeWc.getURL())) {
+      activeWc.reload();
+    }
+    this.emit();
   }
 
   /** Settings for code outside this class that needs them (the Gecko engine download). */
@@ -1428,19 +1580,9 @@ export class Browser {
     return this.settings;
   }
 
-  /** Back from Gecko (drift-engine://chromium): reopen the Gecko session's tabs here. */
+  /** Legacy protocol handler: ensures Chromium engine is selected and focuses Drift. */
   returnFromGecko() {
-    this.setSettings({ engine: 'chromium' });
-    const known = new Set(this.tabs.map((t) => t.url));
-    let last: TabState | undefined;
-    for (const url of readGeckoSession()) {
-      if (known.has(url)) continue;
-      known.add(url);
-      last = { ...this.newTabState(url, this.activeSpaceId), title: url };
-      this.tabs.push(last);
-    }
-    if (last) this.activate(last.id);
-    this.emit();
+    void this.switchEngine('chromium');
     if (this.win.isMinimized()) this.win.restore();
     this.win.focus();
   }
@@ -1485,8 +1627,8 @@ export class Browser {
    * workaround); every other site keeps Drift's normal Chrome-style agent.
    */
   private signInUserAgent(wc: WebContents, url: string) {
-    const google = hostOfUrl(url) === 'accounts.google.com';
-    const want = google ? FIREFOX_UA : app.userAgentFallback;
+    const useGecko = this.settings.engine === 'gecko' || hostOfUrl(url) === 'accounts.google.com';
+    const want = useGecko ? getGeckoUserAgent() : app.userAgentFallback;
     if (wc.getUserAgent() !== want) wc.setUserAgent(want);
   }
 
@@ -1687,6 +1829,15 @@ export class Browser {
       { label: this.i18n.t('act.print'), accelerator: 'Ctrl+P', click: () => this.run({ type: 'page:print' }) },
       { label: this.i18n.t('act.screenshot'), accelerator: 'Ctrl+Shift+S', click: () => this.run({ type: 'page:screenshot' }) },
       { type: 'separator' },
+      { label: 'Local AI Assistant (Ollama)', accelerator: 'Ctrl+Shift+A', click: () => this.run({ type: 'ai:toggle' }) },
+      { label: 'Summarize Current Page (AI)', click: () => this.run({ type: 'ai:prompt', prompt: '', action: 'summarize', includePage: true }) },
+      {
+        label: 'Force Dark Mode on Sites',
+        type: 'checkbox',
+        checked: this.settings.darkMode.enabled,
+        click: () => this.run({ type: 'darkmode:update', patch: { enabled: !this.settings.darkMode.enabled } }),
+      },
+      { type: 'separator' },
       { label: this.i18n.t('menu.verticalTabs'), type: 'checkbox', checked: this.settings.verticalTabs, click: () => this.setSettings({ verticalTabs: !this.settings.verticalTabs }) },
       { label: this.i18n.t('menu.splitNext'), accelerator: 'Ctrl+Alt+V', click: () => this.shortcut({ type: 'keyDown', key: 'v', control: true, alt: true } as Input) },
       { type: 'separator' },
@@ -1757,13 +1908,41 @@ export class Browser {
       items.push({ role: 'undo' }, { role: 'redo' }, sep, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }, sep);
     } else if (p.selectionText.trim()) {
       const q = p.selectionText.trim();
-      items.push({ role: 'copy' }, { label: this.i18n.t('menu.searchFor', { text: q.length > 30 ? q.slice(0, 30) + '…' : q }), click: () => this.createTab({ url: q, afterId: id }) }, sep);
+      items.push(
+        { role: 'copy' },
+        { label: 'Sync Selection to Cloud Clipboard', click: () => this.clipboardMonitor.captureNow(q) },
+        { label: this.i18n.t('menu.searchFor', { text: q.length > 30 ? q.slice(0, 30) + '…' : q }), click: () => this.createTab({ url: q, afterId: id }) },
+        { label: 'Explain Selection with Local AI', click: () => this.run({ type: 'ai:prompt', prompt: `Explain this selection:\n\n"${q}"`, action: 'explain', includePage: false }) },
+        { label: 'Translate Selection with Local AI', click: () => this.run({ type: 'ai:prompt', prompt: q, action: 'translate', includePage: false }) },
+        sep,
+      );
     }
+    const pageHost = hostOfUrl(wc.getURL());
     items.push(
       { label: this.i18n.t('menu.back'), enabled: wc.navigationHistory.canGoBack(), click: () => wc.navigationHistory.goBack() },
       { label: this.i18n.t('menu.forward'), enabled: wc.navigationHistory.canGoForward(), click: () => wc.navigationHistory.goForward() },
       { label: this.i18n.t('menu.reload'), click: () => wc.reload() },
       sep,
+      {
+        label: 'Local AI Assistant (Ollama)',
+        submenu: [
+          { label: 'Summarize This Page', click: () => this.run({ type: 'ai:prompt', prompt: '', action: 'summarize', includePage: true }) },
+          { label: 'Explain Key Concepts', click: () => this.run({ type: 'ai:prompt', prompt: '', action: 'explain', includePage: true }) },
+          { label: 'Translate Page with Ollama', click: () => this.run({ type: 'ai:prompt', prompt: '', action: 'translate', includePage: true }) },
+          { type: 'separator' },
+          { label: 'Toggle AI Side Panel (Ctrl+Shift+A)', click: () => this.run({ type: 'ai:toggle' }) },
+        ],
+      },
+      ...(pageHost
+        ? [
+            {
+              label: `Dark Mode for ${pageHost}`,
+              type: 'checkbox' as const,
+              checked: this.darkEngine.isActiveForUrl(wc.getURL()),
+              click: () => this.run({ type: 'darkmode:toggle-site', host: pageHost }),
+            },
+          ]
+        : []),
       this.openInMenu(wc.getURL()),
       { type: 'separator' },
       { label: this.i18n.t('act.print'), accelerator: 'Ctrl+P', click: () => wc.print() },

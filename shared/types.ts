@@ -1,6 +1,6 @@
 // Types shared by the Electron main process, the preload bridge and the React shell.
 import type { LanguageInfo, LocaleBundle } from './i18n';
-import type { Settings, SettingsPatch } from './settings';
+import type { DarkModeSettings, Settings, SettingsPatch } from './settings';
 
 export interface Rect {
   x: number;
@@ -153,21 +153,100 @@ export interface Suggestion {
   source?: string;
 }
 
-/** Drift Sync with a Google account (electron/gsync.ts). */
+/** Firebase Web & OAuth Client Configuration for Cloud Firestore Sync. */
+export interface FirebaseClientConfig {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
+  /** Optional Google OAuth Desktop Client ID for loopback PKCE sign-in. */
+  googleClientId?: string;
+  /** Optional Google OAuth Desktop Client Secret. */
+  googleClientSecret?: string;
+}
+
+/** A tab sent from one device to another via Cross-Device Tab Handoff. */
+export interface HandoffItem {
+  id: string;
+  url: string;
+  title: string;
+  fromDeviceId: string;
+  fromDeviceName: string;
+  toDeviceId: string;
+  createdAt: number;
+}
+
+/** A synced device's open tabs in Firestore. */
+export interface SyncedDeviceInfo {
+  id: string;
+  name: string;
+  platform: string;
+  updated: number;
+  tabs: { url: string; title: string; favicon?: string }[];
+}
+
+/** Universal Cloud Clipboard entry synced across signed-in devices. */
+export interface ClipboardItemEntry {
+  id: string;
+  text: string;
+  deviceId: string;
+  deviceName: string;
+  createdAt: number;
+  pinned?: boolean;
+}
+
+/** Local AI Assistant (Ollama) conversation message. */
+export interface AiMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+  action?: 'chat' | 'summarize' | 'translate' | 'explain';
+}
+
+/** Local AI Assistant (Ollama) state. */
+export interface AiState {
+  open: boolean;
+  status: 'idle' | 'connecting' | 'streaming' | 'error';
+  ollamaOnline: boolean;
+  availableModels: string[];
+  selectedModel: string;
+  messages: AiMessage[];
+  error?: string;
+}
+
+/** Drift Cloud Sync state powered by Firebase Authentication & Cloud Firestore. */
 export interface SyncState {
-  /** A Google connection key is available (built in or entered in Settings). */
+  provider: 'firebase';
+  /** A Firebase & Google connection config is available (built in or entered in Settings). */
   configured: boolean;
   builtInKey: boolean;
   signedIn: boolean;
+  uid?: string;
   email?: string;
   name?: string;
   picture?: string;
+  deviceId: string;
+  deviceName: string;
   lastSync?: number;
+  realtimeConnected: boolean;
   error?: string;
   syncing: boolean;
-  what: { bookmarks: boolean; tabs: boolean; history: boolean; settings: boolean };
-  otherDevices: { name: string; platform: string; updated: number; tabs: { url: string; title: string }[] }[];
+  what: {
+    bookmarks: boolean;
+    tabs: boolean;
+    history: boolean;
+    settings: boolean;
+    clipboard: boolean;
+  };
+  firebaseConfig?: FirebaseClientConfig;
+  otherDevices: SyncedDeviceInfo[];
+  handoffQueue: HandoffItem[];
 }
+
+export type SyncWhat = SyncState['what'];
 
 export interface BrowserState {
   tabs: TabState[];
@@ -185,6 +264,8 @@ export interface BrowserState {
   compact: boolean;
   sidebarWidth: number;
   sync: SyncState;
+  clipboard: ClipboardItemEntry[];
+  ai: AiState;
 }
 
 /** A placeholder rectangle in the shell where a tab's native web view goes. */
@@ -225,6 +306,21 @@ export type Command =
   | { type: 'sync:now' }
   | { type: 'sync:what'; what: Partial<SyncState['what']> }
   | { type: 'sync:key'; clientId: string; clientSecret: string }
+  | { type: 'sync:firebase-config'; config: FirebaseClientConfig }
+  | { type: 'handoff:send'; url: string; title: string; targetDeviceId: string }
+  | { type: 'handoff:dismiss'; id: string }
+  | { type: 'clipboard:push'; text?: string }
+  | { type: 'clipboard:copy'; id: string }
+  | { type: 'clipboard:pin'; id: string; pinned: boolean }
+  | { type: 'clipboard:delete'; id: string }
+  | { type: 'clipboard:clear' }
+  | { type: 'darkmode:toggle-site'; host: string }
+  | { type: 'darkmode:update'; patch: Partial<DarkModeSettings> }
+  | { type: 'ai:toggle'; open?: boolean }
+  | { type: 'ai:prompt'; prompt: string; action?: 'chat' | 'summarize' | 'translate' | 'explain'; includePage?: boolean }
+  | { type: 'ai:clear' }
+  | { type: 'ai:stop' }
+  | { type: 'ai:refresh-models' }
   | { type: 'updates:check' }
   | { type: 'adblock:site'; host: string; paused: boolean }
   | { type: 'media:control'; id: string; action: 'toggle' | 'next' | 'prev' }
@@ -255,7 +351,8 @@ export type UiEvent =
   | { type: 'commandbar'; mode: 'new' | 'current' }
   | { type: 'space:rename'; id: string }
   | { type: 'glance:backdrop'; snapshots: Snapshot[] }
-  | { type: 'find' };
+  | { type: 'find' }
+  | { type: 'handoff:received'; item: HandoffItem };
 
 export interface DriftApi {
   /** process.platform: 'win32' | 'darwin' | 'linux'. */

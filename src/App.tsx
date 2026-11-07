@@ -1,18 +1,24 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { colorTheme } from '../shared/colorThemes';
 import { THEMES, contentRadiusFor } from '../shared/themes';
-import type { Snapshot } from '../shared/types';
+import type { HandoffItem, Snapshot } from '../shared/types';
+import { AiAssistantPanel } from './components/AiAssistantPanel';
+import { CloudClipboardPanel } from './components/CloudClipboardPanel';
 import { CommandBar } from './components/CommandBar';
 import { ContentArea } from './components/ContentArea';
+import { DarkModePanel } from './components/DarkModePanel';
+import { HandoffPanel } from './components/HandoffPanel';
+import { Icon } from './components/Icon';
 import { Onboarding } from './components/Onboarding';
+import { type PopoverKind } from './components/PageActions';
 import { Sidebar } from './components/Sidebar';
 import { TopBar, type Anchor } from './components/TopBar';
 import { OperaRail } from './components/OperaRail';
-import { loadLocale, useLocale } from './i18n';
+import { loadLocale, t, useLocale } from './i18n';
 import { cx, useBrowserState } from './lib';
 
 type BarMode = 'new' | 'current';
-type OverlayReason = 'bar' | 'onboarding';
+type OverlayReason = 'bar' | 'onboarding' | 'popover';
 
 export function App() {
   const state = useBrowserState();
@@ -36,10 +42,12 @@ export function App() {
   const [peek, setPeek] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [glanceSnaps, setGlanceSnaps] = useState<Snapshot[]>([]);
+  const [popover, setPopover] = useState<PopoverKind | null>(null);
+  const [handoffToast, setHandoffToast] = useState<HandoffItem | null>(null);
 
   // Native web views paint above HTML. While any HTML layer must cover the
-  // page (command bar, first-run setup), the main process swaps the views
-  // for screenshots. Several layers can hold that at once.
+  // page (command bar, first-run setup, floating popover), the main process
+  // swaps the views for screenshots. Several layers can hold that at once.
   const holders = useRef(new Set<OverlayReason>());
   const hold = useCallback(async (reason: OverlayReason, on: boolean) => {
     const before = holders.current.size > 0;
@@ -81,11 +89,28 @@ export function App() {
     void hold('bar', false);
   }, [hold]);
 
+  const closePopover = useCallback(() => {
+    setPopover(null);
+    void hold('popover', false);
+  }, [hold]);
+
   useEffect(() => {
     const open = () => setFindOpen(true);
+    const onPopover = (ev: Event) => {
+      const kind = (ev as CustomEvent<PopoverKind>).detail;
+      setPopover((prev) => {
+        const next = prev === kind ? null : kind;
+        void hold('popover', next !== null);
+        return next;
+      });
+    };
     window.addEventListener('drift:find', open);
-    return () => window.removeEventListener('drift:find', open);
-  }, []);
+    window.addEventListener('drift:popover', onPopover);
+    return () => {
+      window.removeEventListener('drift:find', open);
+      window.removeEventListener('drift:popover', onPopover);
+    };
+  }, [hold]);
 
   const activeId = state?.activeTabId;
   useEffect(() => setFindOpen(false), [activeId]);
@@ -108,10 +133,13 @@ export function App() {
           // Top-tab browsers open a real new tab on Ctrl+T, then focus the omnibox.
           else if (e.mode === 'new') void window.drift.cmd({ type: 'tab:new' }).then(() => openBar('current', omniboxAnchor()));
           else openBar('current', omniboxAnchor());
-        }
-        else if (e.type === 'space:rename') setRenamingSpace(e.id);
+        } else if (e.type === 'space:rename') setRenamingSpace(e.id);
         else if (e.type === 'glance:backdrop') setGlanceSnaps(e.snapshots);
         else if (e.type === 'find') setFindOpen(true);
+        else if (e.type === 'handoff:received') {
+          setHandoffToast(e.item);
+          setTimeout(() => setHandoffToast((cur) => (cur?.id === e.item.id ? null : cur)), 4500);
+        }
       }),
     [openBar],
   );
@@ -140,6 +168,7 @@ export function App() {
     : {};
   // A permission prompt lives in the sidebar, so compact mode must reveal it.
   const focusId = state.glance?.id ?? state.activeTabId;
+  const activeTab = state.tabs.find((t) => t.id === focusId);
   const sidebarOpen = !state.compact || peek || state.prompts.some((p) => p.tabId === focusId);
 
   return (
@@ -169,25 +198,79 @@ export function App() {
         </>
       )}
       {(() => {
-        const content = (
-          <ContentArea
-            state={state}
-            snapshots={[...snapshots, ...glanceSnaps]}
-            dimmed={bar !== null || onboarding}
-            findOpen={findOpen}
-            onCloseFind={() => setFindOpen(false)}
-          />
+        const contentWithAi = (
+          <div className="workspace-main">
+            <ContentArea
+              state={state}
+              snapshots={[...snapshots, ...glanceSnaps]}
+              dimmed={bar !== null || onboarding || popover !== null}
+              findOpen={findOpen}
+              onCloseFind={() => setFindOpen(false)}
+            />
+            {state.ai.open && (
+              <AiAssistantPanel
+                ai={state.ai}
+                settings={state.settings.ai}
+                activeTab={activeTab}
+              />
+            )}
+          </div>
         );
         // Opera One keeps a rail of shortcuts beside the page.
         return horizontal && theme === 'opera' ? (
           <div className="opera-body">
             <OperaRail state={state} />
-            {content}
+            {contentWithAi}
           </div>
         ) : (
-          content
+          contentWithAi
         );
       })()}
+
+      {/* Floating Popover Modal for Dark Mode, Cloud Clipboard, or Tab Handoff */}
+      {popover && (
+        <div className="shell-popover-backdrop" onMouseDown={closePopover}>
+          <div className="shell-popover-card" onMouseDown={(e) => e.stopPropagation()}>
+            {popover === 'darkmode' && (
+              <DarkModePanel
+                darkMode={state.settings.darkMode}
+                activeUrl={activeTab?.url}
+                onClose={closePopover}
+              />
+            )}
+            {popover === 'clipboard' && (
+              <CloudClipboardPanel
+                items={state.clipboard}
+                settings={state.settings.clipboardSync}
+                sync={state.sync}
+                onClose={closePopover}
+              />
+            )}
+            {popover === 'handoff' && (
+              <HandoffPanel
+                sync={state.sync}
+                activeTab={activeTab}
+                onClose={closePopover}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Real-time Incoming Tab Handoff Notification */}
+      {handoffToast && (
+        <div className="handoff-live-banner">
+          <Icon name="devices" size={16} />
+          <span>
+            {t('sync.handoffToast', { device: handoffToast.fromDeviceName })}:{' '}
+            <strong>{handoffToast.title || handoffToast.url}</strong>
+          </span>
+          <button className="tb-btn" onClick={() => setHandoffToast(null)}>
+            <Icon name="x" size={13} />
+          </button>
+        </div>
+      )}
+
       {bar && <CommandBar key={bar} mode={bar} state={state} anchor={horizontal ? anchor : undefined} onClose={closeBar} />}
       {onboarding && <Onboarding state={state} />}
     </div>
