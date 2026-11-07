@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drift</string>
+    <string name="address_hint">חיפוש או הקלדת כתובת</string>
+    <string name="new_tab">כרטיסייה חדשה</string>
+    <string name="tabs">כרטיסיות</string>
+    <string name="back">אחורה</string>
+    <string name="forward">קדימה</string>
+    <string name="menu">תפריט</string>
+    <string name="reload">רענון</string>
+    <string name="share">שיתוף</string>
+    <string name="desktop_site">גרסת מחשב</string>
+    <string name="adblock">חסימת פרסומות ורכיבי מעקב</string>
+    <string name="blocked_count">נחסמו בדף הזה %1$d פרסומות ורכיבי מעקב</string>
+    <string name="close_tab">סגירת כרטיסייה</string>
+    <string name="close_all">סגירת כל הכרטיסיות במרחב</string>
+    <string name="new_space">מרחב חדש</string>
+    <string name="space_default">מרחב %1$d</string>
+    <string name="home">בית</string>
+    <string name="search_with">חיפוש בגוגל</string>
+    <string name="open">פתיחה</string>
+    <string name="switch_to_tab">מעבר לכרטיסייה</string>
+    <string name="update_available">עדכון ל-Drift %1$s</string>
+    <string name="about">Drift %1$s · Chromium %2$s</string>
+    <string name="find_in_page">חיפוש בדף</string>
+    <string name="find_count">%1$d מתוך %2$d</string>
+    <string name="downloading">מוריד את %1$s</string>
+    <string name="not_secure">לא מאובטח</string>
+    <string name="sign_in_google">התחברות לגוגל</string>
+    <string name="pin">נעיצת כרטיסייה</string>
+    <string name="unpin">ביטול נעיצה</string>
+    <string name="pinned">נעוצות</string>
+</resources>

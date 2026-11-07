@@ -2,4 +2,10 @@ node_modules/
 dist/
 dist-electron/
 release/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.jks
+*.keystore
 *.log

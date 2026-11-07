@@ -20,6 +20,8 @@ irm https://raw.githubusercontent.com/dor2500/drift-browser/main/install.ps1 | i
 curl -fsSL https://raw.githubusercontent.com/dor2500/drift-browser/main/install.sh | sh
 ```
 
+**Android**: download `Drift-x.y.z.apk` from [Releases](https://github.com/dor2500/drift-browser/releases/latest) and open it (allow installing from your browser or Files app when Android asks). Drift checks for new versions itself and offers them in its ⋮ menu.
+
 Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppImage` / `.deb` (Linux) from [Releases](https://github.com/dor2500/drift-browser/releases/latest). Installed copies update themselves. Builds aren't code-signed yet, so Windows SmartScreen may say "More info → Run anyway", and on macOS the install script clears the download-quarantine flag.
 
 ## Features
@@ -59,6 +61,21 @@ Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppIm
   | First run | Settings |
   |---|---|
   | ![First run](docs/screenshots/first-run.png) | ![Settings](docs/screenshots/settings.png) |
+
+## Drift for Android
+
+A native Kotlin + Jetpack Compose app in [`android/`](android/), built on Android's Chromium WebView, with:
+- Drift's floating rounded page over the space colour, and a thumb-friendly bottom bar (back, address pill with a shield, tab counter, menu).
+- Tabs in spaces, kept across restarts, and a tab grid.
+- Ad and tracker blocking plus the YouTube ad skipper; downloads; find in page; desktop-site mode; share.
+- Google sign-in that works (the WebView's `; wv` marker that Google blocks is removed).
+- English and Hebrew.
+
+Build locally with `cd android` then `gradlew assembleRelease`. CI builds a signed APK for every release.
+
+| Page | Tabs and spaces |
+|---|---|
+| ![Android](docs/screenshots/android-youtube.png) | ![Android tabs](docs/screenshots/android-tabs.png) |
 
 ## Updates and Chromium security
 

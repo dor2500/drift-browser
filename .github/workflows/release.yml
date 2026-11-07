@@ -74,8 +74,36 @@ jobs:
           # macOS builds are unsigned until an Apple Developer ID is added.
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+  # Drift for Android: a signed APK attached to the same release. The key comes
+  # from repository secrets so every APK installs over the previous one.
+  android:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Restore signing key
+        run: echo "${{ secrets.DRIFT_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/drift.jks"
+      - name: Build APK
+        working-directory: android
+        env:
+          DRIFT_KEYSTORE: ${{ runner.temp }}/drift.jks
+          DRIFT_KEYSTORE_PASSWORD: ${{ secrets.DRIFT_KEYSTORE_PASSWORD }}
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon --console=plain
+      - name: Upload to the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "Drift-${TAG#v}.apk"
+          gh release upload "$TAG" "Drift-${TAG#v}.apk" -R "$GITHUB_REPOSITORY" --clobber
+
   publish:
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     steps:
       - name: Publish the release

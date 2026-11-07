@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drift</string>
+    <string name="address_hint">Search or enter address</string>
+    <string name="new_tab">New tab</string>
+    <string name="tabs">Tabs</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="menu">Menu</string>
+    <string name="reload">Reload</string>
+    <string name="share">Share</string>
+    <string name="desktop_site">Desktop site</string>
+    <string name="adblock">Block ads and trackers</string>
+    <string name="blocked_count">%1$d ads and trackers blocked on this page</string>
+    <string name="close_tab">Close tab</string>
+    <string name="close_all">Close all tabs in this space</string>
+    <string name="new_space">New space</string>
+    <string name="space_default">Space %1$d</string>
+    <string name="home">Home</string>
+    <string name="search_with">Search with Google</string>
+    <string name="open">Open</string>
+    <string name="switch_to_tab">Switch to tab</string>
+    <string name="update_available">Update to Drift %1$s</string>
+    <string name="about">Drift %1$s · Chromium %2$s</string>
+    <string name="find_in_page">Find in page</string>
+    <string name="find_count">%1$d of %2$d</string>
+    <string name="downloading">Downloading %1$s</string>
+    <string name="not_secure">Not secure</string>
+    <string name="sign_in_google">Sign in to Google</string>
+    <string name="pin">Pin tab</string>
+    <string name="unpin">Unpin tab</string>
+    <string name="pinned">Pinned</string>
+</resources>
