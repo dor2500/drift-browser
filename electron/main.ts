@@ -3,6 +3,8 @@ import path from 'node:path';
 import type { Command, ImportBrowser, ImportOptions, Pane } from '../shared/types';
 import { Browser, detectRtl } from './browser';
 import { otherBrowsers, readEnv } from './env';
+import { downloadGecko, geckoStatus, launchGecko } from './gecko';
+import { THEMES } from '../shared/themes';
 import { detectSources } from './importer';
 import { loadSettings } from './settings';
 import * as store from './store';
@@ -10,15 +12,23 @@ import * as store from './store';
 const DEV_URL = process.env.DRIFT_DEV_URL;
 
 app.setName('Drift');
+// Development runs keep their own data, so testing never touches an installed Drift.
+if (!app.isPackaged) app.setPath('userData', app.getPath('userData') + ' Dev');
 // Groups Drift's windows under its own taskbar icon on Windows.
 app.setAppUserModelId('app.drift.browser');
 // Some sites (Google sign-in among them) refuse user agents that mention Electron.
 app.userAgentFallback = app.userAgentFallback.replace(/\s(Electron|drift-browser|Drift)\/\S+/g, '');
 nativeTheme.themeSource = 'dark';
-if (loadSettings().forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark');
+{
+  const early = loadSettings();
+  if (early.forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark');
+  if (!early.smoothScrolling) app.commandLine.appendSwitch('disable-smooth-scrolling');
+  if (!early.hardwareAcceleration) app.disableHardwareAcceleration();
+}
 
 let win: BrowserWindow | undefined;
 let browser: Browser | undefined;
+let confirmedClose = false;
 
 /** Only the shell window may drive the browser over IPC, never a web page. */
 const fromShell = (e: IpcMainEvent | IpcMainInvokeEvent) => !!win && e.sender === win.webContents;
@@ -51,7 +61,18 @@ function createWindow() {
     if (browser?.shortcut(input)) e.preventDefault();
   });
   win.once('ready-to-show', () => win?.show());
-  win.on('close', () => browser && store.saveNow(browser.persisted()));
+  win.on('close', (e) => {
+    if (browser?.shouldConfirmClose() && !confirmedClose) {
+      e.preventDefault();
+      void browser.confirmClose().then((ok) => {
+        if (!ok) return;
+        confirmedClose = true;
+        win?.close();
+      });
+      return;
+    }
+    if (browser) store.saveNow(browser.persisted());
+  });
 
   if (DEV_URL) void win.loadURL(DEV_URL);
   else void win.loadFile(path.join(__dirname, '../../dist/index.html'));
@@ -73,6 +94,17 @@ ipcMain.on('drift:spaces-menu', (e) => fromShell(e) && browser?.spacesMenu());
 ipcMain.handle('drift:env', (e) => (fromShell(e) ? readEnv() : undefined));
 ipcMain.handle('drift:site-permissions', (e) => (fromShell(e) ? browser?.permissions.all() : undefined));
 ipcMain.on('drift:shield-menu', (e) => fromShell(e) && browser?.shieldMenu());
+ipcMain.handle('drift:top-sites', (e) => (fromShell(e) ? browser?.history.topSites(8) : []));
+ipcMain.handle('drift:stats', (e) => (fromShell(e) ? browser?.stats() : undefined));
+ipcMain.handle('drift:gecko-status', (e) => (fromShell(e) ? geckoStatus() : undefined));
+ipcMain.handle('drift:gecko-download', async (e) => {
+  if (!fromShell(e) || !browser) return undefined;
+  try {
+    return await downloadGecko(browser.language);
+  } catch (err) {
+    return { available: false, error: String((err as Error)?.message ?? err) };
+  }
+});
 ipcMain.on('drift:downloads-menu', (e) => fromShell(e) && browser?.downloadsMenu());
 ipcMain.handle('drift:google-status', (e) => (fromShell(e) ? browser?.googleStatus() : false));
 ipcMain.handle('drift:other-browsers', (e) => (fromShell(e) ? otherBrowsers().map(({ id, name }) => ({ id, name })) : []));
@@ -87,8 +119,39 @@ ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions
 // Asked by tab-preload.js on YouTube: should the ad skipper run on this page?
 ipcMain.handle('drift:adblock-active', (e) => browser?.adblockActiveFor(e.sender.getURL()) ?? false);
 
+// One Drift at a time; links like drift-engine://chromium reach the running copy.
+const ENGINE_LINK = 'drift-engine://';
+const engineLink = (argv: string[]) => argv.find((a) => a.startsWith(ENGINE_LINK));
+if (!app.requestSingleInstanceLock()) app.quit();
+app.on('second-instance', (_e, argv) => {
+  if (engineLink(argv)) browser?.returnFromGecko();
+  else if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+});
+app.on('open-url', (e, url) => {
+  // macOS delivers protocol links here.
+  e.preventDefault();
+  if (url.startsWith(ENGINE_LINK)) browser?.returnFromGecko();
+});
+
 app.whenReady().then(() => {
   detectRtl(app.getLocale());
+
+  // The Gecko engine's start page links back here with drift-engine://chromium.
+  // Only the installed app registers the link, so development runs never take it over.
+  if (app.isPackaged) app.setAsDefaultProtocolClient('drift-engine');
+
+  // With Gecko chosen, starting Drift starts the Gecko engine instead of this window.
+  const s = loadSettings();
+  const returning = !!engineLink(process.argv);
+  if (s.engine === 'gecko' && !returning && !process.argv.includes('--chromium') && geckoStatus().available) {
+    const lang = s.language === 'auto' ? app.getLocale().split('-')[0] : s.language;
+    launchGecko([], lang, s.customAccent || THEMES[s.theme].accent);
+    app.quit();
+    return;
+  }
 
   // Pages may not embed <webview> tags.
   app.on('web-contents-created', (_e, wc) => wc.on('will-attach-webview', (ev) => ev.preventDefault()));
@@ -99,6 +162,7 @@ app.whenReady().then(() => {
   }
 
   createWindow();
+  if (returning) setTimeout(() => browser?.returnFromGecko(), 1500);
 });
 
 app.on('window-all-closed', () => app.quit());

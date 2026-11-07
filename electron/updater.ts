@@ -57,7 +57,8 @@ export class Updater {
   }
 
   async checkAll() {
-    await Promise.all([this.checkApp(), this.settings().updates.engineAlerts ? this.checkEngine() : Promise.resolve()]);
+    const s = this.settings();
+    await Promise.all([this.checkApp(), s.updates.engineAlerts && s.privacy.engineCheck ? this.checkEngine() : Promise.resolve()]);
   }
 
   async checkApp() {
@@ -80,9 +81,16 @@ export class Updater {
   async checkEngine() {
     this.status.engine = { ...this.status.engine, checking: true, error: undefined };
     this.changed();
+    const p = this.settings().privacy;
+    if (!p.engineCheck) {
+      this.status.engine = { current: process.versions.chrome };
+      this.changed();
+      return;
+    }
+    // Google's version API is only contacted when you opt in (Settings → Privacy).
     const [releases, chrome] = await Promise.allSettled([
       net.fetch(ELECTRON_RELEASES).then((r) => r.json() as Promise<{ version: string; chrome: string }[]>),
-      net.fetch(CHROME_STABLE).then((r) => r.json() as Promise<{ versions?: { version: string }[] }>),
+      p.chromeCompare ? net.fetch(CHROME_STABLE).then((r) => r.json() as Promise<{ versions?: { version: string }[] }>) : Promise.reject(new Error('off')),
     ]);
     const engine: UpdateStatus['engine'] = { current: process.versions.chrome, checkedAt: Date.now() };
     if (releases.status === 'fulfilled' && Array.isArray(releases.value)) {
@@ -98,7 +106,7 @@ export class Updater {
       }
     }
     if (chrome.status === 'fulfilled') engine.chromeStable = chrome.value.versions?.[0]?.version;
-    if (releases.status === 'rejected' && chrome.status === 'rejected') engine.error = this.t('updmsg.offline');
+    if (releases.status === 'rejected') engine.error = this.t('updmsg.offline');
     this.status.engine = engine;
     this.changed();
   }

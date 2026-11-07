@@ -36,6 +36,8 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | Screenshot | Firefox, Edge, Vivaldi, Opera | ✅ Ctrl+Shift+S (clipboard + Downloads) |
 | Translate page | Chrome, Edge, Brave, Safari | ✅ via Google Translate |
 | Command palette / quick commands | Arc, Vivaldi, Zen | ✅ type an action in the address bar, or start with `>` |
+| New-tab page with shortcuts | Chrome, Brave, Firefox | ✅ per style; Brave's shows blocked trackers and time saved |
+| Search settings | Chrome, Brave, Firefox | ✅ (matches English words in any language) |
 | History suggestions in the address bar | all | ✅ (plus imported history) |
 | Reader mode | Firefox, Safari, Edge | 🔜 |
 | Bookmarks manager | all | ➖ Drift uses pins, Essentials and searchable imported bookmarks instead |
@@ -52,7 +54,12 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | Automatic engine security updates | all | ✅ daily Electron/Chromium watch + auto-update |
 | Private window | all | 🔜 as a "private space" with a throwaway session |
 | Containers per space | Firefox, Zen | 🔜 |
-| HTTPS-only mode | Firefox, Brave, Chrome | 🔜 |
+| HTTPS-only mode | Firefox, Brave, Chrome | ✅ HTTPS-First with fallback |
+| Strip tracking parameters | Firefox, Brave | ✅ |
+| Block third-party cookies | Brave, Firefox, Safari | ✅ |
+| Global Privacy Control / Do Not Track | Brave, Firefox | ✅ |
+| WebRTC IP-leak protection | Brave | ✅ |
+| No telemetry; list of every connection | LibreWolf, Brave | ✅ |
 | Fingerprinting protection | Brave, Firefox | 🔜 |
 | Password manager | all | ➖ for now: security-critical; use your OS or a dedicated manager |
 
@@ -73,5 +80,5 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | Sign in to Google sites | all | ✅ (Google's sign-in page works) |
 | Chrome Sync | Chrome only | ➖ Google allows it only in Chrome |
 | Import from other browsers | all | ✅ Zen, Firefox, Chrome, Brave, Edge |
-| Choice of rendering engine | – | ➖ Electron ships only Chromium. Instead: "Open page in" any installed browser, with per-site rules |
+| Choice of rendering engine | – | ✅ Chromium (built in) or Gecko (Firefox with a Drift-managed, hardened profile); plus "Open page in" any installed browser |
 | Extensions | Chrome, Edge, Firefox, Brave | 🔜 partial (Electron supports a subset of Chrome extensions) |

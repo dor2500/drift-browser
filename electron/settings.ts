@@ -12,6 +12,7 @@ function sanitize(s: Settings): Settings {
   const u = s.updates;
   return {
     onboarded: !!s.onboarded,
+    engine: s.engine === 'gecko' ? 'gecko' : 'chromium',
     language: typeof s.language === 'string' && /^(auto|[a-z]{2,3}(-[A-Za-z]{2,4})?)$/.test(s.language) ? s.language : 'auto',
     theme: s.theme in THEMES ? s.theme : d.theme,
     spaceColors: typeof s.spaceColors === 'boolean' ? s.spaceColors : d.spaceColors,
@@ -19,6 +20,10 @@ function sanitize(s: Settings): Settings {
     searchEngine: s.searchEngine in SEARCH_ENGINES ? s.searchEngine : d.searchEngine,
     homePage: typeof s.homePage === 'string' && /^(https?|drift):/i.test(s.homePage) ? s.homePage : d.homePage,
     restoreSession: typeof s.restoreSession === 'boolean' ? s.restoreSession : d.restoreSession,
+    newTabPage: s.newTabPage === 'home' ? 'home' : 'newtab',
+    confirmClose: !!s.confirmClose,
+    smoothScrolling: typeof s.smoothScrolling === 'boolean' ? s.smoothScrolling : true,
+    hardwareAcceleration: typeof s.hardwareAcceleration === 'boolean' ? s.hardwareAcceleration : true,
     adblock: typeof s.adblock === 'boolean' ? s.adblock : d.adblock,
     adblockPaused: Array.isArray(s.adblockPaused) ? [...new Set(s.adblockPaused.filter((h) => typeof h === 'string' && h.length < 256))] : [],
     sleepAfter: [0, 15, 30, 60, 120].includes(s.sleepAfter) ? s.sleepAfter : d.sleepAfter,
@@ -35,6 +40,9 @@ function sanitize(s: Settings): Settings {
             Object.entries(s.openInRules).filter(([h, b]) => h.length < 256 && ['zen', 'firefox', 'chrome', 'brave', 'edge'].includes(b as string)).slice(0, 200),
           )
         : {},
+    privacy: Object.fromEntries(
+      Object.entries(d.privacy).map(([k, def]) => [k, typeof (s.privacy as unknown as Record<string, unknown> | undefined)?.[k] === 'boolean' ? (s.privacy as unknown as Record<string, boolean>)[k] : def]),
+    ) as Settings['privacy'],
     updates: {
       source: ['github', 'custom', 'off'].includes(u?.source) ? u.source : d.updates.source,
       githubRepo: typeof u?.githubRepo === 'string' ? u.githubRepo.trim() : '',

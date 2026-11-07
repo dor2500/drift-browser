@@ -2,6 +2,7 @@
 @import './themes.css';
 @import './pages.css';
 @import './topbar.css';
+@import './ntp.css';
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }

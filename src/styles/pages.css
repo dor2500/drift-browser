@@ -440,3 +440,22 @@ select.field-input option { background: var(--panel); }
 
 .google-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0 12px; }
 .google-ok { display: inline-flex; align-items: center; gap: 6px; color: #7ad88a; }
+
+/* ------------------------------------------------------------------ engines + connections */
+
+.engine-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.engine-option {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--element-bg);
+  box-shadow: 0 0 0 1px var(--border-contrast);
+}
+.engine-option.selected { box-shadow: 0 0 0 1.5px var(--accent); }
+.engine-head { display: flex; align-items: center; gap: 8px; }
+.engine-head svg { color: var(--accent); }
+.engine-badge { margin-inline-start: auto; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); }
+.engine-option .engine-actions { margin-top: 4px; }
+.conn-list { margin: 0; padding-inline-start: 18px; display: grid; gap: 6px; color: var(--text-dim); font-size: 12.5px; }

@@ -7,6 +7,7 @@ import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { DownloadsButton } from './DownloadsButton';
 import { PageActions } from './PageActions';
+import { SpaceIcon } from './SpaceIcon';
 import { iconForPermission } from './PermissionCard';
 import { hasUpdateBadge } from './UpdatePanels';
 import { t } from '../i18n';
@@ -53,7 +54,7 @@ export function TopBar({ state, onOpenBar }: Props) {
       <div className="tabstrip drag">
         {state.spaces.length > 1 && (
           <button className="strip-btn space-btn" title={t('spaces.space', { name: space.name })} onClick={() => window.drift.spacesMenu()}>
-            {space.icon}
+            <SpaceIcon icon={space.icon} />
           </button>
         )}
         <div
@@ -121,7 +122,7 @@ export function TopBar({ state, onOpenBar }: Props) {
             <Icon name={focus?.url.startsWith('https:') ? 'lock' : 'search'} size={14} />
           </button>
           <button ref={omnibox} className="omnibox-text" title="Ctrl+L" onClick={() => onOpenBar('current', anchor())}>
-            {focus ? (isInternalUrl(focus.url) ? t('set.title') : displayUrl(focus.url)) : t('url.placeholder')}
+            {focus ? (focus.url.startsWith('drift://newtab') ? t('url.placeholder') : isInternalUrl(focus.url) ? t('set.title') : displayUrl(focus.url)) : t('url.placeholder')}
           </button>
           <PageActions tab={focus} state={state} />
         </div>
@@ -182,7 +183,7 @@ function HTab({
       }}
     >
       <Favicon tab={tab} />
-      {!compact && <span className="htab-title">{tabTitle(tab, t('set.title'))}</span>}
+      {!compact && <span className="htab-title">{tabTitle(tab, t('set.title'), t('tabs.new'))}</span>}
       {attention && <span className="tab-attention" />}
       {!compact && (tab.audible || tab.muted) && (
         <button className="htab-icon" onMouseDown={(e) => e.stopPropagation()} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>

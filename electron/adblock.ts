@@ -11,6 +11,8 @@ export interface AdBlockHooks {
   isPaused(pageUrl: string): boolean;
   /** A request was blocked in this web contents; `count` is the total for its current page. */
   blocked(webContentsId: number, count: number): void;
+  /** Blocking was switched on or off (request listeners need re-installing). */
+  toggled(): void;
 }
 
 /**
@@ -50,6 +52,14 @@ export class AdBlock {
     this.apply();
   }
 
+  get engine() {
+    return this.blocker;
+  }
+
+  get isActive() {
+    return this.active;
+  }
+
   get ready() {
     return !!this.blocker;
   }
@@ -62,12 +72,13 @@ export class AdBlock {
     const want = this.hooks.enabled();
     if (want && !this.active) {
       blocker.enableBlockingInSession(ses);
-      this.wrap(ses, blocker);
+      this.wrapCosmetics(blocker);
       this.active = true;
     } else if (!want && this.active) {
       blocker.disableBlockingInSession(ses);
       this.active = false;
     }
+    this.hooks.toggled();
   }
 
   /** New page in this web contents: start counting from zero. */
@@ -80,22 +91,8 @@ export class AdBlock {
     return this.active && !!pageUrl && !this.hooks.isPaused(pageUrl);
   }
 
-  /** Re-register Ghostery's handlers behind a per-site pause check. */
-  private wrap(ses: Session, blocker: ElectronBlocker) {
-    const paused = (wcId: number | undefined, url: string, mainFrame: boolean) => {
-      if (mainFrame) return this.hooks.isPaused(url);
-      const wc = wcId !== undefined ? webContents.fromId(wcId) : undefined;
-      const page = wc && !wc.isDestroyed() ? wc.getURL() : '';
-      return !!page && this.hooks.isPaused(page);
-    };
-    ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, cb) => {
-      if (paused(details.webContentsId, details.url, details.resourceType === 'mainFrame')) return cb({});
-      blocker.onBeforeRequest(details, cb);
-    });
-    ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (details, cb) => {
-      if (paused(details.webContentsId, details.url, details.resourceType === 'mainFrame')) return cb({});
-      blocker.onHeadersReceived(details, cb);
-    });
+  /** Ghostery's page-level (cosmetic) filters, skipped on paused sites. Network filtering lives in RequestHub. */
+  private wrapCosmetics(blocker: ElectronBlocker) {
     ipcMain.removeHandler(COSMETIC_CHANNEL);
     ipcMain.handle(COSMETIC_CHANNEL, (event, url: string, msg) => {
       if (this.hooks.isPaused(event.sender.getURL() || url)) return;

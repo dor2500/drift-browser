@@ -1,6 +1,7 @@
 import {
   BrowserWindow,
   ClipboardItem,
+  dialog,
   DownloadItem,
   Menu,
   app,
@@ -39,12 +40,15 @@ import {
   type UiEvent,
 } from '../shared/types';
 import { SEARCH_ENGINES, type Settings, type SettingsPatch } from '../shared/settings';
-import { contentRadiusFor } from '../shared/themes';
-import { SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
+import { THEMES, contentRadiusFor } from '../shared/themes';
+import type { MessageKey } from '../shared/i18n';
+import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
+import { geckoStatus, launchGecko, readGeckoSession } from './gecko';
 import { HistoryIndex } from './history';
+import { RequestHub } from './requests';
 import { readSource, sourceName } from './importer';
 import { Permissions, originOf } from './permissions';
 import { applyPatch, loadSettings, saveSettings } from './settings';
@@ -62,7 +66,12 @@ export function detectRtl(locale: string) {
 }
 
 const ACCENTS = ['#8aa4ff', '#f5a97f', '#a6da95', '#f5bde6', '#91d7e3', '#eed49f', '#c6a0f6', '#ee99a0'];
-const ICONS = ['🏠', '💼', '🎮', '📚', '🎨', '🎵', '🧪', '✈️', '🛒', '💬'];
+/** Space icons (drawn by the shell's icon set; older emoji values are migrated). */
+const ICONS = ['home', 'work', 'game', 'book', 'palette', 'music', 'flask', 'plane', 'cart', 'chat'];
+const EMOJI_ICONS: Record<string, string> = {
+  '🏠': 'home', '💼': 'work', '🎮': 'game', '📚': 'book', '🎨': 'palette', '🎵': 'music', '🧪': 'flask', '✈️': 'plane', '🛒': 'cart', '💬': 'chat',
+  '📥': 'inbox', '🧘': 'home', '🦊': 'fox', '🌐': 'globe', '🦁': 'shield', '🌊': 'globe',
+};
 
 const newId = () => randomUUID();
 const FIREFOX_UA = `Mozilla/5.0 (${process.platform === 'darwin' ? 'Macintosh; Intel Mac OS X 10.15' : process.platform === 'win32' ? 'Windows NT 10.0; Win64; x64' : 'X11; Linux x86_64'}; rv:140.0) Gecko/20100101 Firefox/140.0`;
@@ -96,8 +105,13 @@ export class Browser {
   readonly history = new HistoryIndex();
   readonly adblock: AdBlock;
   private settings: Settings = loadSettings();
+  /** Hosts whose https upgrade failed; they load over http. */
+  private httpOk = new Set<string>();
+  private hub!: RequestHub;
   readonly i18n = new I18n(() => this.settings.language);
   private media?: MediaState;
+  private blockedTotal = 0;
+  private statsSince = Date.now();
   private downloads: DownloadInfo[] = [];
   private downloadItems = new Map<string, DownloadItem>();
   private find?: FindState;
@@ -112,24 +126,48 @@ export class Browser {
     });
     this.permissions.install(session.fromPartition(PARTITION));
     this.setupDownloads(session.fromPartition(PARTITION));
-    this.setupGoogleSignIn(session.fromPartition(PARTITION));
     setInterval(() => this.sleepIdleTabs(), 60_000);
     this.adblock = new AdBlock({
       enabled: () => this.settings.adblock,
       isPaused: (url) => this.sitePaused(url),
+      toggled: () => this.hub?.install(),
       blocked: (wcId, count) => {
         const id = this.tabIdForWc(wcId);
         const t = this.tab(id);
+        this.blockedTotal++;
         if (t && t.blocked !== count) {
           t.blocked = count;
           this.emit();
         }
       },
     });
+    this.hub = new RequestHub(session.fromPartition(PARTITION), {
+      privacy: () => this.settings.privacy,
+      adblockActive: () => this.adblock.isActive,
+      blocker: () => this.adblock.engine,
+      isPaused: (url) => this.sitePaused(url),
+      httpAllowed: (host) => this.httpOk.has(host),
+      firefoxUA: FIREFOX_UA,
+    });
+    this.hub.install();
     void this.adblock.init(session.fromPartition(PARTITION));
     this.restore(store.load());
     win.on('resize', () => this.fullscreenTab && this.applyLayout());
     this.updater.schedule();
+    try {
+      const st = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'stats.json'), 'utf8')) as { blocked?: number; since?: number };
+      this.blockedTotal = Number(st.blocked) || 0;
+      this.statsSince = Number(st.since) || Date.now();
+    } catch {
+      /* first run */
+    }
+    setInterval(() => {
+      try {
+        fs.writeFileSync(path.join(app.getPath('userData'), 'stats.json'), JSON.stringify({ blocked: this.blockedTotal, since: this.statsSince }));
+      } catch {
+        /* ignore */
+      }
+    }, 30_000);
   }
 
   private get searchUrl() {
@@ -149,6 +187,9 @@ export class Browser {
     }
     if (patch.updates || patch.onboarded !== undefined) this.updater.schedule();
     if (patch.adblock !== undefined) this.adblock.apply();
+    if (patch.privacy?.webrtcProtect !== undefined) {
+      for (const v of this.views.values()) v.webContents.setWebRTCIPHandlingPolicy(this.settings.privacy.webrtcProtect ? 'default_public_interface_only' : 'default');
+    }
     if (patch.language !== undefined) this.i18n.reload();
     this.emit();
   }
@@ -163,7 +204,7 @@ export class Browser {
 
   private restore(d: store.Persisted | null) {
     if (d) {
-      this.spaces = d.spaces;
+      this.spaces = d.spaces.map((s) => ({ ...s, icon: EMOJI_ICONS[s.icon] ?? s.icon }));
       this.activeSpaceId = d.spaces.some((s) => s.id === d.activeSpaceId) ? d.activeSpaceId : d.spaces[0].id;
       this.tabs = d.tabs
         .filter((t) => !('glanceOf' in t) && (t.essential || this.spaces.some((s) => s.id === t.spaceId)))
@@ -257,7 +298,7 @@ export class Browser {
   // ---------------------------------------------------------------- tabs
 
   private createTab(o: { url?: string; spaceId?: string; background?: boolean; afterId?: string }) {
-    const target = o.url ? normalizeInput(o.url, this.searchUrl) : this.settings.homePage;
+    const target = o.url ? normalizeInput(o.url, this.searchUrl) : this.settings.newTabPage === 'newtab' ? NEWTAB_URL : this.settings.homePage;
     if (this.handOff(target)) return this.tab(this.activeTabId) ?? this.newTabState(target, o.spaceId);
     const t = this.newTabState(target, o.spaceId);
     const opener = this.tab(o.afterId);
@@ -572,6 +613,10 @@ export class Browser {
         this.setSettings({ openInRules });
         break;
       }
+      case 'engine:switch':
+        if (c.engine === 'gecko') this.switchToGecko();
+        else this.setSettings({ engine: 'chromium' });
+        break;
       case 'app:restart':
         app.relaunch();
         app.quit();
@@ -755,6 +800,7 @@ export class Browser {
     this.views.set(t.id, v);
     this.wire(t.id, v.webContents);
     if (t.muted) v.webContents.setAudioMuted(true);
+    if (this.settings.privacy.webrtcProtect) v.webContents.setWebRTCIPHandlingPolicy('default_public_interface_only');
     this.lastActive.set(t.id, Date.now());
     t.asleep = undefined;
     v.webContents.loadURL(t.url).catch(() => {});
@@ -821,6 +867,14 @@ export class Browser {
       patch({ audible: true });
     });
     wc.on('did-finish-load', () => this.applySiteZoom(id));
+    wc.on('did-fail-load', (_e, code, _desc, url, isMainFrame) => {
+      if (!isMainFrame || code === -3 || !this.hub.upgraded.has(url)) return; // -3: aborted
+      this.hub.upgraded.delete(url);
+      const host = hostOfUrl(url);
+      if (!host) return;
+      this.httpOk.add(new URL(url).hostname);
+      void wc.loadURL('http://' + url.slice('https://'.length)).catch(() => {});
+    });
     wc.on('zoom-changed', (_e, dir) => this.zoomTab(id, dir === 'in' ? 1 : -1));
     wc.on('found-in-page', (_e, r) => {
       if (this.find?.tabId !== id && (this.glance?.id ?? this.activeTabId) !== id) return;
@@ -1007,7 +1061,7 @@ export class Browser {
         enabled: this.spaces.length > 1,
         submenu: this.spaces
           .filter((s) => s.id !== t.spaceId || t.essential)
-          .map((s) => ({ label: `${s.icon}  ${s.name}`, click: () => this.run({ type: 'tab:set', id, spaceId: s.id }) })),
+          .map((s) => ({ label: s.name, click: () => this.run({ type: 'tab:set', id, spaceId: s.id }) })),
       },
       { type: 'separator' },
       { label: this.i18n.t('menu.closeTab'), accelerator: 'Ctrl+W', click: () => this.run({ type: 'tab:close', id }) },
@@ -1133,7 +1187,7 @@ export class Browser {
       this.tabs.push(t);
       return t;
     };
-    const icon: Record<ImportBrowser, string> = { zen: '📥', firefox: '🦊', chrome: '🌐', brave: '🦁', edge: '🌊' };
+    const icon: Record<ImportBrowser, string> = { zen: 'inbox', firefox: 'fox', chrome: 'globe', brave: 'shield', edge: 'globe' };
 
     if (data.zen && options.zenSpaces && data.zen.tabs.length) {
       const ids = new Map<string, string>();
@@ -1180,6 +1234,67 @@ export class Browser {
 
   // ---------------------------------------------------------------- other browsers & Google
 
+  stats() {
+    return { blocked: this.blockedTotal, since: this.statsSince };
+  }
+
+  shouldConfirmClose() {
+    return this.settings.confirmClose && this.tabs.filter((t) => !t.glanceOf && !t.pinned && !t.essential).length > 1;
+  }
+
+  async confirmClose(): Promise<boolean> {
+    const count = this.tabs.filter((t) => !t.glanceOf && !t.pinned && !t.essential).length;
+    const r = await dialog.showMessageBox(this.win, {
+      type: 'question',
+      buttons: [this.i18n.t('close.confirm'), this.i18n.t('close.cancel')],
+      defaultId: 0,
+      cancelId: 1,
+      message: this.i18n.t('close.title', { count }),
+      detail: this.i18n.t('close.detail'),
+    });
+    return r.response === 0;
+  }
+
+  // ---------------------------------------------------------------- engines
+
+  get language() {
+    return this.i18n.bundle().code;
+  }
+
+  get accentColor() {
+    return this.settings.customAccent || THEMES[this.settings.theme].accent;
+  }
+
+  /** Hand every open tab to the Gecko engine and close Drift's Chromium window. */
+  private switchToGecko() {
+    if (!geckoStatus().available) return;
+    const active = this.tab(this.activeTabId);
+    const urls = [
+      ...(active ? [active.url] : []),
+      ...this.tabs.filter((t) => t !== active && !t.glanceOf && /^https?:/.test(t.url)).map((t) => t.url),
+    ];
+    this.setSettings({ engine: 'gecko' });
+    store.saveNow(this.persisted());
+    if (launchGecko(urls, this.language, this.accentColor)) setTimeout(() => app.quit(), 300);
+  }
+
+  /** Back from Gecko (drift-engine://chromium): reopen the Gecko session's tabs here. */
+  returnFromGecko() {
+    this.setSettings({ engine: 'chromium' });
+    const known = new Set(this.tabs.map((t) => t.url));
+    let last: TabState | undefined;
+    for (const url of readGeckoSession()) {
+      if (known.has(url)) continue;
+      known.add(url);
+      last = { ...this.newTabState(url, this.activeSpaceId), title: url };
+      this.tabs.push(last);
+    }
+    if (last) this.activate(last.id);
+    this.emit();
+    if (this.win.isMinimized()) this.win.restore();
+    this.win.focus();
+  }
+
   /** If a site is set to always open in another browser, send it there. */
   private handOff(url: string): boolean {
     const host = hostOfUrl(url);
@@ -1219,14 +1334,6 @@ export class Browser {
    * Electron apps. Its sign-in pages get a Firefox user agent (a known
    * workaround); every other site keeps Drift's normal Chrome-style agent.
    */
-  private setupGoogleSignIn(ses: Electron.Session) {
-    ses.webRequest.onBeforeSendHeaders({ urls: ['https://accounts.google.com/*'] }, (details, cb) => {
-      const headers: Record<string, string> = { ...details.requestHeaders, 'User-Agent': FIREFOX_UA };
-      for (const k of Object.keys(headers)) if (/^sec-ch-ua/i.test(k)) delete headers[k];
-      cb({ requestHeaders: headers });
-    });
-  }
-
   private signInUserAgent(wc: WebContents, url: string) {
     const google = hostOfUrl(url) === 'accounts.google.com';
     const want = google ? FIREFOX_UA : app.userAgentFallback;
@@ -1437,7 +1544,7 @@ export class Browser {
   /** Space switcher button at the start of the top tab strip. */
   spacesMenu() {
     const items: MenuItemConstructorOptions[] = this.spaces.map((s) => ({
-      label: `${s.icon}  ${s.name}`,
+      label: s.name,
       type: 'radio',
       checked: s.id === this.activeSpaceId,
       click: () => this.switchSpace(s.id),
@@ -1455,7 +1562,7 @@ export class Browser {
     if (!s) return;
     const items: MenuItemConstructorOptions[] = [
       { label: this.i18n.t('menu.renameSpace'), click: () => this.ui({ type: 'space:rename', id }) },
-      { label: this.i18n.t('menu.icon'), submenu: ICONS.map((icon) => ({ label: icon, type: 'radio', checked: s.icon === icon, click: () => this.run({ type: 'space:set', id, icon }) })) },
+      { label: this.i18n.t('menu.icon'), submenu: ICONS.map((icon) => ({ label: this.i18n.t(`icon.${icon}` as MessageKey), type: 'radio', checked: s.icon === icon, click: () => this.run({ type: 'space:set', id, icon }) })) },
       { label: this.i18n.t('menu.colour'), submenu: ACCENTS.map((accent) => ({ label: accent, type: 'radio', checked: s.accent === accent, click: () => this.run({ type: 'space:set', id, accent }) })) },
       { type: 'separator' },
       { label: this.i18n.t('menu.clearSpace'), click: () => this.run({ type: 'space:clear', id }) },

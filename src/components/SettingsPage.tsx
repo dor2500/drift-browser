@@ -1,17 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { en } from '../../shared/locales/en';
 import { hostOf, permissionShortName } from '../../shared/permissions';
 import { SEARCH_ENGINES, type SearchEngineId } from '../../shared/settings';
 import type { BrowserState, DriftEnv, SitePermissions } from '../../shared/types';
 import { cmd, cx } from '../lib';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { ImportPanel } from './ImportPanel';
 import { ColorThemePicker } from './ColorThemePicker';
+import { EnginePicker } from './EnginePicker';
 import { LanguagePicker } from './LanguagePicker';
 import { ThemePicker } from './ThemePicker';
 import { CommitInput, EngineCard, Toggle, UpdateSourceForm } from './UpdatePanels';
 import { t, useLocale } from '../i18n';
 
-const SECTIONS = ['appearance', 'language', 'general', 'privacy', 'import', 'updates', 'about'] as const;
+const SECTIONS = ['appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'] as const;
+const EN_KEYS: Record<string, string[]> = {
+  appearance: ['set.nav.appearance', 'theme.', 'set.colorTheme', 'set.themeDefault', 'set.customAccent', 'set.spaceColors', 'set.verticalTabs', 'set.compact'],
+  engine: ['set.nav.engine', 'eng.'],
+  language: ['set.nav.language', 'set.language'],
+  general: ['set.nav.general', 'set.searchEngine', 'set.homePage', 'set.newTabPage', 'set.confirmClose', 'set.smooth', 'set.gpu', 'set.sleep', 'set.forceDark', 'set.google', 'set.openIn', 'set.restore'],
+  privacy: ['set.nav.privacy', 'priv.', 'set.adblock', 'set.pausedOn', 'set.sitePermissions'],
+  connections: ['priv.connections', 'conn.'],
+  import: ['set.nav.import', 'imp.'],
+  updates: ['set.nav.updates', 'upd.', 'set.updateSource', 'set.channel', 'set.autoCheck', 'set.engineAlerts'],
+  about: ['set.nav.about', 'set.electron', 'set.chromium', 'set.build', 'set.rerunSetup'],
+};
+const englishFor = (section: string) =>
+  Object.entries(en)
+    .filter(([k]) => (EN_KEYS[section] ?? []).some((prefix) => k.startsWith(prefix)))
+    .map(([, v]) => v)
+    .join(' ');
+
+const NAV_ICONS: Record<(typeof SECTIONS)[number], IconName> = {
+  appearance: 'palette',
+  engine: 'globe',
+  language: 'chat',
+  general: 'gear',
+  privacy: 'shield',
+  import: 'import',
+  updates: 'download',
+  about: 'info',
+};
 
 /** drift://settings, drawn by the shell inside the content pane (no web view). */
 export function SettingsPage({ state }: { state: BrowserState }) {
@@ -20,6 +49,8 @@ export function SettingsPage({ state }: { state: BrowserState }) {
   const [browsers, setBrowsers] = useState<{ id: string; name: string }[]>([]);
   // Force-dark only changes after a restart, so remember what this run started with.
   const [startDark] = useState(state.settings.forceDark);
+  const [startSmooth] = useState(state.settings.smoothScrolling);
+  const [startGpu] = useState(state.settings.hardwareAcceleration);
   useEffect(() => {
     void window.drift.googleStatus().then(setGoogle);
     void window.drift.otherBrowsers().then(setBrowsers);
@@ -28,6 +59,21 @@ export function SettingsPage({ state }: { state: BrowserState }) {
   const [env, setEnv] = useState<DriftEnv>();
   const [perms, setPerms] = useState<SitePermissions>({});
   const [section, setSection] = useState<string>('appearance');
+  const [query, setQuery] = useState('');
+  const [noMatch, setNoMatch] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
+
+  // "Search settings", as in Chrome, Brave and Firefox: hide sections that don't mention the words.
+  useEffect(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    let shown = 0;
+    scroller.current?.querySelectorAll<HTMLElement>('.settings-section').forEach((sec) => {
+      const hit = words.every((w) => sec.textContent?.toLowerCase().includes(w));
+      sec.hidden = words.length > 0 && !hit;
+      if (!sec.hidden) shown++;
+    });
+    setNoMatch(words.length > 0 && shown === 0);
+  }, [query, state.settings, state.prompts.length]);
 
   useEffect(() => void window.drift.env().then(setEnv), []);
   // Prompts answered elsewhere change the list, so re-read when they change.
@@ -49,15 +95,22 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         <div className="settings-title">
           <Icon name="gear" size={18} /> {t('set.title')}
         </div>
+        <label className="settings-search">
+          <Icon name="search" size={14} />
+          <input value={query} placeholder={t('set.search')} onChange={(e) => setQuery(e.target.value)} />
+        </label>
         {SECTIONS.map((id) => (
           <button key={id} className={cx('settings-nav-item', section === id && 'active')} onClick={() => go(id)}>
+            <Icon name={NAV_ICONS[id]} size={16} />
             {t(`set.nav.${id}`)}
           </button>
         ))}
       </nav>
 
-      <div className="settings-scroll">
+      <div className="settings-scroll" ref={scroller}>
+        {query && noMatch && <div className="empty-note">{t('set.searchNone', { q: query })}</div>}
         <section id="settings-appearance" className="settings-section">
+          <span hidden className="search-en">{englishFor('appearance')}</span>
           <h2>{t('set.nav.appearance')}</h2>
           <ThemePicker value={s.theme} env={env} />
           <h3>{t('set.colorTheme')}</h3>
@@ -83,12 +136,20 @@ export function SettingsPage({ state }: { state: BrowserState }) {
           />
         </section>
 
+        <section id="settings-engine" className="settings-section">
+          <span hidden className="search-en">{englishFor('engine')}</span>
+          <h2>{t('set.nav.engine')}</h2>
+          <EnginePicker engine={s.engine} chromium={env?.versions.chrome ?? ''} />
+        </section>
+
         <section id="settings-language" className="settings-section">
+          <span hidden className="search-en">{englishFor('language')}</span>
           <h2>{t('set.nav.language')}</h2>
           <LanguagePicker value={s.language} system={locale.system} />
         </section>
 
         <section id="settings-general" className="settings-section">
+          <span hidden className="search-en">{englishFor('general')}</span>
           <h2>{t('set.nav.general')}</h2>
           <div className="field">
             <span className="field-label">{t('set.searchEngine')}</span>
@@ -166,6 +227,31 @@ export function SettingsPage({ state }: { state: BrowserState }) {
               ))}
             </div>
           )}
+          <div className="field">
+            <span className="field-label">{t('set.newTabPage')}</span>
+            <select className="field-input" value={s.newTabPage} onChange={(e) => cmd({ type: 'settings:set', patch: { newTabPage: e.target.value as 'newtab' | 'home' } })}>
+              <option value="newtab">{t('set.newTabPageNewtab')}</option>
+              <option value="home">{t('set.newTabPageHome')}</option>
+            </select>
+          </div>
+          <Toggle checked={s.confirmClose} onChange={(confirmClose) => cmd({ type: 'settings:set', patch: { confirmClose } })} label={t('set.confirmClose')} />
+          <Toggle
+            checked={s.smoothScrolling}
+            onChange={(smoothScrolling) => cmd({ type: 'settings:set', patch: { smoothScrolling } })}
+            label={t('set.smooth')}
+            hint={t('set.smoothHint')}
+          />
+          <Toggle
+            checked={s.hardwareAcceleration}
+            onChange={(hardwareAcceleration) => cmd({ type: 'settings:set', patch: { hardwareAcceleration } })}
+            label={t('set.gpu')}
+            hint={t('set.gpuHint')}
+          />
+          {(s.smoothScrolling !== startSmooth || s.hardwareAcceleration !== startGpu) && (
+            <button className="btn small" onClick={() => cmd({ type: 'app:restart' })}>
+              {t('set.restartNow')}
+            </button>
+          )}
           <Toggle
             checked={s.restoreSession}
             onChange={(restoreSession) => cmd({ type: 'settings:set', patch: { restoreSession } })}
@@ -175,12 +261,56 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         </section>
 
         <section id="settings-privacy" className="settings-section">
+          <span hidden className="search-en">{englishFor('privacy')}</span>
           <h2>{t('set.nav.privacy')}</h2>
           <Toggle
             checked={s.adblock}
             onChange={(adblock) => cmd({ type: 'settings:set', patch: { adblock } })}
             label={t('set.adblock')}
             hint={t('set.adblockHint')}
+          />
+          <h3>{t('priv.title')}</h3>
+          <Toggle
+            checked={s.privacy.httpsOnly}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { httpsOnly: v } } })}
+            label={t('priv.https')}
+            hint={t('priv.httpsHint')}
+          />
+          <Toggle
+            checked={s.privacy.stripTracking}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { stripTracking: v } } })}
+            label={t('priv.strip')}
+            hint={t('priv.stripHint')}
+          />
+          <Toggle
+            checked={s.privacy.block3pCookies}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { block3pCookies: v } } })}
+            label={t('priv.cookies')}
+            hint={t('priv.cookiesHint')}
+          />
+          <Toggle
+            checked={s.privacy.gpc}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { gpc: v } } })}
+            label={t('priv.gpc')}
+            hint={t('priv.gpcHint')}
+          />
+          <Toggle
+            checked={s.privacy.webrtcProtect}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { webrtcProtect: v } } })}
+            label={t('priv.webrtc')}
+            hint={t('priv.webrtcHint')}
+          />
+          <Toggle
+            checked={s.privacy.engineCheck}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { engineCheck: v } } })}
+            label={t('priv.engineCheck')}
+            hint={t('priv.engineCheckHint')}
+          />
+          <Toggle
+            checked={s.privacy.chromeCompare}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { chromeCompare: v } } })}
+            label={t('priv.chromeCompare')}
+            hint={t('priv.chromeCompareHint')}
           />
           {s.adblockPaused.length > 0 && (
             <div className="site-row">
@@ -220,12 +350,25 @@ export function SettingsPage({ state }: { state: BrowserState }) {
           ))}
         </section>
 
+        <section id="settings-connections" className="settings-section">
+          <span hidden className="search-en">{englishFor('connections')}</span>
+          <h3>{t('priv.connections')}</h3>
+          <p className="settings-lead">{t('priv.connectionsLead')}</p>
+          <ul className="conn-list">
+            {(['conn.github', 'conn.electron', 'conn.google', 'conn.search', 'conn.mozilla', 'conn.translate'] as const).map((k) => (
+              <li key={k}>{t(k)}</li>
+            ))}
+          </ul>
+        </section>
+
         <section id="settings-import" className="settings-section">
+          <span hidden className="search-en">{englishFor('import')}</span>
           <h2>{t('set.nav.import')}</h2>
           <ImportPanel />
         </section>
 
         <section id="settings-updates" className="settings-section">
+          <span hidden className="search-en">{englishFor('updates')}</span>
           <h2>{t('set.nav.updates')}</h2>
           <EngineCard status={state.updates} env={env} />
           <h3>{t('set.updateSource')}</h3>
@@ -255,6 +398,7 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         </section>
 
         <section id="settings-about" className="settings-section">
+          <span hidden className="search-en">{englishFor('about')}</span>
           <h2>{t('set.nav.about')}</h2>
           <div className="engine-rows about">
             <div className="engine-row">

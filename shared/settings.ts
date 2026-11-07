@@ -15,9 +15,28 @@ export interface UpdateSettings {
   engineAlerts: boolean;
 }
 
+export interface PrivacySettings {
+  /** Load sites over https when possible, falling back to http if it fails (HTTPS-First). */
+  httpsOnly: boolean;
+  /** Remove tracking parameters (utm_*, fbclid, gclid, …) from links you open. */
+  stripTracking: boolean;
+  /** Don't send or accept cookies on requests to other sites than the page's. */
+  block3pCookies: boolean;
+  /** Send Global Privacy Control and Do Not Track. */
+  gpc: boolean;
+  /** Keep WebRTC from revealing your local network address. */
+  webrtcProtect: boolean;
+  /** Compare Drift's Chromium with the newest Electron (contacts releases.electronjs.org). */
+  engineCheck: boolean;
+  /** Also compare with Google Chrome's stable version (contacts Google). Off by default. */
+  chromeCompare: boolean;
+}
+
 export interface Settings {
   /** False until the first-run setup has been completed. */
   onboarded: boolean;
+  /** Rendering engine: Chromium (built in) or Gecko (Firefox engine, run with a Drift-managed profile). */
+  engine: 'chromium' | 'gecko';
   /** "auto" follows the system language; otherwise a language code such as "he". */
   language: string;
   theme: ThemeId;
@@ -29,6 +48,14 @@ export interface Settings {
   homePage: string;
   /** Reopen last session's regular tabs on startup (pinned tabs and Essentials always come back). */
   restoreSession: boolean;
+  /** What a new tab shows: Drift's new-tab page (styled per browser) or the home page. */
+  newTabPage: 'newtab' | 'home';
+  /** Ask before closing a window with several tabs open. */
+  confirmClose: boolean;
+  /** Chromium smooth scrolling (applies after restart). */
+  smoothScrolling: boolean;
+  /** GPU rendering (applies after restart); turn off if pages flicker or go blank. */
+  hardwareAcceleration: boolean;
   /** Built-in ad and tracker blocking (EasyList/uBlock-style filters + YouTube ad skipping). */
   adblock: boolean;
   /** Hosts where blocking is paused, e.g. "example.com". */
@@ -45,10 +72,11 @@ export interface Settings {
   customAccent: string;
   /** Sites that always open in another installed browser, e.g. { "bank.example": "firefox" }. */
   openInRules: Record<string, string>;
+  privacy: PrivacySettings;
   updates: UpdateSettings;
 }
 
-export type SettingsPatch = Partial<Omit<Settings, 'updates'>> & { updates?: Partial<UpdateSettings> };
+export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy'>> & { updates?: Partial<UpdateSettings>; privacy?: Partial<PrivacySettings> };
 
 export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string; home: string }> = {
   google: { name: 'Google', url: 'https://www.google.com/search?q=', home: 'https://www.google.com/' },
@@ -60,6 +88,7 @@ export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string;
 
 export const DEFAULT_SETTINGS: Settings = {
   onboarded: false,
+  engine: 'chromium',
   language: 'auto',
   theme: 'zen',
   spaceColors: true,
@@ -67,6 +96,10 @@ export const DEFAULT_SETTINGS: Settings = {
   searchEngine: 'google',
   homePage: 'https://www.google.com/',
   restoreSession: true,
+  newTabPage: 'newtab',
+  confirmClose: false,
+  smoothScrolling: true,
+  hardwareAcceleration: true,
   adblock: true,
   adblockPaused: [],
   sleepAfter: 30,
@@ -75,6 +108,15 @@ export const DEFAULT_SETTINGS: Settings = {
   colorTheme: 'default',
   customAccent: '',
   openInRules: {},
+  privacy: {
+    httpsOnly: true,
+    stripTracking: true,
+    block3pCookies: true,
+    gpc: true,
+    webrtcProtect: true,
+    engineCheck: true,
+    chromeCompare: false,
+  },
   updates: {
     source: 'github',
     // Official Drift releases; installed copies update from here.
@@ -87,5 +129,5 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
-  return { ...base, ...patch, updates: { ...base.updates, ...(patch.updates ?? {}) } };
+  return { ...base, ...patch, updates: { ...base.updates, ...(patch.updates ?? {}) }, privacy: { ...base.privacy, ...(patch.privacy ?? {}) } };
 }

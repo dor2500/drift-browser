@@ -95,6 +95,25 @@ export class HistoryIndex {
     return scored.slice(0, limit).map(([, e]) => ({ url: e.url, title: e.title, kind: e.bookmark ? 'bookmark' : 'history', source: e.source }));
   }
 
+  /** Most-visited sites (one per host) for new-tab shortcuts. */
+  topSites(limit: number) {
+    const best = new Map<string, Entry>();
+    for (const e of this.entries.values()) {
+      let host = '';
+      try {
+        host = new URL(e.url).hostname.replace(/^www\./, '');
+      } catch {
+        continue;
+      }
+      const cur = best.get(host);
+      if (!cur || e.visits > cur.visits || (e.visits === cur.visits && e.url.length < cur.url.length)) best.set(host, e);
+    }
+    return [...best.values()]
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, limit)
+      .map((e) => ({ url: e.url, title: e.title }));
+  }
+
   private trim() {
     if (this.entries.size <= MAX_ENTRIES) return;
     const keep = [...this.entries.values()].sort((a, b) => Number(!!b.bookmark) - Number(!!a.bookmark) || b.visits - a.visits).slice(0, MAX_ENTRIES);

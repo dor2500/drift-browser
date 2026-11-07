@@ -213,6 +213,7 @@ export type Command =
   | { type: 'page:print' | 'page:source' | 'page:screenshot' | 'page:translate' | 'page:pip' }
   | { type: 'split:toggle' }
   | { type: 'app:restart' }
+  | { type: 'engine:switch'; engine: 'chromium' | 'gecko' }
   | { type: 'google:signin' }
   | { type: 'openin:remove'; host: string }
   | { type: 'updates:install' }
@@ -250,6 +251,10 @@ export interface DriftApi {
   shieldMenu(): void;
   downloadsMenu(): void;
   googleStatus(): Promise<boolean>;
+  topSites(): Promise<{ url: string; title: string }[]>;
+  stats(): Promise<{ blocked: number; since: number }>;
+  geckoStatus(): Promise<{ available: boolean; kind?: 'installed' | 'downloaded' }>;
+  downloadGecko(): Promise<{ available: boolean; kind?: 'installed' | 'downloaded'; error?: string }>;
   otherBrowsers(): Promise<{ id: string; name: string }[]>;
   locale(): Promise<LocaleBundle>;
   languages(): Promise<{ languages: LanguageInfo[]; offline: boolean }>;

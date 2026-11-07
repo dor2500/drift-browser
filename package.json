@@ -1,7 +1,7 @@
 {
   "name": "drift-browser",
   "productName": "Drift",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A Chromium-based browser with vertical tabs, spaces and split view, in the style of Zen.",
   "private": true,
   "main": "dist-electron/electron/main.js",
@@ -92,7 +92,15 @@
       "icon": "assets/png",
       "category": "Network;WebBrowser",
       "maintainer": "dor2500"
-    }
+    },
+    "protocols": [
+      {
+        "name": "Drift engine switch",
+        "schemes": [
+          "drift-engine"
+        ]
+      }
+    ]
   },
   "author": {
     "name": "dor2500",

@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import { DownloadsButton } from './DownloadsButton';
 import { MediaBar, PageActions } from './PageActions';
 import { PermissionCard } from './PermissionCard';
+import { SpaceIcon } from './SpaceIcon';
 import { TabItem } from './TabItem';
 import { hasUpdateBadge } from './UpdatePanels';
 import { t } from '../i18n';
@@ -118,7 +119,7 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
           <Icon name={active?.url.startsWith('https:') ? 'lock' : 'search'} size={14} />
         </button>
         <button className="urlbar-text" title="Ctrl+L" onClick={() => onOpenBar('current')}>
-          {active ? (isInternalUrl(active.url) ? t('set.title') : displayUrl(active.url)) : t('url.placeholder')}
+          {active ? (active.url.startsWith('drift://newtab') ? t('url.placeholder') : isInternalUrl(active.url) ? t('set.title') : displayUrl(active.url)) : t('url.placeholder')}
         </button>
         <PageActions tab={active} state={state} />
       </div>
@@ -250,7 +251,7 @@ function SpaceHeader({ space, renaming, onDone }: { space: SpaceState; renaming:
         window.drift.spaceMenu(space.id);
       }}
     >
-      <span className="space-icon">{space.icon}</span>
+      <span className="space-icon"><SpaceIcon icon={space.icon} size={14} /></span>
       {isEditing ? (
         <input
           autoFocus
@@ -283,7 +284,7 @@ function SpaceSwitcher({ spaces, activeId }: { spaces: SpaceState[]; activeId: s
             window.drift.spaceMenu(s.id);
           }}
         >
-          {s.icon}
+          <SpaceIcon icon={s.icon} />
         </button>
       ))}
       <button className="icon-btn" title={t('spaces.new')} onClick={() => cmd({ type: 'space:new' })}>

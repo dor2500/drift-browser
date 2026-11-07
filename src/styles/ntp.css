@@ -1,0 +1,121 @@
+/* drift://newtab, shaped like each browser's own new-tab page. */
+
+.ntp {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface);
+  color: var(--text);
+}
+.ntp-center { display: flex; flex-direction: column; align-items: center; gap: 22px; width: min(640px, 90%); margin: auto 0; padding: 40px 0; }
+
+.ntp-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 24px;
+  background: var(--urlbar-bg);
+  box-shadow: 0 0 0 1px var(--border-contrast), 0 4px 18px rgba(0, 0, 0, 0.25);
+  color: var(--text-dim);
+}
+.ntp-search input { flex: 1; border: 0; outline: 0; background: none; font-size: 15px; color: var(--text); user-select: text; }
+
+.ntp-shortcuts { display: grid; grid-template-columns: repeat(4, 112px); justify-content: center; gap: 10px 14px; }
+.ntp-tile { display: grid; justify-items: center; gap: 8px; padding: 12px 6px; border-radius: 12px; transition: background 0.12s; }
+.ntp-tile:hover { background: var(--hover); }
+.ntp-tile-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--element-bg);
+}
+.ntp-tile-icon img { position: relative; z-index: 1; width: 24px; height: 24px; }
+.ntp-tile-icon b { position: absolute; font-size: 18px; color: var(--text-dim); }
+.ntp-tile-name { max-width: 100px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; color: var(--text-dim); }
+.ntp-empty { grid-column: 1 / -1; color: var(--text-faint); font-size: 13px; }
+.ntp-heading { align-self: flex-start; margin: 0; font-size: 13px; font-weight: 600; color: var(--text-dim); }
+
+/* Chrome: search-engine wordmark above a pill, round shortcut tiles. */
+.ntp-wordmark { font-size: 54px; font-weight: 500; letter-spacing: -1px; color: var(--text); }
+.ntp-chrome .ntp-search { border-radius: 24px; background: #282a2c; box-shadow: none; }
+
+/* Firefox Home: rounded-square shortcut tiles, left-aligned "Shortcuts" heading. */
+.ntp-firefox .ntp-search { border-radius: 8px; height: 52px; background: #2b2a33; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+.ntp-firefox .ntp-tile-icon { border-radius: 8px; width: 64px; height: 64px; background: #42414d; }
+
+/* Brave: gradient backdrop, blocked-tracker stats top-left, big clock top-right. */
+.ntp-brave {
+  background:
+    radial-gradient(90% 70% at 20% 0%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, rgba(244, 82, 2, 0.28), transparent 65%),
+    #0d0e12;
+}
+.ntp-stats { position: absolute; top: 28px; inset-inline-start: 32px; display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+.ntp-stats div { display: grid; gap: 2px; }
+.ntp-stats strong { font-size: 34px; font-weight: 600; color: #fb7a45; }
+.ntp-stats div + div strong { color: var(--text); }
+.ntp-stats span { font-size: 12px; color: var(--text-dim); }
+.ntp-stats small { flex-basis: 100%; font-size: 11px; color: var(--text-faint); }
+.ntp-clock { position: absolute; top: 24px; inset-inline-end: 32px; font-size: 40px; font-weight: 300; color: var(--text); }
+.ntp-brave .ntp-search { border-radius: 12px; background: rgba(20, 20, 21, 0.75); backdrop-filter: blur(12px); }
+.ntp-brave .ntp-tile-icon { border-radius: 12px; background: rgba(255, 255, 255, 0.08); }
+
+/* Zen: calm, centred clock and greeting. */
+.ntp-zen .ntp-clock { position: static; order: -1; margin-top: auto; font-size: 64px; font-weight: 200; }
+.ntp-zen .ntp-center { margin-top: 12px; }
+.ntp-greeting { font-size: 18px; color: var(--text-dim); }
+.ntp-zen .ntp-search { border-radius: 14px; }
+
+/* ------------------------------------------------------------------ settings, per browser */
+
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  margin: 0 4px 12px;
+  padding: 0 10px;
+  border-radius: var(--button-radius);
+  background: var(--urlbar-bg);
+  color: var(--text-faint);
+}
+.settings-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); user-select: text; }
+.settings-nav-item { display: flex; align-items: center; gap: 10px; }
+.settings-nav-item svg { flex: 0 0 auto; opacity: 0.85; }
+
+/* Chrome: sections are cards on a darker page, blue switches, pill-shaped active nav item. */
+:root[data-theme='chrome'] .settings-page { background: #1f1f1f; }
+:root[data-theme='chrome'] .settings-nav { border: 0; }
+:root[data-theme='chrome'] .settings-nav-item { height: 40px; border-radius: 0 20px 20px 0; padding-inline-start: 20px; }
+:root[data-theme='chrome'][dir='rtl'] .settings-nav-item { border-radius: 20px 0 0 20px; }
+:root[data-theme='chrome'] .settings-nav-item.active { background: #004a77; color: #c2e7ff; }
+:root[data-theme='chrome'] .settings-search { height: 44px; border-radius: 22px; background: #282a2c; }
+:root[data-theme='chrome'] .settings-section { padding: 18px 20px; margin-top: 16px; border-radius: 8px; background: #282828; }
+:root[data-theme='chrome'] .settings-section h2 { font-size: 15px; }
+:root[data-theme='chrome'] .switch:checked { background: #a8c7fa; }
+
+/* Brave: Leo cards with larger radius, indigo accents. */
+:root[data-theme='brave'] .settings-page { background: #141415; }
+:root[data-theme='brave'] .settings-nav { border: 0; }
+:root[data-theme='brave'] .settings-nav-item { height: 40px; border-radius: 8px; }
+:root[data-theme='brave'] .settings-nav-item.active { background: #252527; color: #bcc6f3; }
+:root[data-theme='brave'] .settings-section { padding: 18px 22px; margin-top: 16px; border-radius: 12px; background: #1c1c1d; box-shadow: 0 0 0 1px #252527; }
+:root[data-theme='brave'] .switch:checked { background: #5b67e8; }
+
+/* Firefox about:preferences: plain page, category list with icons, large section titles. */
+:root[data-theme='firefox'] .settings-page { background: #1c1b22; }
+:root[data-theme='firefox'] .settings-nav-item { height: 44px; font-size: 14px; }
+:root[data-theme='firefox'] .settings-nav-item.active { background: transparent; color: #b89cff; box-shadow: inset 3px 0 0 #b89cff; }
+:root[data-theme='firefox'][dir='rtl'] .settings-nav-item.active { box-shadow: inset -3px 0 0 #b89cff; }
+:root[data-theme='firefox'] .settings-section h2 { font-size: 20px; font-weight: 600; }
+:root[data-theme='firefox'] .settings-search { border-radius: 4px; background: #2b2a33; }
+:root[data-theme='firefox'] .switch:checked { background: #b89cff; }

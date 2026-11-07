@@ -4,6 +4,7 @@ import { cmd, cx } from '../lib';
 import { isInternalUrl } from '../../shared/url';
 import { FindBar } from './FindBar';
 import { Glance } from './Glance';
+import { NewTabPage } from './NewTabPage';
 import { SettingsPage } from './SettingsPage';
 import { t } from '../i18n';
 
@@ -109,7 +110,11 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                   style={split ? { flex: `${i === 0 ? ratio : 1 - ratio} 1 0` } : undefined}
                   onMouseDown={() => split && id !== active && cmd({ type: 'tab:activate', id })}
                 >
-                  {internal.has(id) ? <SettingsPage state={state} /> : snap && <img className="pane-snapshot" src={snap.dataUrl} alt="" />}
+                  {internal.has(id) ? (
+                    state.tabs.find((t) => t.id === id)?.url.startsWith('drift://newtab') ? <NewTabPage state={state} /> : <SettingsPage state={state} />
+                  ) : (
+                    snap && <img className="pane-snapshot" src={snap.dataUrl} alt="" />
+                  )}
                 </div>
               </Fragment>
             );

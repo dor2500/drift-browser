@@ -112,6 +112,12 @@ Why: Zen's identity is mostly UI (CSS, layout, motion). Electron gives a real Ch
 - **Languages** (`shared/i18n.ts`, `electron/i18n.ts`, `src/i18n.ts`): English and Hebrew catalogs are compiled in; other packs are fetched from `locales/` on GitHub, sanitised to known keys and stored in userData. The main process uses the same translator for native menus. RTL languages set `dir=rtl`, and the CSS uses logical properties so the layout mirrors.
 - **Platforms**: Windows (NSIS), macOS (universal dmg + zip, system traffic lights, app menu) and Linux (AppImage + deb), built in parallel by `release.yml` into one draft release that is published only when all three succeed. `install.ps1` / `install.sh` install the latest release in one command.
 
+### Engines and privacy
+
+- **Request hub** (`electron/requests.ts`): Electron allows one listener per request event per session, so HTTPS-First, tracking-parameter stripping, ad blocking, privacy signals, third-party cookie blocking and the Google sign-in agent share one set of listeners. The ad blocker re-installs the hub whenever it is toggled.
+- **Gecko engine** (`electron/gecko.ts`): Firefox (installed, or Mozilla's official build downloaded into userData) started with a Drift-managed profile: `user.js` (telemetry, studies, Pocket and sponsored content off; strict tracking protection; HTTPS-only; GPC; native vertical tabs), `userChrome.css` (Drift look) and, for Drift's own copy, `policies.json`. Switching hands every tab over and closes the Chromium window; the Gecko start page links `drift-engine://chromium`, which reopens Drift and reads the Gecko session back with the Mozilla-LZ4 reader.
+- **Development runs** use a separate data folder ("Drift Dev") and never register the `drift-engine` link, so they can't touch an installed Drift.
+
 ### Known limits of the Electron approach
 
 1. HTML cannot draw over a web page. Floating UI uses the screenshot swap. Compact mode pushes the page aside instead of floating the sidebar over it. A Chromium fork removes this limit.

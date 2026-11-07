@@ -40,7 +40,7 @@ export function TabItem({ tab, selected, inSplit, attention, dropPos, onDragOver
       }}
     >
       <Favicon tab={tab} />
-      <span className="tab-label">{tabTitle(tab, t('set.title'))}</span>
+      <span className="tab-label">{tabTitle(tab, t('set.title'), t('tabs.new'))}</span>
       {attention && <span className="tab-attention" title={t('tabs.waiting')} />}
       {(tab.audible || tab.muted) && (
         <button className="tab-audio" title={tab.muted ? t('tabs.unmute') : t('tabs.mute')} onMouseDown={stop} onClick={() => cmd({ type: 'tab:set', id: tab.id, muted: !tab.muted })}>

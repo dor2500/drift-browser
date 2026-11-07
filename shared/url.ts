@@ -5,8 +5,9 @@ const SCHEME = /^(https?|file|about|chrome|data|view-source|drift):/i;
 
 /** Pages drawn by the shell itself instead of a web view. */
 export const SETTINGS_URL = 'drift://settings';
+export const NEWTAB_URL = 'drift://newtab';
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
-export const internalTitle = (url: string) => (url.startsWith(SETTINGS_URL) ? 'Settings' : 'Drift');
+export const internalTitle = (url: string) => (url.startsWith(SETTINGS_URL) ? 'Settings' : url.startsWith(NEWTAB_URL) ? 'New Tab' : 'Drift');
 
 const SEARCH_HOSTS = /(^|\.)(google\.[a-z.]+|duckduckgo\.com|bing\.com|search\.brave\.com|startpage\.com)$/i;
 const HOST_LIKE = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i;

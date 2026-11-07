@@ -5,8 +5,8 @@ export const drift = () => window.drift;
 export const cmd = (c: Command) => void window.drift.cmd(c);
 
 /** Title to show for a tab; internal pages (drift://settings) follow the UI language. */
-export const tabTitle = (tab: { url: string; title: string }, settingsTitle: string) =>
-  tab.url.startsWith('drift://settings') ? settingsTitle : tab.title || tab.url;
+export const tabTitle = (tab: { url: string; title: string }, settingsTitle: string, newTabTitle = 'New Tab') =>
+  tab.url.startsWith('drift://settings') ? settingsTitle : tab.url.startsWith('drift://newtab') ? newTabTitle : tab.title || tab.url;
 
 export const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
 

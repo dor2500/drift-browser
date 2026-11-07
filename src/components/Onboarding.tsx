@@ -82,7 +82,7 @@ export function Onboarding({ state }: { state: BrowserState }) {
                     type="radio"
                     name="engine"
                     checked={s.searchEngine === id}
-                    onChange={() => cmd({ type: 'settings:set', patch: { searchEngine: id, homePage: SEARCH_ENGINES[id].home } })}
+                    onChange={() => cmd({ type: 'settings:set', patch: { searchEngine: id } })}
                   />
                   <span className="source-text">
                     <span className="source-title">{SEARCH_ENGINES[id].name}</span>

@@ -50,6 +50,9 @@ Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppIm
   ![Ocean theme with the find bar](docs/screenshots/theme-ocean-find.png)
 
 - **Google sign-in** for Gmail, YouTube and Drive. Chrome Sync is Chrome-only. **Open page in** any other installed browser, with per-site "always open in…" rules.
+- **Two engines.** Chromium is built in. **Gecko** (the Firefox engine) runs Firefox with a Drift-managed, LibreWolf-style hardened profile: no telemetry or studies, strict tracking protection, native vertical tabs and a dark Drift look. Switch in Settings → Engine; your tabs move both ways. Drift uses the Firefox on your PC or downloads the official build from Mozilla.
+- **Privacy by default.** No telemetry, analytics or crash reporting. HTTPS-First, tracking-parameter stripping, third-party cookie blocking, Global Privacy Control and Do Not Track, and WebRTC IP protection. Settings lists every server Drift contacts on its own, and each one can be switched off.
+- **New-tab pages per style.** Chrome (search pill and shortcuts), Brave (trackers blocked, time saved and a clock), Firefox Home, and a calm Zen clock. Settings pages follow the style too, with "Search settings" that works in any language.
 - **Media controls** in the sidebar for whatever is playing.
 - **Permission prompts** for camera, microphone, location and notifications, with per-site answers you can change from the lock icon.
 - **Languages:** English and Hebrew built in (Hebrew lays out right to left). More languages download on demand from [`locales/`](locales/).

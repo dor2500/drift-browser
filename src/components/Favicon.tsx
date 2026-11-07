@@ -11,7 +11,7 @@ export function Favicon({ tab }: { tab: TabState }) {
   if (isInternalUrl(tab.url)) {
     return (
       <span className="favicon internal">
-        <Icon name="gear" size={14} />
+        <Icon name={tab.url.startsWith('drift://newtab') ? 'plus' : 'gear'} size={14} />
       </span>
     );
   }
