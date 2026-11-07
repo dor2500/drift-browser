@@ -93,8 +93,18 @@ jobs:
         run: npx electron-builder ${{ matrix.target }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS builds are unsigned until an Apple Developer ID is added.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          # Code signing (optional): set these repository secrets to sign and
+          # notarize — see docs/RELEASE-SECURITY.md. Windows/macOS: a base64
+          # Authenticode PFX / Apple Developer ID cert in CSC_LINK. macOS
+          # notarization: the Apple ID credentials below.
+          CSC_LINK: ${{ secrets.DRIFT_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.DRIFT_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.DRIFT_APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.DRIFT_APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.DRIFT_APPLE_TEAM_ID }}
+          # Only try to auto-discover/sign when a certificate is actually provided,
+          # so unconfigured forks still produce (unsigned) builds.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.DRIFT_CSC_LINK != '' }}
 
   # Drift for Android: a signed APK attached to the same release. The key comes
   # from repository secrets so every APK installs over the previous one.
@@ -133,8 +143,26 @@ jobs:
           gh release upload "$TAG" "Drift-$v.apk" -R "$GITHUB_REPOSITORY" --clobber
           gh release upload "$TAG" "Drift-$v-armeabi-v7a.apk" "Drift-$v-x86_64.apk" -R "$GITHUB_REPOSITORY" --clobber
 
-  publish:
+  # Publish a SHA256SUMS manifest over every release asset so install.sh /
+  # install.ps1 can verify a download before running it.
+  checksums:
     needs: [build, android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate and upload SHA256SUMS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir assets && cd assets
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY"
+          rm -f SHA256SUMS
+          sha256sum * | sort -k2 > ../SHA256SUMS
+          cd ..
+          cat SHA256SUMS
+          gh release upload "$TAG" SHA256SUMS -R "$GITHUB_REPOSITORY" --clobber
+
+  publish:
+    needs: [checksums]
     runs-on: ubuntu-latest
     steps:
       - name: Publish the release

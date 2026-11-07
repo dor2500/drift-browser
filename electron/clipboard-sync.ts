@@ -33,9 +33,20 @@ export class ClipboardMonitor {
     this.timer = undefined;
   }
 
-  /** Write a snippet to the OS clipboard without triggering a local re-capture loop. */
+  /**
+   * Write a snippet to the OS clipboard without triggering a local re-capture
+   * loop. This is the remote -> system path (auto-apply of a snippet synced
+   * from another device), so strip control characters and trailing newlines
+   * first: a malicious synced snippet must not be able to carry terminal escape
+   * sequences, or a trailing newline that auto-runs when the victim pastes into
+   * a shell (pastejacking).
+   */
   writeSystemClipboard(text: string) {
-    const clean = text.trim();
+    const clean = text
+      .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '') // C0/C1 controls, keep \t and \n
+      .replace(/\r/g, '')
+      .replace(/\n+$/, '')
+      .trim();
     if (!clean) return;
     this.lastSeenText = clean;
     try {

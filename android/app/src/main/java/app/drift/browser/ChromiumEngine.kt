@@ -53,6 +53,9 @@ class ChromiumEngine(
         if (private) usePrivateProfile(wv)
         val s = wv.settings
         s.domStorageEnabled = true
+        // Keep web pages out of the app's private files via file:// (default is
+        // true below API 30). Drift never needs to load local files in a tab.
+        s.allowFileAccess = false
         s.mediaPlaybackRequiresUserGesture = true
         s.setSupportZoom(true)
         s.builtInZoomControls = true

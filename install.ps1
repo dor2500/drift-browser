@@ -17,6 +17,25 @@ $installer = Join-Path $env:TEMP $asset.name
 Write-Host "Downloading $($asset.name) ($([math]::Round($asset.size / 1MB)) MB)..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing
 
+# Verify the download against the release's SHA256SUMS before running it, so a
+# tampered release asset can't be executed. Fails closed when the file is listed
+# but the hash doesn't match, or when it's missing from an existing manifest.
+$sums = $release.assets | Where-Object { $_.name -eq 'SHA256SUMS' } | Select-Object -First 1
+if ($sums) {
+  $sumsText = (Invoke-WebRequest -Uri $sums.browser_download_url -UseBasicParsing).Content
+  $line = ($sumsText -split "`n") | Where-Object { $_ -match ('\s' + [regex]::Escape($asset.name) + '\s*$') } | Select-Object -First 1
+  if (-not $line) { Remove-Item $installer -Force -ErrorAction SilentlyContinue; throw "$($asset.name) is not listed in SHA256SUMS; refusing to install." }
+  $expected = ($line.Trim() -split '\s+')[0]
+  $actual = (Get-FileHash -Algorithm SHA256 -Path $installer).Hash
+  if ($actual.ToLower() -ne $expected.ToLower()) {
+    Remove-Item $installer -Force -ErrorAction SilentlyContinue
+    throw "Checksum mismatch for $($asset.name) (expected $expected, got $actual). Refusing to install."
+  }
+  Write-Host 'Checksum verified.'
+} else {
+  Write-Host 'WARNING: this release has no SHA256SUMS; skipping integrity check.'
+}
+
 Write-Host 'Installing...'
 Start-Process -FilePath $installer -ArgumentList '/S' -Wait
 Remove-Item $installer -Force -ErrorAction SilentlyContinue

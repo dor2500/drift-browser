@@ -163,8 +163,13 @@ export class StateManager extends EventEmitter {
     if (!Array.isArray(remoteItems)) return undefined;
     const prevTopId = this.clipboard[0]?.id;
     const map = new Map<string, ClipboardItemEntry>();
-    for (const item of [...this.clipboard, ...remoteItems]) {
-      if (!item || typeof item.text !== 'string' || !item.text.trim()) continue;
+    for (const raw of [...this.clipboard, ...remoteItems]) {
+      if (!raw || typeof raw.text !== 'string' || !raw.text.trim()) continue;
+      // createdAt arrives from other devices and is attacker-controllable; clamp
+      // it to a sane range so a forged far-future timestamp can't force a
+      // malicious snippet to always win "newest" (and thus auto-apply).
+      const createdAt = Number.isFinite(raw.createdAt) ? Math.min(Math.max(0, raw.createdAt), Date.now()) : 0;
+      const item = { ...raw, createdAt };
       const cur = map.get(item.text);
       if (!cur || item.createdAt > cur.createdAt) {
         map.set(item.text, { ...item, pinned: cur?.pinned || item.pinned });

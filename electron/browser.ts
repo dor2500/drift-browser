@@ -42,7 +42,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -1197,6 +1197,14 @@ export class Browser {
     wc.on('did-fail-load', (_e, code, _desc, url, isMainFrame) => {
       if (!isMainFrame || code === -3 || !this.hub.upgraded.has(url)) return; // -3: aborted
       this.hub.upgraded.delete(url);
+      // Only fall back to plaintext http when the failure means the host has no
+      // HTTPS listener (connection refused/reset/closed/failed/timeout, address
+      // unreachable, TLS protocol/cipher mismatch). NEVER downgrade on a
+      // certificate error (-200..-299) or any other code: a forged/invalid
+      // certificate is exactly the signal an SSL-strip MITM produces, so
+      // downgrading there would strip TLS on an active attack.
+      const HTTP_FALLBACK_CODES = new Set([-100, -101, -102, -104, -107, -109, -113, -118]);
+      if (!HTTP_FALLBACK_CODES.has(code)) return;
       const host = hostOfUrl(url);
       if (!host) return;
       this.httpOk.add(new URL(url).hostname);
@@ -1237,7 +1245,20 @@ export class Browser {
     wc.setWindowOpenHandler(({ url, disposition }) => {
       // Real popups (OAuth, payment windows) keep window.opener, so let them open unless blocked.
       if (disposition === 'new-window') {
-        if (this.settings.privacy.blockPopups && !/accounts\.google\.com|firebaseapp\.com|paypal\.com|stripe\.com/i.test(url)) {
+        // Allow genuine OAuth/payment popups by exact host (or a dot-boundary
+        // subdomain) only — a substring test would let accounts.google.com.evil.com
+        // or ?x=stripe.com through and open a real native popup window.
+        const popupHost = (() => {
+          try {
+            return new URL(url).hostname.toLowerCase();
+          } catch {
+            return '';
+          }
+        })();
+        const popupAllowed = ['accounts.google.com', 'firebaseapp.com', 'paypal.com', 'stripe.com'].some(
+          (h) => popupHost === h || popupHost.endsWith('.' + h),
+        );
+        if (this.settings.privacy.blockPopups && !popupAllowed) {
           this.createTab({ url, afterId: id, background: false });
           return { action: 'deny' };
         }
@@ -1618,8 +1639,12 @@ export class Browser {
   /** Settings that follow you between devices (not engine, graphics, updates or first-run state). */
   private static readonly SYNCED_SETTINGS = [
     'theme', 'colorTheme', 'customAccent', 'spaceColors', 'verticalTabs', 'searchEngine', 'homePage', 'newTabPage',
-    'restoreSession', 'confirmClose', 'smoothScrolling', 'adblock', 'adblockPaused', 'hideAnnoyances', 'clearOnExit',
-    'sleepAfter', 'forceDark', 'darkMode', 'clipboardSync', 'siteZoom', 'openInRules', 'privacy', 'language',
+    // Security-posture settings — the `privacy` toggles (httpsOnly, safeBrowsing,
+    // etc.) and the ad blocker's on/off + paused-host list — are deliberately NOT
+    // synced. A compromised second device on the same account must not be able to
+    // silently weaken this device's defenses; security posture stays per-device.
+    'restoreSession', 'confirmClose', 'smoothScrolling', 'hideAnnoyances', 'clearOnExit',
+    'sleepAfter', 'forceDark', 'darkMode', 'clipboardSync', 'siteZoom', 'openInRules', 'language',
   ] as const;
 
   private collectForSync(): LocalData {
@@ -1662,6 +1687,7 @@ export class Browser {
           }
         }
         for (const p of want.values()) {
+          if (!isSafeRemoteUrl(p.url)) continue; // never load file:/data: pushed from another device
           const spaceId = this.spaces.some((sp) => sp.id === p.spaceId) ? p.spaceId : this.activeSpaceId;
           const t = { ...this.newTabState(p.url, spaceId), title: p.title, pinned: !p.essential, essential: p.essential };
           this.tabs.push(t);
@@ -1686,6 +1712,7 @@ export class Browser {
       }
       if (inc.handoffTabs?.length) {
         for (const item of inc.handoffTabs) {
+          if (!isSafeRemoteUrl(item.url)) continue; // only http(s)/drift from another device
           this.createTab({ url: item.url, background: false });
           this.ui({ type: 'handoff:received', item });
         }
@@ -2154,13 +2181,18 @@ export class Browser {
     void incogWin.loadURL(initialUrl && /^https?:/i.test(initialUrl) ? initialUrl : this.settings.homePage);
   }
 
+  /** Escape text interpolated into the small data: HTML chrome windows below. */
+  private esc(s: string): string {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  }
+
   private openTaskManagerWindow() {
     const metrics = app.getAppMetrics();
     const rows = metrics
       .map(
         (m) =>
           `<tr>
-            <td>${m.name || m.type}</td>
+            <td>${this.esc(m.name || m.type)}</td>
             <td>${m.pid}</td>
             <td>${m.cpu.percentCPUUsage.toFixed(1)}%</td>
             <td>${(m.memory.workingSetSize / 1024).toFixed(1)} MB</td>
@@ -2201,7 +2233,7 @@ export class Browser {
       .btn { margin-top:16px; padding:8px 18px; border:0; border-radius:18px; background:#8ab4f8; color:#202124; font-weight:600; cursor:pointer; }
     </style></head><body>
       <h3>סריקת קוד QR לפתיחת הדף בנייד</h3>
-      <p>${url.length > 70 ? url.slice(0, 70) + '…' : url}</p>
+      <p>${this.esc(url.length > 70 ? url.slice(0, 70) + '…' : url)}</p>
       <div class="qr-card"><img src="${qrUrl}" alt="QR Code" /></div>
       <br>
       <button class="btn" onclick="window.close()">סגור</button>

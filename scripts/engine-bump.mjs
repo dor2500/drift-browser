@@ -26,6 +26,13 @@ if (cmp(latest.version, current) <= 0) {
   process.exit(0);
 }
 
+// The version/chrome strings come from a remote feed and flow into a shell
+// install command and into GITHUB_OUTPUT (consumed by the workflow). Reject
+// anything but plain dotted numbers so they can't carry shell metacharacters.
+if (!/^[0-9]+(\.[0-9]+)*$/.test(latest.version) || !/^[0-9]+(\.[0-9]+)*$/.test(latest.chrome)) {
+  throw new Error(`Refusing suspicious engine version strings: electron=${latest.version} chrome=${latest.chrome}`);
+}
+
 execSync(`npm install --save-dev --save-exact --ignore-scripts electron@${latest.version}`, { stdio: 'inherit' });
 execSync('npm version patch --no-git-tag-version', { stdio: 'inherit' });
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;

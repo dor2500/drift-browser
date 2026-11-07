@@ -32,12 +32,19 @@ jobs:
 
       - name: Commit and tag
         if: steps.bump.outputs.tag != ''
+        # Pass step outputs through env, not ${{ }} inlined into the script, so a
+        # tampered releases feed can't inject shell commands on a runner that
+        # holds contents:write. engine-bump.mjs also validates these strings.
+        env:
+          ELECTRON: ${{ steps.bump.outputs.electron }}
+          CHROME: ${{ steps.bump.outputs.chrome }}
+          TAG: ${{ steps.bump.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "engine: Electron ${{ steps.bump.outputs.electron }} (Chromium ${{ steps.bump.outputs.chrome }})"
-          git tag "${{ steps.bump.outputs.tag }}"
-          git push origin HEAD "${{ steps.bump.outputs.tag }}"
+          git commit -am "engine: Electron $ELECTRON (Chromium $CHROME)"
+          git tag "$TAG"
+          git push origin HEAD "$TAG"
 
   release:
     needs: check

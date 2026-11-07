@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handle(intent: Intent?) {
         when (intent?.action) {
-            Intent.ACTION_VIEW -> intent.dataString?.let { model.openIncoming(it) }
+            Intent.ACTION_VIEW -> intent.dataString?.let { if (Url.safeExternal(it)) model.openIncoming(it) }
             Intent.ACTION_WEB_SEARCH -> intent.getStringExtra("query")?.let { model.newTab(Url.normalize(it)) }
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let { model.newTab(Url.normalize(it)) }
         }

@@ -30,6 +30,9 @@ if (dry) {
   process.exit(0);
 }
 
-execSync(`npm install --save-dev electron@${latest.version}`, { stdio: 'inherit' });
+if (!/^[0-9]+(\.[0-9]+)*$/.test(latest.version)) {
+  throw new Error(`Refusing suspicious Electron version: ${latest.version}`);
+}
+execSync(`npm install --save-dev --ignore-scripts electron@${latest.version}`, { stdio: 'inherit' });
 execSync('npm run build', { stdio: 'inherit' });
 console.log(`\nDone: Drift now runs Chromium ${latest.chrome}. Ship it to users with "npm run dist" and publish the release.`);

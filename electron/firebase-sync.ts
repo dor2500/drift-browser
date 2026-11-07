@@ -777,6 +777,9 @@ export class FirebaseSyncManager {
     cfg?: FirebaseClientConfig,
   ): Promise<{ idToken?: string; accessToken?: string; apiKey?: string; projectId?: string; authDomain?: string }> {
     let signInTab: string | undefined;
+    // CSRF nonce: the loopback /callback must only accept tokens posted back by
+    // our own page, not by a local process or web page racing the ephemeral port.
+    const stateParam = crypto.randomBytes(16).toString('hex');
     const tokens = await new Promise<{
       idToken?: string;
       accessToken?: string;
@@ -798,7 +801,8 @@ export class FirebaseSyncManager {
           const projectId = u.searchParams.get('projectId') ?? undefined;
           const authDomain = u.searchParams.get('authDomain') ?? undefined;
           const err = u.searchParams.get('error');
-          const ok = !!(idToken || accessToken);
+          // Reject a callback that doesn't carry our nonce (login-CSRF / token injection).
+          const ok = !!(idToken || accessToken) && u.searchParams.get('state') === stateParam;
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(doneHtml(ok));
           server.close();
@@ -808,7 +812,7 @@ export class FirebaseSyncManager {
           return;
         }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(firebaseLoopbackAuthHtml(cfg));
+        res.end(firebaseLoopbackAuthHtml(cfg, stateParam));
       });
       const timeout = setTimeout(() => {
         server.close();
@@ -1524,19 +1528,29 @@ export class FirebaseSyncManager {
   // ---------------------------------------------------------------- OS Keychain Persistence
 
   private seal(v: string) {
-    return safeStorage.isEncryptionAvailable()
-      ? `enc:${safeStorage.encryptString(v).toString('base64')}`
-      : `raw:${Buffer.from(v).toString('base64')}`;
+    // When OS-level encryption is unavailable (e.g. Linux without a keyring),
+    // keep the token in memory only ('mem:') rather than reversible 'raw:'
+    // base64 — persist() refuses to write anything not sealed with 'enc:'.
+    return safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(v).toString('base64')}` : `mem:${v}`;
   }
 
   private unseal(v: string) {
     if (v.startsWith('enc:')) return safeStorage.decryptString(Buffer.from(v.slice(4), 'base64'));
+    if (v.startsWith('mem:')) return v.slice(4);
+    // Legacy 'raw:' base64 from older versions: readable once, never re-persisted.
     return Buffer.from(v.slice(4), 'base64').toString();
   }
 
   private persist() {
     try {
-      fs.writeFileSync(storeFile(), JSON.stringify(this.s, null, 2));
+      // Never write a token to disk unless the OS keychain sealed it ('enc:').
+      // Without secure storage, tokens live only in memory for the session and
+      // the user re-authenticates next launch — disk never holds a usable token.
+      const safe: StoredSyncState = { ...this.s };
+      for (const k of ['refreshToken', 'idToken', 'accessToken'] as const) {
+        if (typeof safe[k] === 'string' && !safe[k]!.startsWith('enc:')) safe[k] = undefined;
+      }
+      fs.writeFileSync(storeFile(), JSON.stringify(safe, null, 2));
     } catch {
       /* best effort */
     }
@@ -1561,7 +1575,8 @@ function doneHtml(ok: boolean) {
 </body>`;
 }
 
-function firebaseLoopbackAuthHtml(cfg?: FirebaseClientConfig) {
+function firebaseLoopbackAuthHtml(cfg?: FirebaseClientConfig, stateParam = '') {
+  const safeState = JSON.stringify(stateParam);
   const safeCfg = JSON.stringify({
     apiKey: cfg?.apiKey || '',
     authDomain: cfg?.authDomain || (cfg?.projectId ? `${cfg.projectId}.firebaseapp.com` : ''),
@@ -1602,6 +1617,7 @@ function firebaseLoopbackAuthHtml(cfg?: FirebaseClientConfig) {
     import { initializeApp, getApps, deleteApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
     const initial = ${safeCfg};
+    const driftState = ${safeState};
     const setupBox = document.getElementById('setupBox');
     const apiKeyInput = document.getElementById('apiKey');
     const projectIdInput = document.getElementById('projectId');
@@ -1644,6 +1660,7 @@ function firebaseLoopbackAuthHtml(cfg?: FirebaseClientConfig) {
         params.set('apiKey', apiKey);
         params.set('projectId', projectId);
         params.set('authDomain', authDomain);
+        params.set('state', driftState);
         location.href = '/callback?' + params.toString();
       } catch (e) {
         setupBox.style.display = 'block';
