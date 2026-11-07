@@ -63,6 +63,18 @@ function createWindow() {
   });
 
   browser = new Browser(win);
+  // The shell window holds the privileged `drift` IPC surface (authorized by
+  // sender === win.webContents). Never let it navigate to, or open, anything
+  // but the app itself, so a stray link/redirect can't hand that surface to a
+  // remote origin.
+  const isShellUrl = (url: string) => (DEV_URL ? url.startsWith(DEV_URL) : url.startsWith('file://'));
+  win.webContents.on('will-navigate', (e, url) => {
+    if (!isShellUrl(url)) e.preventDefault();
+  });
+  win.webContents.on('will-redirect', (e, url) => {
+    if (!isShellUrl(url)) e.preventDefault();
+  });
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('before-input-event', (e, input) => {
     if (browser?.shortcut(input)) e.preventDefault();
   });

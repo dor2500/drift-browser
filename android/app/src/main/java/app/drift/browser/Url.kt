@@ -21,6 +21,7 @@ object Url {
     const val HOME = "drift:home"
     var search: SearchEngine = SEARCH_ENGINES[0]
     private val scheme = Regex("^(https?|file|about|data|view-source|drift):", RegexOption.IGNORE_CASE)
+    private val safeExternalScheme = Regex("^(https?|drift):", RegexOption.IGNORE_CASE)
     private val hostLike = Regex("^(localhost|\\d{1,3}(\\.\\d{1,3}){3})(:\\d+)?(/.*)?$", RegexOption.IGNORE_CASE)
     private val domain = Regex("^[^/\\s]+\\.[a-z]{2,}(:\\d+)?([/?#].*)?$", RegexOption.IGNORE_CASE)
 
@@ -38,6 +39,13 @@ object Url {
         if (scheme.containsMatchIn(s)) return s
         return (if (hostLike.matches(s)) "http://" else "https://") + s
     }
+
+    /**
+     * Whether a URL arriving from another app's intent is safe to load. Any app
+     * can send an explicit intent to our exported MainActivity, so file:/data:/
+     * javascript: etc. are rejected — only web and Drift's own pages are opened.
+     */
+    fun safeExternal(url: String): Boolean = safeExternalScheme.containsMatchIn(url.trim())
 
     fun host(url: String): String = runCatching { Uri.parse(url).host?.removePrefix("www.") ?: "" }.getOrDefault("")
 

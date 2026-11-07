@@ -6,6 +6,9 @@ const MAGIC = 'mozLz40\0';
 export function decodeMozLz4(buf: Buffer): string {
   if (buf.subarray(0, 8).toString('latin1') !== MAGIC) throw new Error('not a mozLz4 file');
   const size = buf.readUInt32LE(8);
+  // The size is an attacker-controllable header field (up to ~4 GiB); cap it so
+  // a tiny crafted file can't force a huge allocation (decompression-bomb DoS).
+  if (size > 512 * 1024 * 1024) throw new Error('mozLz4 declared size too large');
   const out = Buffer.alloc(size);
   let ip = 12;
   let op = 0;

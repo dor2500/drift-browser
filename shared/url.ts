@@ -3,6 +3,15 @@ export const HOME_URL = 'https://www.google.com/';
 
 const SCHEME = /^(https?|file|about|chrome|data|view-source|drift):/i;
 
+/**
+ * Schemes Drift will navigate to from data it did not get from the user typing
+ * in the address bar — synced pins, cross-device handoff, imported sessions.
+ * Only web and Drift's own pages; never file:/data:/view-source:/chrome:/about:,
+ * which such a source could use to read local files or spoof chrome.
+ */
+const SAFE_REMOTE_SCHEME = /^(https?|drift):/i;
+export const isSafeRemoteUrl = (url: string): boolean => SAFE_REMOTE_SCHEME.test(url.trim());
+
 /** Pages drawn by the shell itself instead of a web view. */
 export const SETTINGS_URL = 'drift://settings';
 export const NEWTAB_URL = 'drift://newtab';

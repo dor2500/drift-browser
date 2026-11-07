@@ -42,7 +42,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -1662,6 +1662,7 @@ export class Browser {
           }
         }
         for (const p of want.values()) {
+          if (!isSafeRemoteUrl(p.url)) continue; // never load file:/data: pushed from another device
           const spaceId = this.spaces.some((sp) => sp.id === p.spaceId) ? p.spaceId : this.activeSpaceId;
           const t = { ...this.newTabState(p.url, spaceId), title: p.title, pinned: !p.essential, essential: p.essential };
           this.tabs.push(t);
@@ -1686,6 +1687,7 @@ export class Browser {
       }
       if (inc.handoffTabs?.length) {
         for (const item of inc.handoffTabs) {
+          if (!isSafeRemoteUrl(item.url)) continue; // only http(s)/drift from another device
           this.createTab({ url: item.url, background: false });
           this.ui({ type: 'handoff:received', item });
         }
@@ -2154,13 +2156,18 @@ export class Browser {
     void incogWin.loadURL(initialUrl && /^https?:/i.test(initialUrl) ? initialUrl : this.settings.homePage);
   }
 
+  /** Escape text interpolated into the small data: HTML chrome windows below. */
+  private esc(s: string): string {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  }
+
   private openTaskManagerWindow() {
     const metrics = app.getAppMetrics();
     const rows = metrics
       .map(
         (m) =>
           `<tr>
-            <td>${m.name || m.type}</td>
+            <td>${this.esc(m.name || m.type)}</td>
             <td>${m.pid}</td>
             <td>${m.cpu.percentCPUUsage.toFixed(1)}%</td>
             <td>${(m.memory.workingSetSize / 1024).toFixed(1)} MB</td>
@@ -2201,7 +2208,7 @@ export class Browser {
       .btn { margin-top:16px; padding:8px 18px; border:0; border-radius:18px; background:#8ab4f8; color:#202124; font-weight:600; cursor:pointer; }
     </style></head><body>
       <h3>סריקת קוד QR לפתיחת הדף בנייד</h3>
-      <p>${url.length > 70 ? url.slice(0, 70) + '…' : url}</p>
+      <p>${this.esc(url.length > 70 ? url.slice(0, 70) + '…' : url)}</p>
       <div class="qr-card"><img src="${qrUrl}" alt="QR Code" /></div>
       <br>
       <button class="btn" onclick="window.close()">סגור</button>
