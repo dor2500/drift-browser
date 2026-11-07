@@ -163,6 +163,33 @@ export function TopBar({ state, onOpenBar }: Props) {
             <Icon name="broom" size={17} />
           </button>
         )}
+        {state.settings.theme === 'chrome' && (
+          <button
+            className="tb-btn"
+            title="חלונית צדדית · Chrome Side Panel (Ctrl+Shift+A)"
+            onClick={() => cmd({ type: 'ai:toggle' })}
+          >
+            <Icon name="sidebar" size={16} />
+          </button>
+        )}
+        {state.settings.theme === 'chrome' && (
+          <button
+            className="tb-btn chrome-profile-btn"
+            title={state.sync.email || 'חשבון Google (Google Account)'}
+            onClick={() => {
+              if (state.sync.signedIn) cmd({ type: 'tab:new', url: 'https://myaccount.google.com/' });
+              else cmd({ type: 'google:signin' });
+            }}
+          >
+            {state.sync.picture ? (
+              <img src={state.sync.picture} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+            ) : state.sync.email ? (
+              <span className="chrome-profile-initial">{state.sync.email[0].toUpperCase()}</span>
+            ) : (
+              <Icon name="google" size={15} />
+            )}
+          </button>
+        )}
         <DownloadsButton downloads={state.downloads} className="tb-btn" />
         <button className="tb-btn menu-btn" title={t('nav.menu')} onClick={() => window.drift.appMenu()}>
           <Icon name="more" size={18} />

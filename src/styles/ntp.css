@@ -45,8 +45,130 @@
 .ntp-heading { align-self: flex-start; margin: 0; font-size: 13px; font-weight: 600; color: var(--text-dim); }
 
 /* Chrome: search-engine wordmark above a pill, round shortcut tiles. */
-.ntp-wordmark { font-size: 54px; font-weight: 500; letter-spacing: -1px; color: var(--text); }
-.ntp-chrome .ntp-search { border-radius: 24px; background: #282a2c; box-shadow: none; }
+.ntp-chrome {
+  background: #202124;
+}
+.ntp-chrome-header {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  z-index: 10;
+}
+.ntp-chrome-link {
+  color: #e8eaed;
+  opacity: 0.88;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.ntp-chrome-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+.ntp-chrome-apps {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #e8eaed;
+  opacity: 0.85;
+  cursor: pointer;
+}
+.ntp-chrome-apps:hover {
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 1;
+}
+.ntp-chrome-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #4285f4;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ntp-chrome .ntp-center {
+  gap: 28px;
+  width: min(580px, 90%);
+}
+.ntp-chrome .google-logo {
+  margin-bottom: 6px;
+  display: grid;
+  place-items: center;
+}
+.ntp-chrome .ntp-search {
+  height: 48px;
+  border-radius: 24px;
+  background: #303134;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  transition: background 0.15s, box-shadow 0.15s;
+  padding: 0 16px;
+}
+.ntp-chrome .ntp-search:hover,
+.ntp-chrome .ntp-search:focus-within {
+  background: #3c4043;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+.ntp-chrome .ntp-search input {
+  color: #e8eaed;
+  font-size: 15px;
+}
+.ntp-chrome-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+.ntp-chrome-tool-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #9aa0a6;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.ntp-chrome-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eaed;
+}
+.ntp-chrome .ntp-shortcuts {
+  gap: 12px 18px;
+}
+.ntp-chrome .ntp-tile {
+  border-radius: 8px;
+  padding: 10px 4px;
+}
+.ntp-chrome .ntp-tile-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #292a2d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.ntp-chrome .ntp-tile-icon img {
+  width: 24px;
+  height: 24px;
+}
+.ntp-chrome .ntp-tile:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.ntp-chrome .ntp-tile-name {
+  color: #e8eaed;
+  font-size: 12px;
+}
 
 /* Firefox Home: rounded-square shortcut tiles, left-aligned "Shortcuts" heading. */
 .ntp-firefox .ntp-search { border-radius: 8px; height: 52px; background: #2b2a33; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }

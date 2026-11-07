@@ -23,17 +23,17 @@
 }
 
 :root[data-theme='chrome'] {
-  --hstrip-bg: #1f1f1f;   /* color-surface */
-  --toolbar-bg: #282828;  /* color-base-container: toolbar and selected tab */
-  --strip-h: 41px;
+  --hstrip-bg: #1f1f23;   /* Chrome dark surface */
+  --toolbar-bg: #2b2d30;  /* Chrome toolbar & selected tab */
+  --strip-h: 42px;
   --htab-h: 34px;
   --htab-radius: 10px;
-  --htab-selected: #282828;
+  --htab-selected: #2b2d30;
   --toolbar-h: 48px;
   --tb-radius: 50%;
   --omni-h: 36px;
   --omni-radius: 18px;
-  --omni-bg: #1f1f1f;
+  --omni-bg: #1f1f23;
 }
 
 :root[data-theme='firefox'] {
@@ -175,6 +175,18 @@
   background: radial-gradient(circle at 100% 0, transparent 9.5px, var(--toolbar-bg) 10px);
 }
 :root[data-theme='chrome'] .newtab-btn { align-self: center; border-radius: 50%; }
+.chrome-profile-btn { padding: 0; }
+.chrome-profile-initial {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #4285f4;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+}
 
 /* ------------------------------------------------------------------ toolbar */
 
