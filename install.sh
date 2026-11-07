@@ -14,6 +14,33 @@ asset_url() {
     | grep -E "$1" | head -n 1
 }
 
+verify() {
+  # Verify a downloaded file ($1) against the release's SHA256SUMS before using
+  # it. $2 is the asset's filename as it appears in the manifest. Fails closed on
+  # mismatch or when the file is missing from an existing manifest.
+  file="$1"; name="$2"
+  sums_url=$(asset_url '/SHA256SUMS$')
+  if [ -z "$sums_url" ]; then
+    echo "WARNING: this release has no SHA256SUMS; skipping integrity check." >&2
+    return 0
+  fi
+  expected=$(curl -fsSL -H "User-Agent: drift-installer" "$sums_url" \
+    | grep -E "[[:space:]]${name}\$" | awk '{print $1}' | head -n 1)
+  if [ -z "$expected" ]; then
+    echo "ERROR: $name is not listed in SHA256SUMS; refusing to install." >&2; exit 1
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual=$(sha256sum "$file" | awk '{print $1}')
+  else
+    actual=$(shasum -a 256 "$file" | awk '{print $1}')
+  fi
+  if [ "$expected" != "$actual" ]; then
+    echo "ERROR: checksum mismatch for $name (expected $expected, got $actual). Refusing to install." >&2
+    exit 1
+  fi
+  echo "Checksum verified for $name."
+}
+
 case "$(uname -s)" in
   Darwin)
     url=$(asset_url '\.dmg$')
