@@ -52,6 +52,15 @@ export function AiAssistantPanel({
   };
 
   const canUsePage = !!activeTab && /^https?:/i.test(activeTab.url);
+  // The "100% Local" promise only holds when the endpoint is a loopback host.
+  const endpointIsLocal = (() => {
+    try {
+      const h = new URL(settings.endpoint || 'http://localhost:11434').hostname.toLowerCase();
+      return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h.endsWith('.localhost');
+    } catch {
+      return false;
+    }
+  })();
 
   return (
     <aside className="ai-panel" aria-label={t('ai.title')}>
@@ -118,9 +127,15 @@ export function AiAssistantPanel({
         ) : (
           <span className="ai-model-tag">{settings.model}</span>
         )}
-        <span className="ai-privacy-badge" title="All requests stay on your machine via localhost">
-          100% Local
-        </span>
+        {endpointIsLocal ? (
+          <span className="ai-privacy-badge" title="All requests stay on your machine via localhost">
+            100% Local
+          </span>
+        ) : (
+          <span className="ai-privacy-badge" title={`Requests are sent to ${settings.endpoint}, which is not on your machine`}>
+            ⚠ Remote endpoint
+          </span>
+        )}
       </div>
 
       {showConfig && (
@@ -200,9 +215,12 @@ export function AiAssistantPanel({
             </div>
             <div className="ai-empty-title">Private Local AI Assistant</div>
             <div className="ai-empty-sub">
-              Powered by your local Ollama instance at <code>{settings.endpoint}</code>. Summarize
-              articles, translate text, or ask questions about the current page without sending any
-              data to the cloud.
+              Powered by your {endpointIsLocal ? 'local' : 'configured'} Ollama instance at{' '}
+              <code>{settings.endpoint}</code>. Summarize articles, translate text, or ask questions
+              about the current page
+              {endpointIsLocal
+                ? ' without sending any data to the cloud.'
+                : ' — note: this endpoint is not on your machine, so page content is sent there.'}
             </div>
             {!ai.ollamaOnline && (
               <div className="ai-offline-hint">

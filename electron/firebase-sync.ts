@@ -1528,19 +1528,29 @@ export class FirebaseSyncManager {
   // ---------------------------------------------------------------- OS Keychain Persistence
 
   private seal(v: string) {
-    return safeStorage.isEncryptionAvailable()
-      ? `enc:${safeStorage.encryptString(v).toString('base64')}`
-      : `raw:${Buffer.from(v).toString('base64')}`;
+    // When OS-level encryption is unavailable (e.g. Linux without a keyring),
+    // keep the token in memory only ('mem:') rather than reversible 'raw:'
+    // base64 — persist() refuses to write anything not sealed with 'enc:'.
+    return safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(v).toString('base64')}` : `mem:${v}`;
   }
 
   private unseal(v: string) {
     if (v.startsWith('enc:')) return safeStorage.decryptString(Buffer.from(v.slice(4), 'base64'));
+    if (v.startsWith('mem:')) return v.slice(4);
+    // Legacy 'raw:' base64 from older versions: readable once, never re-persisted.
     return Buffer.from(v.slice(4), 'base64').toString();
   }
 
   private persist() {
     try {
-      fs.writeFileSync(storeFile(), JSON.stringify(this.s, null, 2));
+      // Never write a token to disk unless the OS keychain sealed it ('enc:').
+      // Without secure storage, tokens live only in memory for the session and
+      // the user re-authenticates next launch — disk never holds a usable token.
+      const safe: StoredSyncState = { ...this.s };
+      for (const k of ['refreshToken', 'idToken', 'accessToken'] as const) {
+        if (typeof safe[k] === 'string' && !safe[k]!.startsWith('enc:')) safe[k] = undefined;
+      }
+      fs.writeFileSync(storeFile(), JSON.stringify(safe, null, 2));
     } catch {
       /* best effort */
     }

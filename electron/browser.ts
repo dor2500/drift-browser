@@ -1639,8 +1639,12 @@ export class Browser {
   /** Settings that follow you between devices (not engine, graphics, updates or first-run state). */
   private static readonly SYNCED_SETTINGS = [
     'theme', 'colorTheme', 'customAccent', 'spaceColors', 'verticalTabs', 'searchEngine', 'homePage', 'newTabPage',
-    'restoreSession', 'confirmClose', 'smoothScrolling', 'adblock', 'adblockPaused', 'hideAnnoyances', 'clearOnExit',
-    'sleepAfter', 'forceDark', 'darkMode', 'clipboardSync', 'siteZoom', 'openInRules', 'privacy', 'language',
+    // Security-posture settings — the `privacy` toggles (httpsOnly, safeBrowsing,
+    // etc.) and the ad blocker's on/off + paused-host list — are deliberately NOT
+    // synced. A compromised second device on the same account must not be able to
+    // silently weaken this device's defenses; security posture stays per-device.
+    'restoreSession', 'confirmClose', 'smoothScrolling', 'hideAnnoyances', 'clearOnExit',
+    'sleepAfter', 'forceDark', 'darkMode', 'clipboardSync', 'siteZoom', 'openInRules', 'language',
   ] as const;
 
   private collectForSync(): LocalData {
