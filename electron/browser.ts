@@ -39,7 +39,7 @@ import {
   type TabState,
   type UiEvent,
 } from '../shared/types';
-import { SEARCH_ENGINES, type Settings, type SettingsPatch } from '../shared/settings';
+import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
 import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, normalizeInput } from '../shared/url';
@@ -191,6 +191,8 @@ export class Browser {
     void this.sync.start();
     this.clipboardMonitor.start();
     void this.ollama.refreshModels();
+    this.applyDnsOverHttps();
+    session.fromPartition(PARTITION).setSpellCheckerEnabled(this.settings.spellCheck);
     win.on('resize', () => this.fullscreenTab && this.applyLayout());
     this.updater.schedule();
     try {
@@ -241,8 +243,67 @@ export class Browser {
     if (patch.ai?.model !== undefined && patch.ai.model) {
       this.stateMgr.ai.selectedModel = patch.ai.model;
     }
+    if (patch.privacy?.dnsOverHttps !== undefined) {
+      this.applyDnsOverHttps();
+    }
+    if (patch.spellCheck !== undefined) {
+      session.fromPartition(PARTITION).setSpellCheckerEnabled(this.settings.spellCheck);
+    }
+    if (patch.defaultZoom !== undefined) {
+      for (const id of this.views.keys()) this.applySiteZoom(id);
+    }
+    if (patch.fontSize !== undefined) {
+      for (const v of this.views.values()) {
+        if (!v.webContents.isDestroyed()) this.applyFontSize(v.webContents);
+      }
+    }
+    if (patch.energySaver !== undefined) {
+      for (const v of this.views.values()) {
+        if (!v.webContents.isDestroyed()) {
+          v.webContents.setBackgroundThrottling(this.settings.energySaver);
+          v.webContents.setFrameRate(this.settings.energySaver ? 30 : 60);
+        }
+      }
+    }
     if (patch.language !== undefined) this.i18n.reload();
     this.emit();
+  }
+
+  private applyDnsOverHttps() {
+    const mode = this.settings.privacy.dnsOverHttps;
+    const servers: Record<string, string> = {
+      cloudflare: 'https://cloudflare-dns.com/dns-query',
+      google: 'https://dns.google/dns-query',
+      quad9: 'https://dns.quad9.net/dns-query',
+    };
+    try {
+      if (mode === 'off') {
+        app.configureHostResolver({ secureDnsMode: 'off' });
+      } else if (mode === 'auto') {
+        app.configureHostResolver({ secureDnsMode: 'automatic' });
+      } else if (servers[mode]) {
+        app.configureHostResolver({ secureDnsMode: 'secure', secureDnsServers: [servers[mode]] });
+      }
+    } catch {
+      /* ignore if called before ready */
+    }
+  }
+
+  private fontSizePx(preset: FontSizePreset = this.settings.fontSize): number {
+    const map: Record<FontSizePreset, number> = {
+      xsmall: 12,
+      small: 14,
+      medium: 16,
+      large: 18,
+      xlarge: 20,
+    };
+    return map[preset] ?? 16;
+  }
+
+  private applyFontSize(wc: WebContents) {
+    if (this.settings.fontSize === 'medium') return;
+    const px = this.fontSizePx();
+    void wc.insertCSS(`html { font-size: ${px}px !important; }`).catch(() => {});
   }
 
   private applyDarkModeToAllViews() {
@@ -262,20 +323,28 @@ export class Browser {
   // ---------------------------------------------------------------- model
 
   private restore(d: store.Persisted | null) {
+    const continueSession =
+      this.settings.startupMode === 'continue' ||
+      (this.settings.startupMode !== 'newtab' && this.settings.startupMode !== 'urls' && this.settings.restoreSession);
     if (d) {
       this.spaces = d.spaces.map((s) => ({ ...s, icon: EMOJI_ICONS[s.icon] ?? s.icon }));
       this.activeSpaceId = d.spaces.some((s) => s.id === d.activeSpaceId) ? d.activeSpaceId : d.spaces[0].id;
       this.tabs = d.tabs
         .filter((t) => !('glanceOf' in t) && (t.essential || this.spaces.some((s) => s.id === t.spaceId)))
-        // "Restore session" off: only pinned tabs and Essentials come back.
-        .filter((t) => this.settings.restoreSession || t.pinned || t.essential)
+        .filter((t) => continueSession || t.pinned || t.essential)
         .map((t) => ({ ...t, muted: !!t.muted, loading: false, canGoBack: false, canGoForward: false, audible: false }));
       this.compact = !!d.compact;
       this.sidebarWidth = clamp(d.sidebarWidth ?? 260, SIDEBAR_MIN, SIDEBAR_MAX);
       if (d.split?.tabIds.every((id) => this.tab(id))) this.split = d.split;
       for (const s of this.spaces) if (s.activeTabId && !this.tab(s.activeTabId)) s.activeTabId = undefined;
-      if (!this.settings.restoreSession && !this.tabs.some((t) => !t.essential && t.spaceId === this.activeSpaceId)) {
-        this.createTab({ url: this.settings.homePage });
+      if (!continueSession) {
+        if (this.settings.startupMode === 'urls' && this.settings.startupUrls.length > 0) {
+          for (const u of this.settings.startupUrls) {
+            if (u.trim()) this.createTab({ url: u.trim() });
+          }
+        } else if (!this.tabs.some((t) => !t.essential && t.spaceId === this.activeSpaceId)) {
+          this.createTab({ url: this.settings.startupMode === 'newtab' ? NEWTAB_URL : this.settings.homePage });
+        }
       }
       return;
     }
@@ -584,8 +653,40 @@ export class Browser {
       case 'settings:open':
         this.openSettings();
         break;
+      case 'settings:reset':
+        this.setSettings({ ...DEFAULT_SETTINGS, onboarded: true });
+        break;
       case 'privacy:newIdentity':
         void this.newIdentity();
+        break;
+      case 'privacy:clearData':
+        void this.clearBrowsingData(c.range, c.history, c.cookies, c.cache);
+        break;
+      case 'downloads:chooseFolder':
+        void this.chooseDownloadFolder();
+        break;
+      case 'win:incognito':
+        this.openIncognitoWindow(c.url);
+        break;
+      case 'win:taskManager':
+        this.openTaskManagerWindow();
+        break;
+      case 'bookmark:toggle': {
+        const t = this.tab(this.activeTabId);
+        const url = c.url ?? t?.url;
+        const title = c.title ?? t?.title ?? url ?? '';
+        if (url && /^https?:/i.test(url)) {
+          this.history.toggleBookmark(url, title);
+          if (t && !t.essential) {
+            t.pinned = !t.pinned;
+            this.stateMgr.notifyDomainChanged('bookmarks');
+            this.emit();
+          }
+        }
+        break;
+      }
+      case 'page:readingMode':
+        this.toggleReadingMode();
         break;
       case 'sync:signin':
         void this.sync.signIn().catch((err: Error) => this.sync.fail(err.message));
@@ -933,6 +1034,8 @@ export class Browser {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
+        defaultFontSize: this.fontSizePx(),
+        backgroundThrottling: this.settings.energySaver,
         preload: path.join(__dirname, 'tab-preload.js'),
       },
     });
@@ -944,6 +1047,7 @@ export class Browser {
     this.views.set(t.id, v);
     this.wire(t.id, v.webContents);
     if (t.muted) v.webContents.setAudioMuted(true);
+    if (this.settings.energySaver) v.webContents.setFrameRate(30);
     if (this.settings.privacy.webrtcProtect) v.webContents.setWebRTCIPHandlingPolicy('default_public_interface_only');
     this.lastActive.set(t.id, Date.now());
     t.asleep = undefined;
@@ -1017,6 +1121,7 @@ export class Browser {
     });
     wc.on('did-finish-load', () => {
       this.applySiteZoom(id);
+      this.applyFontSize(wc);
       applyGeckoEngineToWebContents(wc, this.settings.engine === 'gecko');
       this.darkEngine.applyToWebContents(wc);
       this.stateMgr.notifyDomainChanged('tabs');
@@ -1062,8 +1167,12 @@ export class Browser {
     });
     wc.on('context-menu', (_e, p) => this.pageMenu(id, wc, p));
     wc.setWindowOpenHandler(({ url, disposition }) => {
-      // Real popups (OAuth, payment windows) keep window.opener, so let them open.
+      // Real popups (OAuth, payment windows) keep window.opener, so let them open unless blocked.
       if (disposition === 'new-window') {
+        if (this.settings.privacy.blockPopups && !/accounts\.google\.com|firebaseapp\.com|paypal\.com|stripe\.com/i.test(url)) {
+          this.createTab({ url, afterId: id, background: false });
+          return { action: 'deny' };
+        }
         return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, backgroundColor: '#1b1b1b' } };
       }
       const opener = this.tab(id);
@@ -1148,6 +1257,17 @@ export class Browser {
     if (k === 'escape' && this.glance && !this.overlay) return run({ type: 'glance:close' });
 
     if (ctrl && !i.alt && !i.shift && k === 't') return this.ui({ type: 'commandbar', mode: 'new' }), true;
+    if (ctrl && i.shift && !i.alt && k === 'n') return run({ type: 'win:incognito' });
+    if (ctrl && i.shift && !i.alt && k === 'b') {
+      const next = this.settings.showBookmarksBar === 'always' ? 'never' : 'always';
+      return run({ type: 'settings:set', patch: { showBookmarksBar: next } });
+    }
+    if (!ctrl && !i.alt && i.shift && k === 'escape') return run({ type: 'win:taskManager' });
+    if (ctrl && i.shift && !i.alt && k === 'delete') return run({ type: 'settings:open' });
+    if (!ctrl && !i.alt && !i.shift && k === 'f7') {
+      return run({ type: 'settings:set', patch: { caretBrowsing: !this.settings.caretBrowsing } });
+    }
+    if (ctrl && !i.alt && !i.shift && k === 'h') return run({ type: 'settings:open' });
     if (ctrl && !i.alt && !i.shift && k === ',') return run({ type: 'settings:open' });
     if ((ctrl && !i.alt && k === 'l') || k === 'f6') return this.ui({ type: 'commandbar', mode: 'current' }), true;
     if (ctrl && !i.alt && !i.shift && k === 'w') return run({ type: 'tab:close' });
@@ -1649,7 +1769,11 @@ export class Browser {
     const t = this.tab(id);
     const wc = this.wc(id);
     if (!t || !wc) return;
-    const level = this.settings.siteZoom[hostOfUrl(wc.getURL())] ?? 0;
+    const defaultLevel =
+      this.settings.defaultZoom && this.settings.defaultZoom !== 100
+        ? Math.log(this.settings.defaultZoom / 100) / Math.log(1.2)
+        : 0;
+    const level = this.settings.siteZoom[hostOfUrl(wc.getURL())] ?? defaultLevel;
     wc.setZoomLevel(level);
     const pct = Math.round(Math.pow(1.2, level) * 100);
     if ((t.zoom ?? 100) !== pct) {
@@ -1672,8 +1796,9 @@ export class Browser {
     for (const t of this.tabs) if (this.views.has(t.id) && hostOfUrl(t.url) === host) this.applySiteZoom(t.id);
   }
 
-  /** Unload tabs nobody has looked at for a while, like Edge's sleeping tabs. They reload when shown. */
+  /** Unload tabs nobody has looked at for a while, like Chrome's Memory Saver & Edge's sleeping tabs. */
   private sleepIdleTabs() {
+    if (!this.settings.memorySaver) return;
     const mins = this.settings.sleepAfter;
     if (!mins) return;
     const cutoff = Date.now() - mins * 60_000;
@@ -1688,6 +1813,8 @@ export class Browser {
     for (const id of [...this.views.keys()]) {
       const t = this.tab(id);
       if (!t || keep.has(id) || t.audible) continue;
+      const host = hostOfUrl(t.url);
+      if (host && this.settings.neverSleepHosts.some((h) => host === h || host.endsWith('.' + h))) continue;
       if ((this.lastActive.get(id) ?? Date.now()) < cutoff) {
         this.destroyView(id);
         changed = true;
@@ -1715,7 +1842,11 @@ export class Browser {
       if (owner && !source.isDestroyed() && source.navigationHistory.length() <= 1 && !/^https?:/.test(source.getURL())) {
         setTimeout(() => this.closeTab(owner, false), 0);
       }
-      const file = this.uniquePath(app.getPath('downloads'), item.getFilename());
+      const targetDir =
+        this.settings.downloadPath && fs.existsSync(this.settings.downloadPath)
+          ? this.settings.downloadPath
+          : app.getPath('downloads');
+      const file = this.uniquePath(targetDir, item.getFilename());
       // "Ask where to save each file": Electron shows the save dialog when no path is set.
       if (this.settings.askDownloadLocation) item.setSaveDialogOptions({ defaultPath: file });
       else item.setSavePath(file);
@@ -1808,14 +1939,39 @@ export class Browser {
     this.emit();
   }
 
-  /** The ⋮ menu in top-tab layouts. */
+  /** The ⋮ menu in top-tab layouts (full Chrome menu options). */
   appMenu() {
     const items: MenuItemConstructorOptions[] = [
       { label: this.i18n.t('menu.newTab'), accelerator: 'Ctrl+T', click: () => this.ui({ type: 'commandbar', mode: 'new' }) },
+      { label: 'חלון גלישה בסתר חדש · New Incognito Window', accelerator: 'Ctrl+Shift+N', click: () => this.run({ type: 'win:incognito' }) },
       { label: this.i18n.t('menu.reopen'), accelerator: 'Ctrl+Shift+T', enabled: this.closed.length > 0, click: () => this.run({ type: 'tab:reopen' }) },
       { label: this.i18n.t('menu.newSpace'), click: () => this.run({ type: 'space:new' }) },
       { type: 'separator' },
-      { label: this.i18n.t('act.find'), accelerator: 'Ctrl+F', click: () => this.ui({ type: 'find' }) },
+      {
+        label: 'סימניות ורשימות · Bookmarks',
+        submenu: [
+          { label: 'הוספת דף זה לסימניות · Bookmark This Tab', accelerator: 'Ctrl+D', click: () => this.run({ type: 'bookmark:toggle' }) },
+          {
+            label: 'הצגת סרגל הסימניות · Show Bookmarks Bar',
+            accelerator: 'Ctrl+Shift+B',
+            type: 'checkbox',
+            checked: this.settings.showBookmarksBar === 'always',
+            click: () =>
+              this.setSettings({
+                showBookmarksBar: this.settings.showBookmarksBar === 'always' ? 'never' : 'always',
+              }),
+          },
+          {
+            label: 'הצגת לחצן דף הבית · Show Home Button',
+            type: 'checkbox',
+            checked: this.settings.showHomeButton,
+            click: () => this.setSettings({ showHomeButton: !this.settings.showHomeButton }),
+          },
+        ],
+      },
+      { label: this.i18n.t('act.downloads'), accelerator: 'Ctrl+J', click: () => this.downloadsMenu() },
+      { label: 'ניקוי נתוני גלישה… · Clear Browsing Data…', accelerator: 'Ctrl+Shift+Del', click: () => this.openSettings() },
+      { type: 'separator' },
       {
         label: this.i18n.t('act.zoom'),
         submenu: [
@@ -1824,8 +1980,9 @@ export class Browser {
           { label: this.i18n.t('act.zoomReset'), accelerator: 'Ctrl+0', click: () => this.run({ type: 'zoom', dir: 0 }) },
         ],
       },
-      { label: this.i18n.t('act.downloads'), accelerator: 'Ctrl+J', click: () => this.downloadsMenu() },
       { label: this.i18n.t('act.print'), accelerator: 'Ctrl+P', click: () => this.run({ type: 'page:print' }) },
+      { label: 'מצב קריאה · Reading Mode', click: () => this.run({ type: 'page:readingMode' }) },
+      { label: this.i18n.t('act.find'), accelerator: 'Ctrl+F', click: () => this.ui({ type: 'find' }) },
       { label: this.i18n.t('act.screenshot'), accelerator: 'Ctrl+Shift+S', click: () => this.run({ type: 'page:screenshot' }) },
       { type: 'separator' },
       { label: 'Local AI Assistant (Ollama)', accelerator: 'Ctrl+Shift+A', click: () => this.run({ type: 'ai:toggle' }) },
@@ -1837,15 +1994,158 @@ export class Browser {
         click: () => this.run({ type: 'darkmode:update', patch: { enabled: !this.settings.darkMode.enabled } }),
       },
       { type: 'separator' },
-      { label: this.i18n.t('menu.verticalTabs'), type: 'checkbox', checked: this.settings.verticalTabs, click: () => this.setSettings({ verticalTabs: !this.settings.verticalTabs }) },
-      { label: this.i18n.t('menu.splitNext'), accelerator: 'Ctrl+Alt+V', click: () => this.shortcut({ type: 'keyDown', key: 'v', control: true, alt: true } as Input) },
+      {
+        label: 'כלים נוספים · More Tools',
+        submenu: [
+          { label: 'מנהל משימות · Task Manager', accelerator: 'Shift+Esc', click: () => this.run({ type: 'win:taskManager' }) },
+          { label: this.i18n.t('act.source'), accelerator: 'Ctrl+U', click: () => this.run({ type: 'page:source' }) },
+          { label: this.i18n.t('menu.devtools'), accelerator: 'F12', click: () => this.shortcut({ type: 'keyDown', key: 'F12' } as Input) },
+          { type: 'separator' },
+          { label: this.i18n.t('menu.verticalTabs'), type: 'checkbox', checked: this.settings.verticalTabs, click: () => this.setSettings({ verticalTabs: !this.settings.verticalTabs }) },
+          { label: this.i18n.t('menu.splitNext'), accelerator: 'Ctrl+Alt+V', click: () => this.shortcut({ type: 'keyDown', key: 'v', control: true, alt: true } as Input) },
+        ],
+      },
       { type: 'separator' },
       { label: this.i18n.t('menu.settings'), accelerator: 'Ctrl+,', click: () => this.openSettings() },
-      { label: this.i18n.t('menu.devtools'), accelerator: 'F12', click: () => this.shortcut({ type: 'keyDown', key: 'F12' } as Input) },
       { type: 'separator' },
       { label: this.i18n.t('menu.exit'), click: () => this.win.close() },
     ];
     Menu.buildFromTemplate(items).popup({ window: this.win });
+  }
+
+  private async clearBrowsingData(
+    range: '1h' | '24h' | '7d' | '4w' | 'all',
+    clearHist: boolean,
+    clearCookies: boolean,
+    clearCache: boolean,
+  ) {
+    const now = Date.now();
+    const offsets: Record<string, number> = {
+      '1h': 3600_000,
+      '24h': 24 * 3600_000,
+      '7d': 7 * 24 * 3600_000,
+      '4w': 28 * 24 * 3600_000,
+      all: now,
+    };
+    const since = range === 'all' ? 0 : now - (offsets[range] ?? now);
+    if (clearHist) {
+      this.history.clearHistory(since);
+      this.stateMgr.notifyDomainChanged('history');
+    }
+    const ses = session.fromPartition(PARTITION);
+    if (clearCookies) {
+      await ses.clearStorageData({
+        storages: ['cookies', 'localstorage', 'indexdb', 'serviceworkers', 'cachestorage'],
+      });
+    }
+    if (clearCache) {
+      await ses.clearCache();
+    }
+    this.emit();
+  }
+
+  private async chooseDownloadFolder() {
+    const res = await dialog.showOpenDialog(this.win, {
+      title: 'Choose Download Folder · בחירת תיקיית הורדות',
+      defaultPath: this.settings.downloadPath || app.getPath('downloads'),
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (!res.canceled && res.filePaths[0]) {
+      this.setSettings({ downloadPath: res.filePaths[0] });
+    }
+  }
+
+  private openIncognitoWindow(initialUrl?: string) {
+    const incogPartition = `incognito-${newId()}`;
+    const incogSes = session.fromPartition(incogPartition, { cache: false });
+    const incogWin = new BrowserWindow({
+      width: 1220,
+      height: 820,
+      title: 'Drift — מצב גלישה בסתר (Incognito)',
+      autoHideMenuBar: true,
+      backgroundColor: '#121316',
+      webPreferences: {
+        partition: incogPartition,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+    incogWin.on('closed', () => {
+      void incogSes.clearStorageData().catch(() => {});
+      void incogSes.clearCache().catch(() => {});
+    });
+    void incogWin.loadURL(initialUrl && /^https?:/i.test(initialUrl) ? initialUrl : this.settings.homePage);
+  }
+
+  private openTaskManagerWindow() {
+    const metrics = app.getAppMetrics();
+    const rows = metrics
+      .map(
+        (m) =>
+          `<tr>
+            <td>${m.name || m.type}</td>
+            <td>${m.pid}</td>
+            <td>${m.cpu.percentCPUUsage.toFixed(1)}%</td>
+            <td>${(m.memory.workingSetSize / 1024).toFixed(1)} MB</td>
+          </tr>`,
+      )
+      .join('');
+    const html = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>מנהל משימות · Drift Task Manager</title>
+    <style>
+      body { margin:0; padding:20px; background:#14161b; color:#e8eaed; font:14px system-ui,sans-serif; }
+      h2 { margin:0 0 14px; color:#8aa4ff; font-size:18px; }
+      table { width:100%; border-collapse:collapse; background:#1d2028; border-radius:10px; overflow:hidden; }
+      th, td { padding:10px 14px; text-align:right; border-bottom:1px solid #2b2f3a; }
+      th { background:#242834; color:#9aa0b0; font-weight:600; font-size:12px; }
+      tr:last-child td { border-bottom:0; }
+    </style></head><body>
+    <h2>מנהל משימות של הדפדפן · Browser Task Manager</h2>
+    <table><thead><tr><th>תהליך (Process)</th><th>PID</th><th>מעבד (CPU)</th><th>זיכרון (Memory)</th></tr></thead>
+    <tbody>${rows}</tbody></table></body></html>`;
+    const tmWin = new BrowserWindow({
+      width: 640,
+      height: 460,
+      title: 'מנהל משימות — Drift Task Manager',
+      autoHideMenuBar: true,
+      backgroundColor: '#14161b',
+    });
+    void tmWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  }
+
+  private toggleReadingMode() {
+    const wc = this.wc();
+    if (!wc) return;
+    void wc
+      .executeJavaScript(
+        `(() => {
+          const existing = document.getElementById('__drift_reader_overlay');
+          if (existing) { existing.remove(); return; }
+          const article = document.querySelector('article, main, [role="main"]') || document.body;
+          const title = document.title;
+          const text = article.innerText;
+          const overlay = document.createElement('div');
+          overlay.id = '__drift_reader_overlay';
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#16181e;color:#e8eaed;overflow-y:auto;padding:48px 24px;font:18px/1.75 system-ui,sans-serif;';
+          const inner = document.createElement('div');
+          inner.style.cssText = 'max-width:720px;margin:0 auto;';
+          const closeBtn = document.createElement('button');
+          closeBtn.textContent = '✕ סגירת מצב קריאה · Exit Reading Mode';
+          closeBtn.style.cssText = 'padding:8px 16px;border-radius:18px;border:0;background:#8aa4ff;color:#111;font-weight:600;cursor:pointer;margin-bottom:24px;';
+          closeBtn.onclick = () => overlay.remove();
+          const h1 = document.createElement('h1');
+          h1.textContent = title;
+          h1.style.cssText = 'font-size:28px;line-height:1.3;margin-bottom:20px;color:#fff;';
+          const body = document.createElement('div');
+          body.style.cssText = 'white-space:pre-wrap;';
+          body.textContent = text;
+          inner.append(closeBtn, h1, body);
+          overlay.appendChild(inner);
+          document.body.appendChild(overlay);
+        })()`,
+        true,
+      )
+      .catch(() => {});
   }
 
   /** Space switcher button at the start of the top tab strip. */
@@ -1884,6 +2184,7 @@ export class Browser {
     if (p.linkURL) {
       items.push(
         { label: this.i18n.t('menu.openNewTab'), click: () => this.createTab({ url: p.linkURL, afterId: id, background: true }) },
+        { label: 'פתח קישור בחלון גלישה בסתר · Open Link in Incognito Window', click: () => this.openIncognitoWindow(p.linkURL) },
         { label: this.i18n.t('menu.openGlance'), sublabel: 'Alt+Click', click: () => void this.openGlance(id, p.linkURL, { x: p.x, y: p.y }) },
         {
           label: this.i18n.t('menu.openSplit'),

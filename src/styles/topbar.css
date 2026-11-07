@@ -237,6 +237,47 @@
   text-overflow: ellipsis;
 }
 
+/* ------------------------------------------------------------------ bookmarks bar */
+
+.bookmarks-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  background: var(--toolbar-bg);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.bookmarks-bar::-webkit-scrollbar { display: none; }
+.bm-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 170px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s, color 0.1s;
+}
+.bm-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.bm-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bm-item.bm-add {
+  color: var(--accent);
+}
+
 /* ------------------------------------------------------------------ permission bar */
 
 .permission-bar {

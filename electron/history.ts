@@ -145,6 +145,36 @@ export class HistoryIndex {
       .map((e) => ({ url: e.url, title: e.title }));
   }
 
+  /** Toggle bookmark status for a URL (like Chrome's star button / Ctrl+D). */
+  toggleBookmark(url: string, title: string): boolean {
+    if (!/^https?:/i.test(url)) return false;
+    const e = this.entries.get(url);
+    if (e) {
+      e.bookmark = !e.bookmark;
+      if (title && title !== url) e.title = title;
+      this.save();
+      return !!e.bookmark;
+    }
+    this.entries.set(url, { url, title: title || url, visits: 1, bookmark: true, last: Date.now() });
+    this.save();
+    return true;
+  }
+
+  /** Clear browsing history entries visited after `sinceMs` (keeps bookmarks). */
+  clearHistory(sinceMs = 0) {
+    for (const [url, e] of this.entries.entries()) {
+      if (e.last >= sinceMs) {
+        if (e.bookmark) {
+          e.visits = 0;
+          e.last = 0;
+        } else {
+          this.entries.delete(url);
+        }
+      }
+    }
+    this.save();
+  }
+
   private trim() {
     if (this.entries.size <= MAX_ENTRIES) return;
     const keep = [...this.entries.values()].sort((a, b) => Number(!!b.bookmark) - Number(!!a.bookmark) || b.visits - a.visits).slice(0, MAX_ENTRIES);

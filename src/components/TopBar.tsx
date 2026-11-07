@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { hostOf, permissionLabel } from '../../shared/permissions';
-import type { BrowserState, DropPosition, PermissionPrompt, TabState } from '../../shared/types';
+import type { BrowserState, DropPosition, PermissionPrompt, Suggestion, TabState } from '../../shared/types';
 import { displayUrl, isInternalUrl } from '../../shared/url';
 import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
@@ -38,6 +38,19 @@ export function TopBar({ state, onOpenBar }: Props) {
   const prompt = focus ? state.prompts.find((p) => p.tabId === focus.id) : undefined;
   const omnibox = useRef<HTMLButtonElement>(null);
   const [drop, setDrop] = useState<{ id: string; pos: DropPosition } | null>(null);
+  const [bookmarks, setBookmarks] = useState<Suggestion[]>([]);
+
+  const showBmBar =
+    state.settings.showBookmarksBar === 'always' ||
+    (state.settings.showBookmarksBar === 'newtab' && !!focus?.url.startsWith('drift://newtab'));
+
+  useEffect(() => {
+    if (!showBmBar) return;
+    void window.drift.suggest('').then((items) => {
+      const bm = items.filter((i) => i.kind === 'bookmark');
+      setBookmarks(bm.length > 0 ? bm : items.filter((i) => i.kind === 'history').slice(0, 8));
+    });
+  }, [showBmBar, focus?.url, state.tabs.length]);
 
   const anchor = (): Anchor | undefined => {
     const r = omnibox.current?.getBoundingClientRect();
@@ -80,6 +93,7 @@ export function TopBar({ state, onOpenBar }: Props) {
               selected={t.id === state.activeTabId}
               compact={t.essential || t.pinned}
               attention={waiting.has(t.id) && t.id !== state.activeTabId}
+              showHoverCard={state.settings.tabHoverCard}
               dropPos={drop?.id === t.id ? drop.pos : undefined}
               onDragOverTab={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
             />
@@ -112,6 +126,15 @@ export function TopBar({ state, onOpenBar }: Props) {
         <button className="tb-btn" title={`${t('nav.reload')} (Ctrl+R)`} disabled={!focus} onClick={() => cmd({ type: 'tab:reload' })}>
           <Icon name="reload" size={17} />
         </button>
+        {state.settings.showHomeButton && (
+          <button
+            className="tb-btn"
+            title={`${t('set.homePage')} (Alt+Home)`}
+            onClick={() => cmd({ type: 'tab:navigate', input: state.settings.homePage || 'drift://newtab' })}
+          >
+            <Icon name="home" size={17} />
+          </button>
+        )}
         <div className="omnibox">
           <button
             className="omnibox-site"
@@ -147,6 +170,41 @@ export function TopBar({ state, onOpenBar }: Props) {
         </button>
       </div>
 
+      {showBmBar && (
+        <div className="bookmarks-bar">
+          {bookmarks.map((b) => (
+            <button
+              key={b.url}
+              className="bm-item"
+              title={`${b.title}\n${b.url}`}
+              onClick={() => cmd({ type: 'tab:navigate', input: b.url })}
+              onAuxClick={(e) => e.button === 1 && cmd({ type: 'tab:new', url: b.url })}
+            >
+              <Icon name={b.kind === 'bookmark' ? 'star' : 'globe'} size={12} />
+              <span>{b.title || displayUrl(b.url)}</span>
+            </button>
+          ))}
+          {focus && /^https?:/.test(focus.url) && (
+            <button
+              className="bm-item bm-add"
+              title="הוסף דף נוכחי לסרגל הסימניות · Add current page to Bookmarks (Ctrl+D)"
+              onClick={() => {
+                cmd({ type: 'bookmark:toggle', url: focus.url, title: focus.title });
+                setTimeout(() => {
+                  void window.drift.suggest('').then((items) => {
+                    const bm = items.filter((i) => i.kind === 'bookmark');
+                    setBookmarks(bm.length > 0 ? bm : items.filter((i) => i.kind === 'history').slice(0, 8));
+                  });
+                }, 150);
+              }}
+            >
+              <Icon name="plus" size={12} />
+              <span>הוסף סימנייה</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {prompt && <PermissionBar key={prompt.id} prompt={prompt} />}
     </header>
   );
@@ -157,6 +215,7 @@ function HTab({
   selected,
   compact,
   attention,
+  showHoverCard,
   dropPos,
   onDragOverTab,
 }: {
@@ -164,13 +223,14 @@ function HTab({
   selected: boolean;
   compact: boolean;
   attention: boolean;
+  showHoverCard: boolean;
   dropPos?: DropPosition;
   onDragOverTab: (pos: DropPosition) => void;
 }) {
   return (
     <div
       className={cx('htab', selected && 'selected', compact && 'compact', tab.asleep && !selected && 'asleep', dropPos && `drop-${dropPos}`)}
-      title={`${tab.title}\n${tab.url}`}
+      title={showHoverCard ? `${tab.title}\n${tab.url}${tab.asleep ? '\n💤 כרטיסייה במצב חיסכון בזיכרון (Memory Saver)' : ''}` : tab.title}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}
       onDragEnd={endTabDrag}

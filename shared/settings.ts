@@ -1,7 +1,13 @@
 export type ThemeId = 'zen' | 'firefox' | 'brave' | 'chrome' | 'edge' | 'opera' | 'tor';
-export type SearchEngineId = 'google' | 'duckduckgo' | 'bing' | 'brave' | 'startpage';
+export type SearchEngineId = 'google' | 'duckduckgo' | 'bing' | 'brave' | 'startpage' | 'yahoo' | 'ecosia';
 export type UpdateSource = 'github' | 'custom' | 'off';
 export type DarkEngineMode = 'smart' | 'filter' | 'chromium';
+export type BookmarksBarMode = 'always' | 'newtab' | 'never';
+export type FontSizePreset = 'xsmall' | 'small' | 'medium' | 'large' | 'xlarge';
+export type StartupMode = 'newtab' | 'continue' | 'urls';
+export type SafeBrowsingMode = 'enhanced' | 'standard' | 'off';
+export type DnsOverHttpsMode = 'auto' | 'cloudflare' | 'google' | 'quad9' | 'off';
+export type PreloadPagesMode = 'standard' | 'extended' | 'off';
 
 export interface UpdateSettings {
   /** Where Drift downloads new versions (each one also carries a newer Chromium). */
@@ -31,6 +37,12 @@ export interface PrivacySettings {
   engineCheck: boolean;
   /** Also compare with Google Chrome's stable version (contacts Google). Off by default. */
   chromeCompare: boolean;
+  /** Chrome Safe Browsing protection level. */
+  safeBrowsing: SafeBrowsingMode;
+  /** Secure DNS (DNS-over-HTTPS) provider. */
+  dnsOverHttps: DnsOverHttpsMode;
+  /** Block unsolicited pop-ups and redirects. */
+  blockPopups: boolean;
 }
 
 export interface DarkModeSettings {
@@ -124,6 +136,36 @@ export interface Settings {
   customAccent: string;
   /** Sites that always open in another installed browser, e.g. { "bank.example": "firefox" }. */
   openInRules: Record<string, string>;
+  /** Chrome Appearance: show the Home button in the toolbar. */
+  showHomeButton: boolean;
+  /** Chrome Appearance: when to show the horizontal Bookmarks Bar. */
+  showBookmarksBar: BookmarksBarMode;
+  /** Chrome Appearance: default page zoom percentage (e.g. 100). */
+  defaultZoom: number;
+  /** Chrome Appearance: default page font size preset. */
+  fontSize: FontSizePreset;
+  /** Chrome Appearance: show preview cards when hovering over tabs. */
+  tabHoverCard: boolean;
+  /** Chrome On Startup mode ('newtab' | 'continue' | 'urls'). */
+  startupMode: StartupMode;
+  /** Custom URLs opened on startup when startupMode === 'urls'. */
+  startupUrls: string[];
+  /** Chrome Performance: Memory Saver toggle. */
+  memorySaver: boolean;
+  /** Chrome Performance: Hosts that Memory Saver never puts to sleep. */
+  neverSleepHosts: string[];
+  /** Chrome Performance: Energy Saver toggle (limits background activity & frame rate). */
+  energySaver: boolean;
+  /** Chrome Performance: Preload pages mode. */
+  preloadPages: PreloadPagesMode;
+  /** Chrome Downloads: custom download directory path (empty = OS default Downloads folder). */
+  downloadPath: string;
+  /** Chrome Downloads: show downloads menu automatically when a download finishes. */
+  showDownloadsWhenDone: boolean;
+  /** Chrome Languages: enable spell check in text fields. */
+  spellCheck: boolean;
+  /** Chrome Accessibility: navigate pages with a text cursor (F7). */
+  caretBrowsing: boolean;
   privacy: PrivacySettings;
   updates: UpdateSettings;
 }
@@ -142,6 +184,8 @@ export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string;
   bing: { name: 'Bing', url: 'https://www.bing.com/search?q=', home: 'https://www.bing.com/' },
   brave: { name: 'Brave Search', url: 'https://search.brave.com/search?q=', home: 'https://search.brave.com/' },
   startpage: { name: 'Startpage', url: 'https://www.startpage.com/do/search?q=', home: 'https://www.startpage.com/' },
+  yahoo: { name: 'Yahoo', url: 'https://search.yahoo.com/search?p=', home: 'https://www.yahoo.com/' },
+  ecosia: { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=', home: 'https://www.ecosia.org/' },
 };
 
 export const DEFAULT_DARK_MODE: DarkModeSettings = {
@@ -196,6 +240,21 @@ export const DEFAULT_SETTINGS: Settings = {
   colorTheme: 'default',
   customAccent: '',
   openInRules: {},
+  showHomeButton: true,
+  showBookmarksBar: 'always',
+  defaultZoom: 100,
+  fontSize: 'medium',
+  tabHoverCard: true,
+  startupMode: 'continue',
+  startupUrls: ['https://www.google.com/'],
+  memorySaver: true,
+  neverSleepHosts: [],
+  energySaver: false,
+  preloadPages: 'standard',
+  downloadPath: '',
+  showDownloadsWhenDone: true,
+  spellCheck: true,
+  caretBrowsing: false,
   privacy: {
     httpsOnly: true,
     stripTracking: true,
@@ -204,6 +263,9 @@ export const DEFAULT_SETTINGS: Settings = {
     webrtcProtect: true,
     engineCheck: true,
     chromeCompare: false,
+    safeBrowsing: 'standard',
+    dnsOverHttps: 'auto',
+    blockPopups: true,
   },
   updates: {
     source: 'github',

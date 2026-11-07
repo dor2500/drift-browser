@@ -2,7 +2,16 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { en, type MessageKey } from '../../shared/locales/en';
 import { SETTINGS_ORDER } from '../../shared/themes';
 import { hostOf, permissionShortName } from '../../shared/permissions';
-import { SEARCH_ENGINES, type SearchEngineId } from '../../shared/settings';
+import {
+  SEARCH_ENGINES,
+  type BookmarksBarMode,
+  type DnsOverHttpsMode,
+  type FontSizePreset,
+  type PreloadPagesMode,
+  type SafeBrowsingMode,
+  type SearchEngineId,
+  type StartupMode,
+} from '../../shared/settings';
 import type { BrowserState, DriftEnv, SitePermissions } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { Icon, type IconName } from './Icon';
@@ -74,6 +83,13 @@ export function SettingsPage({ state }: { state: BrowserState }) {
   const [section, setSection] = useState<string>(SETTINGS_ORDER[state.settings.theme][0]);
   const [query, setQuery] = useState('');
   const [noMatch, setNoMatch] = useState(false);
+  const [newStartupUrl, setNewStartupUrl] = useState('');
+  const [newNeverSleepHost, setNewNeverSleepHost] = useState('');
+  const [clearRange, setClearRange] = useState<'1h' | '24h' | '7d' | '4w' | 'all'>('all');
+  const [clearHistory, setClearHistory] = useState(true);
+  const [clearCookies, setClearCookies] = useState(true);
+  const [clearCache, setClearCache] = useState(true);
+  const [clearedToast, setClearedToast] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
 
   // "Search settings", as in Chrome, Brave and Firefox: hide sections that don't mention the words.
@@ -158,6 +174,60 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label={t('set.compact')}
             hint={t('set.compactHint')}
           />
+
+          <h3>סרגל כלים, סימניות ותצוגת דף (Chrome Appearance)</h3>
+          <Toggle
+            checked={s.showHomeButton}
+            onChange={(showHomeButton) => cmd({ type: 'settings:set', patch: { showHomeButton } })}
+            label="הצג כפתור דף הבית (Show Home button)"
+            hint="מוסיף לחצן בית (🏠) בסרגל הכלים העליון ליד כפתור הרענון"
+          />
+          <div className="field">
+            <span className="field-label">הצג את סרגל הסימניות (Show bookmarks bar · Ctrl+Shift+B)</span>
+            <select
+              className="field-input"
+              value={s.showBookmarksBar}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { showBookmarksBar: e.target.value as BookmarksBarMode } })}
+            >
+              <option value="always">תמיד (Always)</option>
+              <option value="newtab">רק בכרטיסייה חדשה (Only on New Tab page)</option>
+              <option value="never">אף פעם (Never)</option>
+            </select>
+          </div>
+          <Toggle
+            checked={s.tabHoverCard}
+            onChange={(tabHoverCard) => cmd({ type: 'settings:set', patch: { tabHoverCard } })}
+            label="הצג תצוגה מקדימה במעבר עכבר על כרטיסייה (Show tab hover preview card)"
+            hint="מציג את כתובת האתר ומצב הזיכרון בעת ריחוף מעל כרטיסייה"
+          />
+          <div className="field">
+            <span className="field-label">גודל גופן בדפים (Font size)</span>
+            <select
+              className="field-input"
+              value={s.fontSize}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { fontSize: e.target.value as FontSizePreset } })}
+            >
+              <option value="xsmall">קטן מאוד (Very small)</option>
+              <option value="small">קטן (Small)</option>
+              <option value="medium">בינוני - מומלץ (Medium - Recommended)</option>
+              <option value="large">גדול (Large)</option>
+              <option value="xlarge">גדול מאוד (Very large)</option>
+            </select>
+          </div>
+          <div className="field">
+            <span className="field-label">מרחק מתצוגה בדף כברירת מחדל (Page zoom)</span>
+            <select
+              className="field-input"
+              value={s.defaultZoom}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { defaultZoom: Number(e.target.value) } })}
+            >
+              {[50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200].map((z) => (
+                <option key={z} value={z}>
+                  {z}%
+                </option>
+              ))}
+            </select>
+          </div>
         </section>
 
         <section id="settings-engine" className="settings-section">
@@ -287,6 +357,194 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label={t('set.restore')}
             hint={t('set.restoreHint')}
           />
+
+          <h3>בעת ההפעלה (On Startup)</h3>
+          <div className="field">
+            <span className="field-label">מה לפתוח בעת הפעלת הדפדפן</span>
+            <select
+              className="field-input"
+              value={s.startupMode}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { startupMode: e.target.value as StartupMode } })}
+            >
+              <option value="newtab">פתח את דף הכרטיסייה החדשה (Open the New Tab page)</option>
+              <option value="continue">המשך מהמקום שבו הפסקת (Continue where you left off)</option>
+              <option value="urls">פתח דף מסוים או קבוצת דפים (Open a specific page or set of pages)</option>
+            </select>
+          </div>
+          {s.startupMode === 'urls' && (
+            <div className="site-row">
+              <div className="site-host">דפים שייפתחו בעת ההפעלה</div>
+              {s.startupUrls.length > 0 && (
+                <div className="site-chips">
+                  {s.startupUrls.map((u) => (
+                    <span key={u} className="chip">
+                      {u}
+                      <button
+                        title="הסר דף"
+                        onClick={() => cmd({ type: 'settings:set', patch: { startupUrls: s.startupUrls.filter((x) => x !== u) } })}
+                      >
+                        <Icon name="x" size={11} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <input
+                  className="field-input"
+                  style={{ flex: 1, minWidth: 220 }}
+                  value={newStartupUrl}
+                  placeholder="https://example.com"
+                  onChange={(e) => setNewStartupUrl(e.target.value)}
+                />
+                <button
+                  className="btn small"
+                  onClick={() => {
+                    const u = newStartupUrl.trim();
+                    if (!u) return;
+                    const normalized = /^https?:\/\//i.test(u) ? u : `https://${u}`;
+                    if (!s.startupUrls.includes(normalized)) {
+                      cmd({ type: 'settings:set', patch: { startupUrls: [...s.startupUrls, normalized] } });
+                    }
+                    setNewStartupUrl('');
+                  }}
+                >
+                  הוסף דף (Add page)
+                </button>
+                <button
+                  className="btn small"
+                  onClick={() => {
+                    const currentUrls = state.tabs
+                      .map((t) => t.url)
+                      .filter((u) => /^https?:\/\//i.test(u));
+                    if (currentUrls.length > 0) {
+                      cmd({ type: 'settings:set', patch: { startupUrls: Array.from(new Set(currentUrls)) } });
+                    }
+                  }}
+                >
+                  השתמש בדפים הפתוחים כעת (Use current pages)
+                </button>
+              </div>
+            </div>
+          )}
+
+          <h3>ביצועים, חוסך הזיכרון וחוסך האנרגיה (Performance — Memory Saver & Energy Saver)</h3>
+          <Toggle
+            checked={s.memorySaver}
+            onChange={(memorySaver) => cmd({ type: 'settings:set', patch: { memorySaver } })}
+            label="חוסך הזיכרון (Memory Saver)"
+            hint="מפנה זיכרון מכרטיסיות לא פעילות כדי להעניק לכרטיסיות פעילות וליישומים אחרים יותר משאבי מחשב"
+          />
+          <div className="site-row">
+            <div className="site-host">אתרים שתמיד יישארו פעילים (Always keep these sites active)</div>
+            {s.neverSleepHosts.length > 0 && (
+              <div className="site-chips">
+                {s.neverSleepHosts.map((h) => (
+                  <span key={h} className="chip">
+                    {h}
+                    <button
+                      title="הסר אתר"
+                      onClick={() => cmd({ type: 'settings:set', patch: { neverSleepHosts: s.neverSleepHosts.filter((x) => x !== h) } })}
+                    >
+                      <Icon name="x" size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <input
+                className="field-input"
+                style={{ flex: 1, minWidth: 200 }}
+                value={newNeverSleepHost}
+                placeholder="example.com"
+                onChange={(e) => setNewNeverSleepHost(e.target.value)}
+              />
+              <button
+                className="btn small"
+                onClick={() => {
+                  const h = newNeverSleepHost.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '').toLowerCase();
+                  if (h && !s.neverSleepHosts.includes(h)) {
+                    cmd({ type: 'settings:set', patch: { neverSleepHosts: [...s.neverSleepHosts, h] } });
+                  }
+                  setNewNeverSleepHost('');
+                }}
+              >
+                הוסף אתר (Add site)
+              </button>
+            </div>
+          </div>
+          <Toggle
+            checked={s.energySaver}
+            onChange={(energySaver) => cmd({ type: 'settings:set', patch: { energySaver } })}
+            label="חוסך האנרגיה (Energy Saver)"
+            hint="חוסך בסוללה על ידי הגבלת פעילות ברקע ואפקטים חזותיים כגון גלילה חלקה וקצב פריימים בווידאו"
+          />
+          <div className="field">
+            <span className="field-label">טעינה מראש של דפים (Preload pages)</span>
+            <select
+              className="field-input"
+              value={s.preloadPages}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { preloadPages: e.target.value as PreloadPagesMode } })}
+            >
+              <option value="standard">טעינה מראש רגילה (Standard preloading)</option>
+              <option value="extended">טעינה מראש מורחבת (Extended preloading)</option>
+              <option value="off">ללא טעינה מראש (No preloading)</option>
+            </select>
+          </div>
+
+          <h3>הורדות, איות, נגישות וכלי מערכת (Downloads, Accessibility & System)</h3>
+          <div className="field">
+            <span className="field-label">מיקום שמירת הורדות (Download location)</span>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="mono" style={{ fontSize: 12, opacity: 0.85 }}>
+                {s.downloadPath || 'תיקיית ההורדות הרגילה של מערכת ההפעלה (System Default Downloads)'}
+              </span>
+              <button className="btn small" onClick={() => cmd({ type: 'downloads:chooseFolder' })}>
+                שנה מיקום… (Change…)
+              </button>
+              {s.downloadPath && (
+                <button className="btn small" onClick={() => cmd({ type: 'settings:set', patch: { downloadPath: '' } })}>
+                  אפס לברירת מחדל
+                </button>
+              )}
+            </div>
+          </div>
+          <Toggle
+            checked={s.showDownloadsWhenDone}
+            onChange={(showDownloadsWhenDone) => cmd({ type: 'settings:set', patch: { showDownloadsWhenDone } })}
+            label="הצג הורדות כשהן מסתיימות (Show downloads when they're done)"
+          />
+          <Toggle
+            checked={s.spellCheck}
+            onChange={(spellCheck) => cmd({ type: 'settings:set', patch: { spellCheck } })}
+            label="בדיקת איות בשדות טקסט באתרים (Spell Check)"
+            hint="מסמן שגיאות כתיב בעת הקלדה באתרי אינטרנט"
+          />
+          <Toggle
+            checked={s.caretBrowsing}
+            onChange={(caretBrowsing) => cmd({ type: 'settings:set', patch: { caretBrowsing } })}
+            label="ניווט בעזרת סמן הטקסט בדפים (Caret Browsing · F7)"
+            hint="מאפשר לנווט ולבחור טקסט בדפי אינטרנט באמצעות מקשי החצים במקלדת"
+          />
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+            <button className="btn" onClick={() => cmd({ type: 'win:incognito' })}>
+              <Icon name="shield" size={14} /> חלון גלישה בסתר חדש (New Incognito Window · Ctrl+Shift+N)
+            </button>
+            <button className="btn" onClick={() => cmd({ type: 'win:taskManager' })}>
+              <Icon name="bolt" size={14} /> מנהל המשימות של הדפדפן (Task Manager · Shift+Esc)
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                if (window.confirm('האם לאפס את כל ההגדרות לערכי ברירת המחדל המקוריים? (Reset all settings to defaults?)')) {
+                  cmd({ type: 'settings:reset' });
+                }
+              }}
+            >
+              <Icon name="reload" size={14} /> שחזור הגדרות לברירת המחדל המקורית (Reset Settings)
+            </button>
+          </div>
           <h3>{t('ai.title')}</h3>
           <p className="settings-lead">
             Connect Drift to your local Ollama server (<code>http://localhost:11434</code>) to summarize pages, translate text, or chat privately on-device. Press <code>Ctrl+Shift+A</code> or type <code>@ai</code> in the address bar.
@@ -326,6 +584,97 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         <section id="settings-privacy" className="settings-section">
           <span hidden className="search-en">{englishFor('privacy')}</span>
           <h2>{sectionName(s.theme, 'privacy')}</h2>
+
+          <h3>ניקוי נתוני גלישה (Clear Browsing Data · Ctrl+Shift+Del)</h3>
+          <div className="site-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
+              <span className="field-label">טווח זמן (Time range):</span>
+              <select
+                className="field-input"
+                value={clearRange}
+                onChange={(e) => setClearRange(e.target.value as '1h' | '24h' | '7d' | '4w' | 'all')}
+              >
+                <option value="1h">שעה אחרונה (Last hour)</option>
+                <option value="24h">24 שעות אחרונות (Last 24 hours)</option>
+                <option value="7d">7 ימים אחרונים (Last 7 days)</option>
+                <option value="4w">4 שבועות אחרונים (Last 4 weeks)</option>
+                <option value="all">משחר ההיסטוריה (All time)</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={clearHistory} onChange={(e) => setClearHistory(e.target.checked)} />
+                היסטוריית גלישה (Browsing history)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={clearCookies} onChange={(e) => setClearCookies(e.target.checked)} />
+                קובצי Cookie ונתוני אתרים (Cookies and other site data)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={clearCache} onChange={(e) => setClearCache(e.target.checked)} />
+                תמונות וקבצים במטמון (Cached images and files)
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button
+                className="btn primary small"
+                disabled={!clearHistory && !clearCookies && !clearCache}
+                onClick={() => {
+                  cmd({
+                    type: 'privacy:clearData',
+                    range: clearRange,
+                    history: clearHistory,
+                    cookies: clearCookies,
+                    cache: clearCache,
+                  });
+                  setClearedToast(true);
+                  setTimeout(() => setClearedToast(false), 3000);
+                }}
+              >
+                <Icon name="trash" size={13} /> נקה נתונים (Clear data)
+              </button>
+              {clearedToast && (
+                <span className="google-ok">
+                  <Icon name="check" size={14} /> נתוני הגלישה נוקו בהצלחה!
+                </span>
+              )}
+            </div>
+          </div>
+
+          <h3>גלישה בטוחה, DNS מאובטח וחלונות קופצים (Safe Browsing & Security)</h3>
+          <div className="field">
+            <span className="field-label">גלישה בטוחה (Safe Browsing)</span>
+            <select
+              className="field-input"
+              value={s.privacy.safeBrowsing}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { privacy: { safeBrowsing: e.target.value as SafeBrowsingMode } } })}
+            >
+              <option value="enhanced">הגנה משופרת (Enhanced protection)</option>
+              <option value="standard">הגנה רגילה - מומלץ (Standard protection)</option>
+              <option value="off">ללא הגנה (No protection)</option>
+            </select>
+          </div>
+          <div className="field">
+            <span className="field-label">שימוש ב-DNS מאובטח (Use Secure DNS / DNS-over-HTTPS)</span>
+            <select
+              className="field-input"
+              value={s.privacy.dnsOverHttps}
+              onChange={(e) => cmd({ type: 'settings:set', patch: { privacy: { dnsOverHttps: e.target.value as DnsOverHttpsMode } } })}
+            >
+              <option value="auto">אוטומטי - ספק השירות הנוכחי (With your current service provider)</option>
+              <option value="cloudflare">Cloudflare (1.1.1.1)</option>
+              <option value="google">Google (Public DNS)</option>
+              <option value="quad9">Quad9 (9.9.9.9)</option>
+              <option value="off">כבוי (Off)</option>
+            </select>
+          </div>
+          <Toggle
+            checked={s.privacy.blockPopups}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { blockPopups: v } } })}
+            label="חסימת חלונות קופצים והפניות אוטומטיות (Block Pop-ups and Redirects)"
+            hint="מונע מאתרים לפתוח חלונות קופצים ללא פעולת משתמש"
+          />
+
           <Toggle
             checked={s.adblock}
             onChange={(adblock) => cmd({ type: 'settings:set', patch: { adblock } })}

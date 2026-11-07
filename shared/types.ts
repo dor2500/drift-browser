@@ -300,7 +300,20 @@ export type Command =
   | { type: 'permission:reset'; origin: string; kind?: string }
   | { type: 'settings:set'; patch: SettingsPatch }
   | { type: 'settings:open' }
+  | { type: 'settings:reset' }
   | { type: 'privacy:newIdentity' }
+  | {
+      type: 'privacy:clearData';
+      range: '1h' | '24h' | '7d' | '4w' | 'all';
+      history: boolean;
+      cookies: boolean;
+      cache: boolean;
+    }
+  | { type: 'downloads:chooseFolder' }
+  | { type: 'win:incognito'; url?: string }
+  | { type: 'win:taskManager' }
+  | { type: 'bookmark:toggle'; url?: string; title?: string }
+  | { type: 'page:readingMode' }
   | { type: 'sync:signin' }
   | { type: 'sync:signout' }
   | { type: 'sync:now' }

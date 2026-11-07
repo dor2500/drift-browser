@@ -37,6 +37,24 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       {web && (
         <button
           className="page-action"
+          title="הוספה או הסרה מהסימניות · Bookmark this tab (Ctrl+D)"
+          onClick={() => cmd({ type: 'bookmark:toggle', url: tab!.url, title: tab!.title })}
+        >
+          <Icon name="star" size={14} />
+        </button>
+      )}
+      {web && (
+        <button
+          className="page-action"
+          title="מצב קריאה · Reading Mode"
+          onClick={() => cmd({ type: 'page:readingMode' })}
+        >
+          <Icon name="book" size={14} />
+        </button>
+      )}
+      {web && (
+        <button
+          className="page-action"
           title={copied ? t('url.copied') : t('url.copyLink')}
           onClick={() => {
             clipboardActions.pushCurrentOrText(tab!.url);

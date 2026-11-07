@@ -82,9 +82,37 @@ function sanitize(s: Settings): Settings {
             Object.entries(s.openInRules).filter(([h, b]) => h.length < 256 && ['zen', 'firefox', 'chrome', 'brave', 'edge', 'opera', 'tor'].includes(b as string)).slice(0, 200),
           )
         : {},
-    privacy: Object.fromEntries(
-      Object.entries(d.privacy).map(([k, def]) => [k, typeof (s.privacy as unknown as Record<string, unknown> | undefined)?.[k] === 'boolean' ? (s.privacy as unknown as Record<string, boolean>)[k] : def]),
-    ) as Settings['privacy'],
+    showHomeButton: typeof s.showHomeButton === 'boolean' ? s.showHomeButton : d.showHomeButton,
+    showBookmarksBar: ['always', 'newtab', 'never'].includes(s.showBookmarksBar) ? s.showBookmarksBar : d.showBookmarksBar,
+    defaultZoom: clampNum(s.defaultZoom, d.defaultZoom, 25, 500),
+    fontSize: ['xsmall', 'small', 'medium', 'large', 'xlarge'].includes(s.fontSize) ? s.fontSize : d.fontSize,
+    tabHoverCard: typeof s.tabHoverCard === 'boolean' ? s.tabHoverCard : d.tabHoverCard,
+    startupMode: ['newtab', 'continue', 'urls'].includes(s.startupMode) ? s.startupMode : d.startupMode,
+    startupUrls: Array.isArray(s.startupUrls)
+      ? [...new Set(s.startupUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u)))].slice(0, 100)
+      : d.startupUrls,
+    memorySaver: typeof s.memorySaver === 'boolean' ? s.memorySaver : d.memorySaver,
+    neverSleepHosts: Array.isArray(s.neverSleepHosts)
+      ? [...new Set(s.neverSleepHosts.filter((h) => typeof h === 'string' && h.length < 256))].slice(0, 200)
+      : d.neverSleepHosts,
+    energySaver: typeof s.energySaver === 'boolean' ? s.energySaver : d.energySaver,
+    preloadPages: ['standard', 'extended', 'off'].includes(s.preloadPages) ? s.preloadPages : d.preloadPages,
+    downloadPath: typeof s.downloadPath === 'string' ? s.downloadPath.trim() : d.downloadPath,
+    showDownloadsWhenDone: typeof s.showDownloadsWhenDone === 'boolean' ? s.showDownloadsWhenDone : d.showDownloadsWhenDone,
+    spellCheck: typeof s.spellCheck === 'boolean' ? s.spellCheck : d.spellCheck,
+    caretBrowsing: typeof s.caretBrowsing === 'boolean' ? s.caretBrowsing : d.caretBrowsing,
+    privacy: {
+      httpsOnly: typeof s.privacy?.httpsOnly === 'boolean' ? s.privacy.httpsOnly : d.privacy.httpsOnly,
+      stripTracking: typeof s.privacy?.stripTracking === 'boolean' ? s.privacy.stripTracking : d.privacy.stripTracking,
+      block3pCookies: typeof s.privacy?.block3pCookies === 'boolean' ? s.privacy.block3pCookies : d.privacy.block3pCookies,
+      gpc: typeof s.privacy?.gpc === 'boolean' ? s.privacy.gpc : d.privacy.gpc,
+      webrtcProtect: typeof s.privacy?.webrtcProtect === 'boolean' ? s.privacy.webrtcProtect : d.privacy.webrtcProtect,
+      engineCheck: typeof s.privacy?.engineCheck === 'boolean' ? s.privacy.engineCheck : d.privacy.engineCheck,
+      chromeCompare: typeof s.privacy?.chromeCompare === 'boolean' ? s.privacy.chromeCompare : d.privacy.chromeCompare,
+      safeBrowsing: ['enhanced', 'standard', 'off'].includes(s.privacy?.safeBrowsing) ? s.privacy.safeBrowsing : d.privacy.safeBrowsing,
+      dnsOverHttps: ['auto', 'cloudflare', 'google', 'quad9', 'off'].includes(s.privacy?.dnsOverHttps) ? s.privacy.dnsOverHttps : d.privacy.dnsOverHttps,
+      blockPopups: typeof s.privacy?.blockPopups === 'boolean' ? s.privacy.blockPopups : d.privacy.blockPopups,
+    },
     updates: {
       source: ['github', 'custom', 'off'].includes(u?.source) ? u.source : d.updates.source,
       githubRepo: typeof u?.githubRepo === 'string' ? u.githubRepo.trim() : '',
