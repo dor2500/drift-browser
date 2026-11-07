@@ -29,27 +29,55 @@ export class AdBlock {
 
   constructor(private hooks: AdBlockHooks) {}
 
-  async init(ses: Session) {
+  private full = false;
+
+  async init(ses: Session, annoyances = false) {
     this.ses = ses;
-    const cache = path.join(app.getPath('userData'), 'adblock-engine.bin');
+    this.full = annoyances;
+    const blocker = await this.load(annoyances);
+    if (!blocker) return;
+    this.blocker = blocker;
+    this.watch(blocker);
+    this.apply();
+  }
+
+  /** Ghostery's lists: ads and trackers, or the full set that also hides cookie banners and annoyances. */
+  private async load(full: boolean) {
+    const cache = path.join(app.getPath('userData'), full ? 'adblock-engine-full.bin' : 'adblock-engine.bin');
+    const caching = { path: cache, read: fs.readFile, write: fs.writeFile };
     try {
-      this.blocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, {
-        path: cache,
-        read: fs.readFile,
-        write: fs.writeFile,
-      });
+      return full ? await ElectronBlocker.fromPrebuiltFull(fetch, caching) : await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, caching);
     } catch (err) {
       console.error('[drift] ad-block lists unavailable:', err);
-      return;
+      return undefined;
     }
-    this.blocker.on('request-blocked', (req) => {
+  }
+
+  /** Switch between the two list sets (Settings → Hide cookie banners and annoyances). */
+  async setAnnoyances(on: boolean) {
+    if (on === this.full || !this.ses) return;
+    this.full = on;
+    const next = await this.load(on);
+    if (!next) return;
+    const wasActive = this.active;
+    if (wasActive && this.blocker) {
+      this.blocker.disableBlockingInSession(this.ses);
+      this.active = false;
+    }
+    this.blocker = next;
+    this.watch(next);
+    if (wasActive) this.apply();
+    else this.hooks.toggled();
+  }
+
+  private watch(blocker: ElectronBlocker) {
+    blocker.on('request-blocked', (req) => {
       const id = (req as { tabId?: number }).tabId;
       if (typeof id !== 'number' || id < 0) return;
       const n = (this.counts.get(id) ?? 0) + 1;
       this.counts.set(id, n);
       this.hooks.blocked(id, n);
     });
-    this.apply();
   }
 
   get engine() {

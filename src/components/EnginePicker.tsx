@@ -3,7 +3,7 @@ import { t } from '../i18n';
 import { cmd, cx } from '../lib';
 import { Icon } from './Icon';
 
-type Gecko = { available: boolean; kind?: 'installed' | 'downloaded'; error?: string };
+type Gecko = { available: boolean; version?: string; error?: string };
 
 /** Chromium (built in) or Gecko (Firefox engine with a Drift-managed, hardened profile). */
 export function EnginePicker({ engine, chromium }: { engine: 'chromium' | 'gecko'; chromium: string }) {
@@ -36,7 +36,7 @@ export function EnginePicker({ engine, chromium }: { engine: 'chromium' | 'gecko
           </div>
           <span className="source-body">{t('eng.geckoBody')}</span>
           <span className="source-body">
-            {gecko?.available ? (gecko.kind === 'downloaded' ? t('eng.geckoDownloaded') : t('eng.geckoInstalled')) : gecko ? t('eng.geckoMissing') : ''}
+            {gecko?.available ? t('eng.geckoReady', { version: gecko.version ?? '' }) : gecko ? t('eng.geckoMissing') : ''}
           </span>
           {gecko?.error && <span className="import-result error">{gecko.error}</span>}
           <div className="engine-actions">

@@ -67,7 +67,12 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 
 | Feature | Seen in | Drift |
 |---|---|---|
-| Browser styles | – | ✅ Zen, Chrome, Firefox, Brave layouts |
+| Browser modes | – | ✅ Zen, Chrome, Edge, Firefox, Brave, Opera, Tor Browser: layout, colours, new-tab page and Settings named and ordered as in that browser |
+| Hide cookie banners and annoyances | Brave, Opera, Firefox | ✅ |
+| Clear site data on exit | Chrome, Firefox, Brave | ✅ |
+| Ask where to save downloads | Chrome, Edge, Firefox | ✅ |
+| New Identity | Tor Browser | ✅ in Tor Browser mode (clears data and tabs; no Tor network) |
+| Sidebar rail | Opera, Edge, Vivaldi | ✅ Opera mode |
 | Colour themes | Chrome themes, Firefox Colorways, Zen gradients | ✅ 13 themes + custom accent |
 | Dark mode for websites | Brave, Chrome (flag), Opera | ✅ Settings → General |
 | Per-site custom CSS (Boosts / Mods) | Arc, Zen | 🔜 |

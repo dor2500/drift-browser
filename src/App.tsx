@@ -7,6 +7,7 @@ import { ContentArea } from './components/ContentArea';
 import { Onboarding } from './components/Onboarding';
 import { Sidebar } from './components/Sidebar';
 import { TopBar, type Anchor } from './components/TopBar';
+import { OperaRail } from './components/OperaRail';
 import { loadLocale, useLocale } from './i18n';
 import { cx, useBrowserState } from './lib';
 
@@ -167,13 +168,26 @@ export function App() {
           />
         </>
       )}
-      <ContentArea
-        state={state}
-        snapshots={[...snapshots, ...glanceSnaps]}
-        dimmed={bar !== null || onboarding}
-        findOpen={findOpen}
-        onCloseFind={() => setFindOpen(false)}
-      />
+      {(() => {
+        const content = (
+          <ContentArea
+            state={state}
+            snapshots={[...snapshots, ...glanceSnaps]}
+            dimmed={bar !== null || onboarding}
+            findOpen={findOpen}
+            onCloseFind={() => setFindOpen(false)}
+          />
+        );
+        // Opera One keeps a rail of shortcuts beside the page.
+        return horizontal && theme === 'opera' ? (
+          <div className="opera-body">
+            <OperaRail state={state} />
+            {content}
+          </div>
+        ) : (
+          content
+        );
+      })()}
       {bar && <CommandBar key={bar} mode={bar} state={state} anchor={horizontal ? anchor : undefined} onClose={closeBar} />}
       {onboarding && <Onboarding state={state} />}
     </div>

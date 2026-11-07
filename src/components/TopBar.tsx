@@ -135,6 +135,11 @@ export function TopBar({ state, onOpenBar }: Props) {
             <Icon name={state.media.playing ? 'pause' : 'play'} size={16} />
           </button>
         )}
+        {state.settings.theme === 'tor' && (
+          <button className="tb-btn" title={t('nid.button')} onClick={() => cmd({ type: 'privacy:newIdentity' })}>
+            <Icon name="broom" size={17} />
+          </button>
+        )}
         <DownloadsButton downloads={state.downloads} className="tb-btn" />
         <button className="tb-btn menu-btn" title={t('nav.menu')} onClick={() => window.drift.appMenu()}>
           <Icon name="more" size={18} />

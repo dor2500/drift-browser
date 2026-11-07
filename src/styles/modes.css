@@ -1,0 +1,261 @@
+/*
+ * Edge, Opera and Tor Browser modes, plus section order in Settings for every mode.
+ *   Edge   — measured from Microsoft Edge 157 on this PC (dark): frame #202020,
+ *            toolbar and selected tab #333333, page and address field #242424,
+ *            links #a7c9fc, focus ring #235ccf; the page sits in a rounded frame.
+ *   Opera  — Opera One: tab islands on top, a rail of shortcuts on the left, red accent.
+ *   Tor    — Tor Browser 14: Firefox's layout and greys with Tor purple, plus New Identity.
+ */
+
+/* ------------------------------------------------------------------ tokens */
+
+:root[data-theme='edge'] {
+  --glow-1: 0%;
+  --glow-2: 0%;
+  --tint: 0%;
+  --branding-bg: #1a1a1a;
+  --window-bg: #202020;
+  --surface: #242424;
+  --panel: #2c2c2c;
+  --urlbar-bg: #242424;
+  --text: #ffffff;
+  --text-dim: rgba(255, 255, 255, 0.78);
+  --text-faint: rgba(255, 255, 255, 0.5);
+  --hover: rgba(255, 255, 255, 0.07);
+  --pressed: rgba(255, 255, 255, 0.11);
+  --element-bg: #2c2c2c;
+  --tab-selected: #333333;
+  --tab-selected-shadow: none;
+  --essential-bg: #2c2c2c;
+  --essential-selected: #3a3a3a;
+  --border-contrast: rgba(255, 255, 255, 0.08);
+  --radius: 8px;
+  --sep: 6px;
+  --tab-radius: 8px;
+  --tile-radius: 8px;
+  --button-radius: 4px;
+  --tab-height: 36px;
+  --content-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+
+  --hstrip-bg: #202020;
+  --toolbar-bg: #333333;
+  --strip-h: 41px;
+  --htab-h: 32px;
+  --htab-radius: 8px;
+  --htab-selected: #333333;
+  --toolbar-h: 44px;
+  --tb-radius: 4px;
+  --omni-h: 32px;
+  --omni-radius: 16px;
+  --omni-bg: #242424;
+}
+
+:root[data-theme='opera'] {
+  --glow-1: 0%;
+  --glow-2: 0%;
+  --tint: 0%;
+  --branding-bg: #101116;
+  --window-bg: #16171d;
+  --surface: #22242c;
+  --panel: #262832;
+  --urlbar-bg: #262832;
+  --text: #e8e9ee;
+  --text-dim: rgba(232, 233, 238, 0.72);
+  --text-faint: rgba(232, 233, 238, 0.45);
+  --hover: rgba(255, 255, 255, 0.07);
+  --pressed: rgba(255, 255, 255, 0.12);
+  --element-bg: #262832;
+  --tab-selected: #30323b;
+  --tab-selected-shadow: none;
+  --essential-bg: #1d1f27;
+  --essential-selected: #30323b;
+  --border-contrast: rgba(255, 255, 255, 0.08);
+  --radius: 10px;
+  --sep: 6px;
+  --tab-radius: 10px;
+  --tile-radius: 14px;
+  --button-radius: 10px;
+  --tab-height: 34px;
+  --content-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+
+  --hstrip-bg: #16171d;
+  --toolbar-bg: #16171d;
+  --strip-h: 42px;
+  --htab-h: 32px;
+  --htab-radius: 10px;
+  --htab-selected: #30323b;
+  --toolbar-h: 46px;
+  --tb-radius: 10px;
+  --omni-h: 34px;
+  --omni-radius: 10px;
+  --omni-bg: #262832;
+}
+
+:root[data-theme='tor'] {
+  --glow-1: 0%;
+  --glow-2: 0%;
+  --tint: 0%;
+  --branding-bg: #15141a;
+  --window-bg: #1c1b22;
+  --surface: #2b2a33;
+  --panel: #2b2a33;
+  --urlbar-bg: #1c1b22;
+  --text: #fbfbfe;
+  --text-dim: rgba(251, 251, 254, 0.72);
+  --text-faint: rgba(251, 251, 254, 0.45);
+  --hover: color-mix(in srgb, #fbfbfe 10%, transparent);
+  --pressed: color-mix(in srgb, #fbfbfe 18%, transparent);
+  --element-bg: rgba(0, 0, 0, 0.3);
+  --tab-selected: #42414d;
+  --tab-selected-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  --essential-bg: rgba(251, 251, 254, 0.06);
+  --essential-selected: #42414d;
+  --border-contrast: rgba(251, 251, 254, 0.1);
+  --radius: 8px;
+  --sep: 6px;
+  --tab-radius: 8px;
+  --tile-radius: 8px;
+  --button-radius: 8px;
+  --tab-height: 36px;
+  --content-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+
+  --hstrip-bg: #1c1b22;
+  --toolbar-bg: #2b2a33;
+  --strip-h: 44px;
+  --htab-h: 36px;
+  --htab-radius: 8px;
+  --htab-selected: #42414d;
+  --toolbar-h: 42px;
+  --tb-radius: 8px;
+  --omni-h: 32px;
+  --omni-radius: 8px;
+  --omni-bg: #1c1b22;
+}
+
+/* ------------------------------------------------------------------ Edge layout */
+
+/* The selected tab is part of the toolbar, like Chromium. */
+:root[data-theme='edge'] .htabs { align-items: flex-end; gap: 2px; padding-top: 7px; }
+:root[data-theme='edge'] .htab { border-radius: var(--htab-radius) var(--htab-radius) 0 0; }
+:root[data-theme='edge'] .htab:not(.selected):hover { background: rgba(255, 255, 255, 0.06); border-radius: 8px; }
+/* The page sits in a rounded frame inside the window. */
+:root[data-theme='edge'] .app.horizontal .content {
+  margin: 0 6px 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+:root[data-theme='edge'] .omnibox:focus-within { box-shadow: 0 0 0 2px #235ccf; }
+
+/* ------------------------------------------------------------------ Opera layout */
+
+/* Tab islands: rounded tabs floating in the strip. */
+:root[data-theme='opera'] .htab.selected { box-shadow: inset 0 -2px 0 var(--accent); }
+.opera-body { flex: 1; min-height: 0; display: flex; }
+.opera-body .content { flex: 1; min-width: 0; margin: 0 6px 6px 0 !important; border-radius: 10px; overflow: hidden; }
+.opera-rail {
+  flex: 0 0 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 10px;
+}
+.rail-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--text-dim);
+}
+.rail-btn:hover { background: var(--hover); color: var(--text); }
+.rail-btn.active { background: var(--tab-selected); color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+.rail-sep { width: 24px; height: 1px; margin: 4px 0; background: var(--border-contrast); }
+.rail-fill { flex: 1; }
+
+/* ------------------------------------------------------------------ Tor layout */
+
+:root[data-theme='tor'] .htab.selected { box-shadow: 0 0 4px rgba(0, 0, 0, 0.4); }
+
+/* ------------------------------------------------------------------ new-tab pages */
+
+/* Edge: centred search box with a white field and square-ish tiles. */
+.ntp-edge { background: #242424; }
+.ntp-edge .ntp-search { border-radius: 24px; height: 50px; background: #ffffff; color: #444; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+.ntp-edge .ntp-search input { color: #1b1b1b; }
+.ntp-edge .ntp-tile-icon { border-radius: 8px; background: #2f2f2f; }
+.ntp-edge-time { position: absolute; top: 22px; inset-inline-start: 28px; font-size: 22px; font-weight: 300; color: var(--text-dim); }
+
+/* Opera: Speed Dial — large rounded tiles. */
+.ntp-opera { background: radial-gradient(80% 60% at 50% 0%, rgba(255, 75, 92, 0.18), transparent 70%), #16171d; }
+.ntp-opera-greet { font-size: 30px; font-weight: 600; }
+.ntp-opera .ntp-search { border-radius: 12px; background: #262832; box-shadow: none; }
+.ntp-opera .ntp-shortcuts { grid-template-columns: repeat(4, 140px); gap: 14px; }
+.ntp-opera .ntp-tile { padding: 0; gap: 6px; }
+.ntp-opera .ntp-tile-icon { width: 140px; height: 86px; border-radius: 14px; background: #262832; }
+.ntp-opera .ntp-tile-icon img { width: 32px; height: 32px; }
+
+/* Tor Browser: purple welcome over Firefox greys. */
+.ntp-tor { background: radial-gradient(70% 55% at 50% 0%, rgba(144, 89, 255, 0.28), transparent 70%), #1c1b22; }
+.ntp-tor-head { display: grid; gap: 8px; text-align: center; }
+.ntp-tor-title { font-size: 30px; font-weight: 600; color: #e6dcff; }
+.ntp-tor-note { font-size: 13px; color: var(--text-dim); }
+.ntp-tor .ntp-search { border-radius: 8px; background: #2b2a33; }
+.ntp-tor .ntp-tile-icon { border-radius: 8px; background: #42414d; }
+
+/* ------------------------------------------------------------------ settings, per browser */
+
+/* Sections follow the chosen browser's own order (SETTINGS_ORDER in shared/themes.ts). */
+.settings-scroll { display: flex; flex-direction: column; }
+.settings-scroll > .empty-note { order: -1; }
+#settings-appearance { order: calc(var(--order-appearance, 0) * 2); }
+#settings-engine { order: calc(var(--order-engine, 1) * 2); }
+#settings-language { order: calc(var(--order-language, 2) * 2); }
+#settings-general { order: calc(var(--order-general, 3) * 2); }
+#settings-privacy { order: calc(var(--order-privacy, 4) * 2); }
+#settings-connections { order: calc(var(--order-privacy, 4) * 2 + 1); }
+#settings-import { order: calc(var(--order-import, 5) * 2); }
+#settings-updates { order: calc(var(--order-updates, 6) * 2); }
+#settings-about { order: calc(var(--order-about, 7) * 2); }
+
+/* Edge: Fluent cards, blue selection bar on the left of the nav item. */
+:root[data-theme='edge'] .settings-page { background: #202020; }
+:root[data-theme='edge'] .settings-nav { border: 0; }
+:root[data-theme='edge'] .settings-nav-item { height: 36px; border-radius: 4px; position: relative; }
+:root[data-theme='edge'] .settings-nav-item.active { background: rgba(255, 255, 255, 0.06); }
+:root[data-theme='edge'] .settings-nav-item.active::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 2px;
+  background: #4f8ff7;
+}
+:root[data-theme='edge'] .settings-search { height: 32px; border-radius: 4px; background: #2c2c2c; border-bottom: 1px solid #8a8a8a; }
+:root[data-theme='edge'] .settings-section { padding: 16px 20px; margin-top: 12px; border-radius: 8px; background: #2b2b2b; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3); }
+:root[data-theme='edge'] .settings-section h2 { font-size: 20px; font-weight: 600; }
+:root[data-theme='edge'] .switch:checked { background: #4f8ff7; }
+
+/* Opera: dark panels, red accents. */
+:root[data-theme='opera'] .settings-page { background: #16171d; }
+:root[data-theme='opera'] .settings-nav { border: 0; }
+:root[data-theme='opera'] .settings-nav-item { height: 38px; border-radius: 10px; }
+:root[data-theme='opera'] .settings-nav-item.active { background: #262832; color: #fff; box-shadow: inset 3px 0 0 #ff4b5c; }
+:root[data-theme='opera'][dir='rtl'] .settings-nav-item.active { box-shadow: inset -3px 0 0 #ff4b5c; }
+:root[data-theme='opera'] .settings-section { padding: 18px 22px; margin-top: 14px; border-radius: 14px; background: #1d1f27; }
+:root[data-theme='opera'] .switch:checked { background: #ff4b5c; }
+
+/* Tor Browser: about:preferences with Tor purple. */
+:root[data-theme='tor'] .settings-page { background: #1c1b22; }
+:root[data-theme='tor'] .settings-nav-item { height: 44px; font-size: 14px; }
+:root[data-theme='tor'] .settings-nav-item.active { background: transparent; color: #c5b0ff; box-shadow: inset 3px 0 0 #9059ff; }
+:root[data-theme='tor'][dir='rtl'] .settings-nav-item.active { box-shadow: inset -3px 0 0 #9059ff; }
+:root[data-theme='tor'] .settings-section h2 { font-size: 20px; font-weight: 600; }
+:root[data-theme='tor'] .settings-search { border-radius: 4px; background: #2b2a33; }
+:root[data-theme='tor'] .switch:checked { background: #9059ff; }

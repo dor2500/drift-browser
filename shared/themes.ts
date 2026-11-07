@@ -18,8 +18,9 @@ export interface ThemeInfo {
   preview: { window: string; sidebar: string; surface: string; tab: string; text: string };
 }
 
-// Token values live in src/styles/themes.css under [data-theme="…"]. All four
-// were measured from the browsers installed on this PC.
+// Token values live in src/styles/themes.css and modes.css under [data-theme="…"].
+// Zen, Firefox, Brave, Chrome and Edge were measured from the browsers installed on
+// this PC; Opera and Tor Browser follow their published designs.
 export const THEMES: Record<ThemeId, ThemeInfo> = {
   zen: {
     id: 'zen',
@@ -65,6 +66,51 @@ export const THEMES: Record<ThemeId, ThemeInfo> = {
     contentRadius: 0,
     preview: { window: '#1f1f1f', sidebar: '#1f1f1f', surface: '#27282a', tab: '#333438', text: '#e3e3e3' },
   },
+  edge: {
+    id: 'edge',
+    name: 'Edge style',
+    tagline: 'Tabs on top, Fluent greys, the page set in a rounded frame.',
+    source: 'Microsoft Edge 157 (measured from its window on this PC)',
+    accent: '#a7c9fc',
+    spaceColors: false,
+    verticalTabs: false,
+    contentRadius: 8,
+    preview: { window: '#202020', sidebar: '#202020', surface: '#242424', tab: '#333333', text: '#ffffff' },
+  },
+  opera: {
+    id: 'opera',
+    name: 'Opera style',
+    tagline: 'Opera One: tab islands on top, a sidebar rail of shortcuts, red accent.',
+    source: 'Opera One design (Opera is not installed on this PC)',
+    accent: '#ff4b5c',
+    spaceColors: false,
+    verticalTabs: false,
+    contentRadius: 10,
+    preview: { window: '#16171d', sidebar: '#1d1f27', surface: '#22242c', tab: '#30323b', text: '#e8e9ee' },
+  },
+  tor: {
+    id: 'tor',
+    name: 'Tor Browser style',
+    tagline: 'The Tor Browser look (Firefox layout, Tor purple, New Identity). Looks only: Drift does not use the Tor network.',
+    source: 'Tor Browser 14 design (Firefox ESR based)',
+    accent: '#9059ff',
+    spaceColors: false,
+    verticalTabs: false,
+    contentRadius: 0,
+    preview: { window: '#1c1b22', sidebar: '#1c1b22', surface: '#2b2a33', tab: '#42414d', text: '#fbfbfe' },
+  },
+};
+
+/** Settings sections in the order each browser shows them (see the mode.* labels). */
+export type SettingsSection = 'appearance' | 'engine' | 'language' | 'general' | 'privacy' | 'import' | 'updates' | 'about';
+export const SETTINGS_ORDER: Record<ThemeId, SettingsSection[]> = {
+  zen: ['appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'],
+  chrome: ['import', 'privacy', 'engine', 'appearance', 'general', 'language', 'updates', 'about'],
+  edge: ['import', 'privacy', 'appearance', 'general', 'language', 'engine', 'updates', 'about'],
+  firefox: ['appearance', 'general', 'privacy', 'language', 'engine', 'import', 'updates', 'about'],
+  tor: ['appearance', 'general', 'privacy', 'language', 'engine', 'import', 'updates', 'about'],
+  brave: ['general', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
+  opera: ['general', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
 };
 
 /** Rounded floating page only in sidebar layouts; top-tab browsers draw the page edge to edge. */
@@ -72,4 +118,4 @@ export function contentRadiusFor(s: Pick<Settings, 'theme' | 'verticalTabs'>): n
   return s.verticalTabs ? THEMES[s.theme].contentRadius : 0;
 }
 
-export const THEME_ORDER: ThemeId[] = ['zen', 'firefox', 'brave', 'chrome'];
+export const THEME_ORDER: ThemeId[] = ['zen', 'chrome', 'edge', 'firefox', 'brave', 'opera', 'tor'];

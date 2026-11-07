@@ -8,6 +8,7 @@ const PF = process.env.ProgramFiles ?? 'C:\\Program Files';
 const PF86 = process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
 const LOCAL = process.env.LOCALAPPDATA ?? '';
 const APPS = '/Applications';
+const HOME = process.env.USERPROFILE ?? process.env.HOME ?? '';
 const BIN = ['/usr/bin', '/usr/local/bin', '/opt', '/snap/bin'];
 const onPath = (names: string[]) => BIN.flatMap((d) => names.map((n) => path.join(d, n)));
 
@@ -24,6 +25,10 @@ const WIN: Record<keyof DriftEnv['browsers'], string[]> = {
     path.join(PF86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
     path.join(LOCAL, 'Google', 'Chrome', 'Application', 'chrome.exe'),
   ],
+  edge: [path.join(PF86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'), path.join(PF, 'Microsoft', 'Edge', 'Application', 'msedge.exe')],
+  opera: [path.join(LOCAL, 'Programs', 'Opera', 'opera.exe'), path.join(LOCAL, 'Programs', 'Opera', 'launcher.exe')],
+  // Tor Browser is portable; its installer puts it on the desktop by default.
+  tor: [path.join(HOME, 'Desktop', 'Tor Browser', 'Browser', 'firefox.exe'), path.join(HOME, 'OneDrive', 'Desktop', 'Tor Browser', 'Browser', 'firefox.exe')],
 };
 
 const MAC: Record<keyof DriftEnv['browsers'], string[]> = {
@@ -31,6 +36,9 @@ const MAC: Record<keyof DriftEnv['browsers'], string[]> = {
   firefox: [path.join(APPS, 'Firefox.app')],
   brave: [path.join(APPS, 'Brave Browser.app')],
   chrome: [path.join(APPS, 'Google Chrome.app')],
+  edge: [path.join(APPS, 'Microsoft Edge.app')],
+  opera: [path.join(APPS, 'Opera.app')],
+  tor: [path.join(APPS, 'Tor Browser.app')],
 };
 
 const LINUX: Record<keyof DriftEnv['browsers'], string[]> = {
@@ -38,6 +46,9 @@ const LINUX: Record<keyof DriftEnv['browsers'], string[]> = {
   firefox: onPath(['firefox']),
   brave: onPath(['brave', 'brave-browser']),
   chrome: onPath(['google-chrome', 'google-chrome-stable']),
+  edge: onPath(['microsoft-edge', 'microsoft-edge-stable']),
+  opera: onPath(['opera']),
+  tor: onPath(['torbrowser-launcher']),
 };
 
 const CANDIDATES = process.platform === 'win32' ? WIN : process.platform === 'darwin' ? MAC : LINUX;
@@ -49,11 +60,11 @@ const EDGE: string[] =
       ? [path.join(APPS, 'Microsoft Edge.app')]
       : onPath(['microsoft-edge', 'microsoft-edge-stable']);
 
-export const BROWSER_NAMES: Record<string, string> = { zen: 'Zen', firefox: 'Firefox', chrome: 'Google Chrome', brave: 'Brave', edge: 'Microsoft Edge' };
+export const BROWSER_NAMES: Record<string, string> = { zen: 'Zen', firefox: 'Firefox', chrome: 'Google Chrome', brave: 'Brave', edge: 'Microsoft Edge', opera: 'Opera', tor: 'Tor Browser' };
 
 /** Installed browsers Drift can hand a page to, with the path that launches each. */
 export function otherBrowsers(): { id: string; name: string; exe: string }[] {
-  const all: Record<string, string[]> = { ...CANDIDATES, edge: EDGE };
+  const all: Record<string, string[]> = { ...CANDIDATES, edge: [...CANDIDATES.edge, ...EDGE] };
   return Object.entries(all)
     .map(([id, paths]) => ({ id, name: BROWSER_NAMES[id], exe: paths.find((p) => p && fs.existsSync(p)) ?? '' }))
     .filter((b) => b.exe);

@@ -1,4 +1,4 @@
-export type ThemeId = 'zen' | 'firefox' | 'brave' | 'chrome';
+export type ThemeId = 'zen' | 'firefox' | 'brave' | 'chrome' | 'edge' | 'opera' | 'tor';
 export type SearchEngineId = 'google' | 'duckduckgo' | 'bing' | 'brave' | 'startpage';
 export type UpdateSource = 'github' | 'custom' | 'off';
 
@@ -58,6 +58,12 @@ export interface Settings {
   hardwareAcceleration: boolean;
   /** Built-in ad and tracker blocking (EasyList/uBlock-style filters + YouTube ad skipping). */
   adblock: boolean;
+  /** Also hide cookie banners, newsletter pop-ups and other annoyances (Brave, Opera, Firefox). */
+  hideAnnoyances: boolean;
+  /** Clear cookies and site data when Drift closes (Chrome, Firefox, Brave). */
+  clearOnExit: boolean;
+  /** Ask where to save each download (Chrome, Edge, Firefox). */
+  askDownloadLocation: boolean;
   /** Hosts where blocking is paused, e.g. "example.com". */
   adblockPaused: string[];
   /** Unload tabs idle this many minutes (0 = never), like Edge's sleeping tabs. */
@@ -101,6 +107,9 @@ export const DEFAULT_SETTINGS: Settings = {
   smoothScrolling: true,
   hardwareAcceleration: true,
   adblock: true,
+  hideAnnoyances: false,
+  clearOnExit: false,
+  askDownloadLocation: false,
   adblockPaused: [],
   sleepAfter: 30,
   forceDark: false,

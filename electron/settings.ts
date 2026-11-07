@@ -25,6 +25,9 @@ function sanitize(s: Settings): Settings {
     smoothScrolling: typeof s.smoothScrolling === 'boolean' ? s.smoothScrolling : true,
     hardwareAcceleration: typeof s.hardwareAcceleration === 'boolean' ? s.hardwareAcceleration : true,
     adblock: typeof s.adblock === 'boolean' ? s.adblock : d.adblock,
+    hideAnnoyances: !!s.hideAnnoyances,
+    clearOnExit: !!s.clearOnExit,
+    askDownloadLocation: !!s.askDownloadLocation,
     adblockPaused: Array.isArray(s.adblockPaused) ? [...new Set(s.adblockPaused.filter((h) => typeof h === 'string' && h.length < 256))] : [],
     sleepAfter: [0, 15, 30, 60, 120].includes(s.sleepAfter) ? s.sleepAfter : d.sleepAfter,
     forceDark: !!s.forceDark,
@@ -37,7 +40,7 @@ function sanitize(s: Settings): Settings {
     openInRules:
       s.openInRules && typeof s.openInRules === 'object'
         ? Object.fromEntries(
-            Object.entries(s.openInRules).filter(([h, b]) => h.length < 256 && ['zen', 'firefox', 'chrome', 'brave', 'edge'].includes(b as string)).slice(0, 200),
+            Object.entries(s.openInRules).filter(([h, b]) => h.length < 256 && ['zen', 'firefox', 'chrome', 'brave', 'edge', 'opera', 'tor'].includes(b as string)).slice(0, 200),
           )
         : {},
     privacy: Object.fromEntries(

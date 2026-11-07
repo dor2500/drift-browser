@@ -88,7 +88,7 @@ export interface UpdateStatus {
 
 export interface DriftEnv {
   /** Which browsers are installed on this PC (for the theme picker). */
-  browsers: { zen: boolean; firefox: boolean; brave: boolean; chrome: boolean };
+  browsers: { zen: boolean; firefox: boolean; brave: boolean; chrome: boolean; edge: boolean; opera: boolean; tor: boolean };
   packaged: boolean;
   versions: { app: string; electron: string; chrome: string; node: string };
 }
@@ -202,6 +202,7 @@ export type Command =
   | { type: 'permission:reset'; origin: string; kind?: string }
   | { type: 'settings:set'; patch: SettingsPatch }
   | { type: 'settings:open' }
+  | { type: 'privacy:newIdentity' }
   | { type: 'updates:check' }
   | { type: 'adblock:site'; host: string; paused: boolean }
   | { type: 'media:control'; id: string; action: 'toggle' | 'next' | 'prev' }

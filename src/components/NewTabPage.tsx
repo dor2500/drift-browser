@@ -24,8 +24,9 @@ const hostOf = (url: string) => {
 
 /**
  * drift://newtab, shaped like the chosen browser's own new-tab page:
- * Chrome (search pill + round shortcuts), Brave (blocked-tracker stats + clock),
- * Firefox (Firefox Home shortcuts), Zen (calm clock).
+ * Chrome (search pill + round shortcuts), Edge (search box + rounded tiles),
+ * Brave (blocked-tracker stats + clock), Firefox (Firefox Home shortcuts),
+ * Opera (Speed Dial), Tor Browser (purple welcome), Zen (calm clock).
  */
 export function NewTabPage({ state }: { state: BrowserState }) {
   const locale = useLocale();
@@ -95,11 +96,19 @@ export function NewTabPage({ state }: { state: BrowserState }) {
         </div>
       )}
       {(style === 'brave' || style === 'zen') && <div className="ntp-clock">{time}</div>}
+      {style === 'edge' && <div className="ntp-edge-time">{time}</div>}
       <div className="ntp-center">
         {style === 'zen' && <div className="ntp-greeting">{greeting}</div>}
         {style === 'chrome' && <div className="ntp-wordmark">{engine}</div>}
+        {style === 'tor' && (
+          <div className="ntp-tor-head">
+            <div className="ntp-tor-title">{t('ntp.torTitle')}</div>
+            <div className="ntp-tor-note">{t('ntp.torNote')}</div>
+          </div>
+        )}
+        {style === 'opera' && <div className="ntp-wordmark ntp-opera-greet">{greeting}</div>}
         {search}
-        {style !== 'zen' && style === 'firefox' && <h3 className="ntp-heading">{t('ntp.shortcuts')}</h3>}
+        {(style === 'firefox' || style === 'opera') && <h3 className="ntp-heading">{t(style === 'opera' ? 'ntp.speedDial' : 'ntp.shortcuts')}</h3>}
         {shortcuts}
       </div>
     </div>

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { en } from '../../shared/locales/en';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { en, type MessageKey } from '../../shared/locales/en';
+import { SETTINGS_ORDER } from '../../shared/themes';
 import { hostOf, permissionShortName } from '../../shared/permissions';
 import { SEARCH_ENGINES, type SearchEngineId } from '../../shared/settings';
 import type { BrowserState, DriftEnv, SitePermissions } from '../../shared/types';
@@ -14,12 +15,19 @@ import { CommitInput, EngineCard, Toggle, UpdateSourceForm } from './UpdatePanel
 import { t, useLocale } from '../i18n';
 
 const SECTIONS = ['appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'] as const;
+
+/** A section's name in the chosen browser's own words (Chrome's "You and Google", Edge's "Profiles"…). */
+function sectionName(theme: string, id: string) {
+  const key = `mode.${theme}.${id}` as MessageKey;
+  const named = t(key);
+  return named === key ? t(`set.nav.${id}` as MessageKey) : named;
+}
 const EN_KEYS: Record<string, string[]> = {
   appearance: ['set.nav.appearance', 'theme.', 'set.colorTheme', 'set.themeDefault', 'set.customAccent', 'set.spaceColors', 'set.verticalTabs', 'set.compact'],
   engine: ['set.nav.engine', 'eng.'],
   language: ['set.nav.language', 'set.language'],
-  general: ['set.nav.general', 'set.searchEngine', 'set.homePage', 'set.newTabPage', 'set.confirmClose', 'set.smooth', 'set.gpu', 'set.sleep', 'set.forceDark', 'set.google', 'set.openIn', 'set.restore'],
-  privacy: ['set.nav.privacy', 'priv.', 'set.adblock', 'set.pausedOn', 'set.sitePermissions'],
+  general: ['set.nav.general', 'set.searchEngine', 'set.homePage', 'set.newTabPage', 'set.confirmClose', 'set.askDownload', 'set.smooth', 'set.gpu', 'set.sleep', 'set.forceDark', 'set.google', 'set.openIn', 'set.restore'],
+  privacy: ['set.nav.privacy', 'priv.', 'set.adblock', 'set.annoyances', 'set.clearOnExit', 'set.pausedOn', 'set.sitePermissions'],
   connections: ['priv.connections', 'conn.'],
   import: ['set.nav.import', 'imp.'],
   updates: ['set.nav.updates', 'upd.', 'set.updateSource', 'set.channel', 'set.autoCheck', 'set.engineAlerts'],
@@ -58,7 +66,7 @@ export function SettingsPage({ state }: { state: BrowserState }) {
   const s = state.settings;
   const [env, setEnv] = useState<DriftEnv>();
   const [perms, setPerms] = useState<SitePermissions>({});
-  const [section, setSection] = useState<string>('appearance');
+  const [section, setSection] = useState<string>(SETTINGS_ORDER[state.settings.theme][0]);
   const [query, setQuery] = useState('');
   const [noMatch, setNoMatch] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
@@ -99,19 +107,23 @@ export function SettingsPage({ state }: { state: BrowserState }) {
           <Icon name="search" size={14} />
           <input value={query} placeholder={t('set.search')} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        {SECTIONS.map((id) => (
+        {SETTINGS_ORDER[s.theme].map((id) => (
           <button key={id} className={cx('settings-nav-item', section === id && 'active')} onClick={() => go(id)}>
             <Icon name={NAV_ICONS[id]} size={16} />
-            {t(`set.nav.${id}`)}
+            {sectionName(s.theme, id)}
           </button>
         ))}
       </nav>
 
-      <div className="settings-scroll" ref={scroller}>
+      <div
+        className="settings-scroll"
+        ref={scroller}
+        style={Object.fromEntries(SETTINGS_ORDER[s.theme].map((id, i) => [`--order-${id}`, i])) as CSSProperties}
+      >
         {query && noMatch && <div className="empty-note">{t('set.searchNone', { q: query })}</div>}
         <section id="settings-appearance" className="settings-section">
           <span hidden className="search-en">{englishFor('appearance')}</span>
-          <h2>{t('set.nav.appearance')}</h2>
+          <h2>{sectionName(s.theme, 'appearance')}</h2>
           <ThemePicker value={s.theme} env={env} />
           <h3>{t('set.colorTheme')}</h3>
           <p className="settings-lead">{t('set.colorThemeHint')}</p>
@@ -138,19 +150,19 @@ export function SettingsPage({ state }: { state: BrowserState }) {
 
         <section id="settings-engine" className="settings-section">
           <span hidden className="search-en">{englishFor('engine')}</span>
-          <h2>{t('set.nav.engine')}</h2>
+          <h2>{sectionName(s.theme, 'engine')}</h2>
           <EnginePicker engine={s.engine} chromium={env?.versions.chrome ?? ''} />
         </section>
 
         <section id="settings-language" className="settings-section">
           <span hidden className="search-en">{englishFor('language')}</span>
-          <h2>{t('set.nav.language')}</h2>
+          <h2>{sectionName(s.theme, 'language')}</h2>
           <LanguagePicker value={s.language} system={locale.system} />
         </section>
 
         <section id="settings-general" className="settings-section">
           <span hidden className="search-en">{englishFor('general')}</span>
-          <h2>{t('set.nav.general')}</h2>
+          <h2>{sectionName(s.theme, 'general')}</h2>
           <div className="field">
             <span className="field-label">{t('set.searchEngine')}</span>
             <select
@@ -236,6 +248,11 @@ export function SettingsPage({ state }: { state: BrowserState }) {
           </div>
           <Toggle checked={s.confirmClose} onChange={(confirmClose) => cmd({ type: 'settings:set', patch: { confirmClose } })} label={t('set.confirmClose')} />
           <Toggle
+            checked={s.askDownloadLocation}
+            onChange={(askDownloadLocation) => cmd({ type: 'settings:set', patch: { askDownloadLocation } })}
+            label={t('set.askDownload')}
+          />
+          <Toggle
             checked={s.smoothScrolling}
             onChange={(smoothScrolling) => cmd({ type: 'settings:set', patch: { smoothScrolling } })}
             label={t('set.smooth')}
@@ -262,12 +279,24 @@ export function SettingsPage({ state }: { state: BrowserState }) {
 
         <section id="settings-privacy" className="settings-section">
           <span hidden className="search-en">{englishFor('privacy')}</span>
-          <h2>{t('set.nav.privacy')}</h2>
+          <h2>{sectionName(s.theme, 'privacy')}</h2>
           <Toggle
             checked={s.adblock}
             onChange={(adblock) => cmd({ type: 'settings:set', patch: { adblock } })}
             label={t('set.adblock')}
             hint={t('set.adblockHint')}
+          />
+          <Toggle
+            checked={s.hideAnnoyances}
+            onChange={(hideAnnoyances) => cmd({ type: 'settings:set', patch: { hideAnnoyances } })}
+            label={t('set.annoyances')}
+            hint={t('set.annoyancesHint')}
+          />
+          <Toggle
+            checked={s.clearOnExit}
+            onChange={(clearOnExit) => cmd({ type: 'settings:set', patch: { clearOnExit } })}
+            label={t('set.clearOnExit')}
+            hint={t('set.clearOnExitHint')}
           />
           <h3>{t('priv.title')}</h3>
           <Toggle
@@ -363,13 +392,13 @@ export function SettingsPage({ state }: { state: BrowserState }) {
 
         <section id="settings-import" className="settings-section">
           <span hidden className="search-en">{englishFor('import')}</span>
-          <h2>{t('set.nav.import')}</h2>
+          <h2>{sectionName(s.theme, 'import')}</h2>
           <ImportPanel />
         </section>
 
         <section id="settings-updates" className="settings-section">
           <span hidden className="search-en">{englishFor('updates')}</span>
-          <h2>{t('set.nav.updates')}</h2>
+          <h2>{sectionName(s.theme, 'updates')}</h2>
           <EngineCard status={state.updates} env={env} />
           <h3>{t('set.updateSource')}</h3>
           <UpdateSourceForm u={s.updates} />
@@ -399,7 +428,7 @@ export function SettingsPage({ state }: { state: BrowserState }) {
 
         <section id="settings-about" className="settings-section">
           <span hidden className="search-en">{englishFor('about')}</span>
-          <h2>{t('set.nav.about')}</h2>
+          <h2>{sectionName(s.theme, 'about')}</h2>
           <div className="engine-rows about">
             <div className="engine-row">
               <span>Drift</span>

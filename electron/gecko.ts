@@ -6,58 +6,72 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { decodeMozLz4 } from './mozlz4';
 import { SEARCH_ENGINES, type Settings } from '../shared/settings';
+import { AUTOCONFIG_JS, DRIFT_CFG } from './gecko-autoconfig';
 
 const run = promisify(execFile);
 
 /**
  * Drift's second engine: Gecko, the Firefox engine. Electron only contains
- * Chromium, so the Gecko engine is Firefox itself, started with a Drift-managed
- * profile that is privacy-hardened (LibreWolf-style prefs) and styled like Drift
- * (native vertical tabs, dark, compact). This is how Zen and LibreWolf are made.
+ * Chromium, so Drift keeps its own portable copy of the engine: Mozilla's
+ * official, signed build, unpacked into Drift's data folder. Nothing is
+ * installed: no registry entries, shortcuts, uninstaller or background
+ * services, and a Firefox the user may have installed is never used or changed.
+ * Drift's profile (privacy-hardened, LibreWolf-style), policies and an
+ * autoconfig script make it Drift: its settings, look, ad blocking and name.
  */
 export interface GeckoStatus {
   available: boolean;
-  /** "installed" = the Firefox already on this PC; "downloaded" = Drift's own copy. */
-  kind?: 'installed' | 'downloaded';
   exe?: string;
   version?: string;
 }
 
 const enginesDir = () => path.join(app.getPath('userData'), 'engines');
-const ownDir = () => path.join(enginesDir(), 'firefox');
+/**
+ * The engine's files. On Windows they go where per-user programs live
+ * (%LOCALAPPDATA%\Programs\Drift Gecko): Windows refuses to load the engine's
+ * libraries from ordinary AppData folders, and it isn't data that should roam.
+ */
+const ownDir = () =>
+  process.platform === 'win32' && process.env.LOCALAPPDATA
+    ? path.join(process.env.LOCALAPPDATA, 'Programs', `${path.basename(app.getPath('userData'))} Gecko`)
+    : path.join(enginesDir(), 'gecko');
 export const geckoProfile = () => path.join(enginesDir(), 'gecko-profile');
 
-function installedFirefox(): string | undefined {
-  const PF = process.env.ProgramFiles ?? 'C:\\Program Files';
-  const PF86 = process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
-  const candidates =
-    process.platform === 'win32'
-      ? [path.join(PF, 'Mozilla Firefox', 'firefox.exe'), path.join(PF86, 'Mozilla Firefox', 'firefox.exe')]
-      : process.platform === 'darwin'
-        ? ['/Applications/Firefox.app/Contents/MacOS/firefox']
-        : ['/usr/bin/firefox', '/usr/local/bin/firefox', '/snap/bin/firefox'];
-  return candidates.find((p) => fs.existsSync(p));
+/** Where the engine's files live inside Drift's copy (the folder holding the executable and omni.ja). */
+function engineRoot(): string {
+  return process.platform === 'darwin'
+    ? path.join(ownDir(), 'Firefox.app', 'Contents', 'Resources')
+    : process.platform === 'win32'
+      ? ownDir()
+      : path.join(ownDir(), 'firefox');
 }
 
-function downloadedFirefox(): string | undefined {
-  const exe =
-    process.platform === 'win32'
-      ? path.join(ownDir(), 'firefox.exe')
-      : process.platform === 'darwin'
-        ? path.join(ownDir(), 'Firefox.app', 'Contents', 'MacOS', 'firefox')
-        : path.join(ownDir(), 'firefox', 'firefox');
-  return fs.existsSync(exe) ? exe : undefined;
+function engineExe(): string {
+  return process.platform === 'win32'
+    ? path.join(ownDir(), 'firefox.exe')
+    : process.platform === 'darwin'
+      ? path.join(ownDir(), 'Firefox.app', 'Contents', 'MacOS', 'firefox')
+      : path.join(ownDir(), 'firefox', 'firefox');
+}
+
+function engineVersion(): string | undefined {
+  try {
+    const ini = fs.readFileSync(path.join(engineRoot(), 'application.ini'), 'utf8');
+    return /^Version=(.+)$/m.exec(ini)?.[1]?.trim();
+  } catch {
+    return undefined;
+  }
 }
 
 export function geckoStatus(): GeckoStatus {
-  const own = downloadedFirefox();
-  if (own) return { available: true, kind: 'downloaded', exe: own };
-  const sys = installedFirefox();
-  if (sys) return { available: true, kind: 'installed', exe: sys };
-  return { available: false };
+  const exe = engineExe();
+  return fs.existsSync(exe) ? { available: true, exe, version: engineVersion() } : { available: false };
 }
 
-/** Fetch the official Firefox build from Mozilla into Drift's own folder (no admin rights needed). */
+/**
+ * Fetch Mozilla's official build and unpack it into Drift's folder as a portable engine.
+ * Windows: the package is unpacked with its own /ExtractDir option, so its installer never runs.
+ */
 export async function downloadGecko(lang: string, settings?: Settings): Promise<GeckoStatus> {
   const osName = process.platform === 'win32' ? 'win64' : process.platform === 'darwin' ? 'osx' : 'linux64';
   const url = `https://download.mozilla.org/?product=firefox-latest-ssl&os=${osName}&lang=${encodeURIComponent(lang === 'he' ? 'he' : lang === 'en' ? 'en-US' : lang)}`;
@@ -65,21 +79,14 @@ export async function downloadGecko(lang: string, settings?: Settings): Promise<
   try {
     const res = await net.fetch(url);
     if (!res.ok) throw new Error(`Mozilla download failed (${res.status})`);
-    const file = path.join(tmp, process.platform === 'win32' ? 'firefox-setup.exe' : process.platform === 'darwin' ? 'firefox.dmg' : 'firefox.tar.xz');
+    const file = path.join(tmp, process.platform === 'win32' ? 'gecko.exe' : process.platform === 'darwin' ? 'gecko.dmg' : 'gecko.tar.xz');
     fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+    fs.rmSync(ownDir(), { recursive: true, force: true });
     fs.mkdirSync(ownDir(), { recursive: true });
     if (process.platform === 'win32') {
-      // Mozilla's full installer: silent, into Drift's folder, no shortcuts or background services.
-      await run(file, [
-        '/S',
-        `/InstallDirectoryPath=${ownDir()}`,
-        '/DesktopShortcut=false',
-        '/StartMenuShortcut=false',
-        '/TaskbarShortcut=false',
-        '/PrivateBrowsingShortcut=false',
-        '/MaintenanceService=false',
-        '/PreventRebootRequired=true',
-      ]);
+      const out = path.join(tmp, 'unpacked');
+      await run(file, [`/ExtractDir=${out}`]);
+      fs.cpSync(path.join(out, 'core'), ownDir(), { recursive: true });
     } else if (process.platform === 'darwin') {
       const { stdout } = await run('hdiutil', ['attach', '-nobrowse', '-quiet', file]);
       const mount = stdout.trim().split('\t').pop() ?? '/Volumes/Firefox';
@@ -88,21 +95,25 @@ export async function downloadGecko(lang: string, settings?: Settings): Promise<
     } else {
       await run('tar', ['-xf', file, '-C', ownDir()]);
     }
-    writePolicies(settings);
+    if (settings) writeEngineConfig(settings);
     return geckoStatus();
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
 
+/** Drift's files inside the engine: policies plus the autoconfig that adds Drift's settings and name. */
+function writeEngineConfig(settings: Settings) {
+  writePolicies(settings);
+  const prefDir = path.join(engineRoot(), 'defaults', 'pref');
+  fs.mkdirSync(prefDir, { recursive: true });
+  fs.writeFileSync(path.join(prefDir, 'autoconfig.js'), AUTOCONFIG_JS);
+  fs.writeFileSync(path.join(engineRoot(), 'drift.cfg'), DRIFT_CFG);
+}
+
 /** Enterprise policies for Drift's own Firefox copy: no telemetry, studies, Pocket or sponsored content. */
-function writePolicies(settings?: Settings) {
-  const dist =
-    process.platform === 'darwin'
-      ? path.join(ownDir(), 'Firefox.app', 'Contents', 'Resources', 'distribution')
-      : process.platform === 'win32'
-        ? path.join(ownDir(), 'distribution')
-        : path.join(ownDir(), 'firefox', 'distribution');
+function writePolicies(settings: Settings) {
+  const dist = path.join(engineRoot(), 'distribution');
   fs.mkdirSync(dist, { recursive: true });
   fs.writeFileSync(
     path.join(dist, 'policies.json'),
@@ -122,16 +133,11 @@ function writePolicies(settings?: Settings) {
           FirefoxSuggest: { SponsoredSuggestions: false, ImproveSuggest: false, Locked: false },
           UserMessaging: { ExtensionRecommendations: false, FeatureRecommendations: false, SkipOnboarding: true, MoreFromMozilla: false, Locked: false },
           EnableTrackingProtection: { Value: true, Cryptomining: true, Fingerprinting: true, EmailTracking: true, Locked: false },
-          ...(settings
-            ? {
-                // Drift's search engine becomes Firefox's default too.
-                SearchEngines: { Default: SEARCH_ENGINES[settings.searchEngine].name },
-                // Ad blocking like Drift's Chromium side: uBlock Origin, kept up to date by Mozilla's add-on site.
-                ExtensionSettings: settings.adblock
-                  ? { [UBLOCK_ID]: { installation_mode: 'force_installed', install_url: UBLOCK_URL, private_browsing: true } }
-                  : { [UBLOCK_ID]: { installation_mode: 'blocked' } },
-              }
-            : {}),
+          // Drift's search engine becomes the engine's default too.
+          SearchEngines: { Default: SEARCH_ENGINES[settings.searchEngine].name },
+          // Ad blocking like Drift's Chromium side: uBlock Origin, kept up to date by Mozilla's add-on site.
+          // Installed once; the Drift settings switch turns it on and off.
+          ExtensionSettings: { [UBLOCK_ID]: { installation_mode: 'normal_installed', install_url: UBLOCK_URL, private_browsing: true } },
         },
       },
       null,
@@ -191,9 +197,6 @@ function userJs(lang: string, s: Settings) {
     'dom.security.https_only_mode': p.httpsOnly,
     'media.peerconnection.ice.default_address_only': p.webrtcProtect,
     'media.peerconnection.ice.no_host': p.webrtcProtect,
-    // Drift's add-on in the profile folder (uBlock Origin) starts enabled, without a prompt.
-    'extensions.autoDisableScopes': 0,
-    'extensions.enabledScopes': 15,
     // Quiet startup: no welcome pages, default-browser nags or "what's new".
     'browser.shell.checkDefaultBrowser': false,
     'browser.aboutwelcome.enabled': false,
@@ -219,6 +222,15 @@ function userJs(lang: string, s: Settings) {
     'extensions.activeThemeID': 'firefox-compact-dark@mozilla.org',
     'toolkit.legacyUserProfileCustomizations.stylesheets': true,
     'intl.locale.requested': lang === 'he' ? 'he' : '',
+    // Read by drift.cfg (Drift's section in Settings).
+    'drift.lang': lang === 'he' ? 'he' : 'en',
+    'drift.settingsFile': path.join(app.getPath('userData'), 'settings.json'),
+    'drift.launch': JSON.stringify([process.execPath, ...(app.isPackaged ? [] : [app.getAppPath()])]),
+    'drift.adblock': s.adblock,
+    'drift.settings': JSON.stringify({
+      theme: s.theme, searchEngine: s.searchEngine, adblock: s.adblock, privacy: s.privacy,
+      smoothScrolling: s.smoothScrolling, confirmClose: s.confirmClose, restoreSession: s.restoreSession, forceDark: s.forceDark,
+    }),
   };
   const lines = Object.entries(prefs).map(([k, v]) => `user_pref(${JSON.stringify(k)}, ${typeof v === 'string' ? JSON.stringify(v) : v});`);
   return `// Drift Gecko engine profile. Managed by Drift: this file is rewritten each time Drift starts the engine.\n${lines.join('\n')}\n`;
@@ -226,7 +238,7 @@ function userJs(lang: string, s: Settings) {
 
 function userChromeCss(accent: string, theme: Settings['theme']) {
   // The Firefox style is Firefox as it ships; the others get Drift's colours and rounded page.
-  if (theme === 'firefox') return '/* Drift: Firefox style, stock look. */\n';
+  if (theme === 'firefox' || theme === 'tor') return '/* Drift: Firefox-based style, stock look. */\n';
   return `/* Drift look for the Gecko engine. Managed by Drift. */
 :root {
   --drift-accent: ${accent};
@@ -291,24 +303,6 @@ ${tiles ? `<div class="grid">${tiles}</div>` : ''}</main>
 <a class="btn" href="drift-engine://chromium">${he ? 'חזרה ל-Chromium' : 'Back to Chromium'}</a></footer></body></html>`;
 }
 
-/** uBlock Origin in the profile when ad blocking is on (signed by Mozilla, so Firefox accepts it); removed when off. */
-async function ensureUblock(dir: string, on: boolean) {
-  const xpi = path.join(dir, 'extensions', `${UBLOCK_ID}.xpi`);
-  if (!on) {
-    fs.rmSync(xpi, { force: true });
-    return;
-  }
-  if (fs.existsSync(xpi)) return;
-  try {
-    const res = await Promise.race([net.fetch(UBLOCK_URL), new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))]);
-    if (!res.ok) return;
-    fs.mkdirSync(path.dirname(xpi), { recursive: true });
-    fs.writeFileSync(xpi, Buffer.from(await res.arrayBuffer()));
-  } catch {
-    /* offline: Gecko's own tracking protection still blocks trackers */
-  }
-}
-
 export interface GeckoLaunch {
   lang: string;
   accent: string;
@@ -336,8 +330,7 @@ export async function launchGecko(urls: string[], o: GeckoLaunch): Promise<boole
   fs.writeFileSync(path.join(dir, 'user.js'), userJs(o.lang, o.settings));
   fs.writeFileSync(path.join(dir, 'chrome', 'userChrome.css'), userChromeCss(o.accent, o.settings.theme));
   fs.writeFileSync(path.join(dir, 'drift-home.html'), homeHtml(o.lang, o.settings, o.accent, shortcuts));
-  if (st.kind === 'downloaded') writePolicies(o.settings);
-  else await ensureUblock(dir, o.settings.adblock);
+  writeEngineConfig(o.settings);
   const web = urls.filter((u) => /^https?:\/\//i.test(u)).slice(0, 60);
   const child = spawn(st.exe, ['-profile', dir, '-no-remote', ...web], { detached: true, stdio: 'ignore' });
   child.unref();

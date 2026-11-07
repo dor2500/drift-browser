@@ -150,7 +150,7 @@ export class Browser {
       firefoxUA: FIREFOX_UA,
     });
     this.hub.install();
-    void this.adblock.init(session.fromPartition(PARTITION));
+    void this.adblock.init(session.fromPartition(PARTITION), this.settings.hideAnnoyances);
     this.restore(store.load());
     win.on('resize', () => this.fullscreenTab && this.applyLayout());
     this.updater.schedule();
@@ -187,6 +187,7 @@ export class Browser {
     }
     if (patch.updates || patch.onboarded !== undefined) this.updater.schedule();
     if (patch.adblock !== undefined) this.adblock.apply();
+    if (patch.hideAnnoyances !== undefined) void this.adblock.setAnnoyances(this.settings.hideAnnoyances);
     if (patch.privacy?.webrtcProtect !== undefined) {
       for (const v of this.views.values()) v.webContents.setWebRTCIPHandlingPolicy(this.settings.privacy.webrtcProtect ? 'default_public_interface_only' : 'default');
     }
@@ -514,6 +515,9 @@ export class Browser {
         break;
       case 'settings:open':
         this.openSettings();
+        break;
+      case 'privacy:newIdentity':
+        void this.newIdentity();
         break;
       case 'updates:check':
         void this.updater.checkApp();
@@ -1242,6 +1246,41 @@ export class Browser {
     return this.settings.confirmClose && this.tabs.filter((t) => !t.glanceOf && !t.pinned && !t.essential).length > 1;
   }
 
+  /**
+   * Tor Browser's "New Identity", for Drift's own session: closes every tab and
+   * forgets cookies, site data and cache, so sites can't link what comes next
+   * to what came before. (It doesn't change your IP address: Drift doesn't use Tor.)
+   */
+  private async newIdentity() {
+    const r = await dialog.showMessageBox(this.win, {
+      type: 'question',
+      buttons: [this.i18n.t('nid.confirm'), this.i18n.t('close.cancel')],
+      defaultId: 0,
+      cancelId: 1,
+      message: this.i18n.t('nid.title'),
+      detail: this.i18n.t('nid.body'),
+    });
+    if (r.response !== 0) return;
+    for (const t of [...this.tabs]) this.closeTab(t.id, false);
+    this.closed = [];
+    const ses = session.fromPartition(PARTITION);
+    await ses.clearStorageData();
+    await ses.clearCache();
+    this.createTab({});
+    this.emit();
+  }
+
+  get wantsClearOnExit() {
+    return this.settings.clearOnExit;
+  }
+
+  /** "Clear cookies and site data when Drift closes". */
+  async clearSiteData() {
+    const ses = session.fromPartition(PARTITION);
+    await ses.clearStorageData();
+    await ses.clearCache();
+  }
+
   async confirmClose(): Promise<boolean> {
     const count = this.tabs.filter((t) => !t.glanceOf && !t.pinned && !t.essential).length;
     const r = await dialog.showMessageBox(this.win, {
@@ -1446,7 +1485,9 @@ export class Browser {
         setTimeout(() => this.closeTab(owner, false), 0);
       }
       const file = this.uniquePath(app.getPath('downloads'), item.getFilename());
-      item.setSavePath(file);
+      // "Ask where to save each file": Electron shows the save dialog when no path is set.
+      if (this.settings.askDownloadLocation) item.setSaveDialogOptions({ defaultPath: file });
+      else item.setSavePath(file);
       const d: DownloadInfo = {
         id: newId(),
         filename: path.basename(file),
@@ -1460,6 +1501,11 @@ export class Browser {
       this.downloads = [d, ...this.downloads].slice(0, 40);
       this.downloadItems.set(d.id, item);
       item.on('updated', (_ev, st) => {
+        const chosen = item.getSavePath();
+        if (chosen && chosen !== d.path) {
+          d.path = chosen;
+          d.filename = path.basename(chosen);
+        }
         d.received = item.getReceivedBytes();
         d.total = item.getTotalBytes();
         d.state = st === 'interrupted' ? 'interrupted' : 'progressing';

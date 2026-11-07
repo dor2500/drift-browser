@@ -166,4 +166,18 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => app.quit());
+
+// "Clear cookies and site data when Drift closes": finish clearing before quitting.
+let clearedOnExit = false;
+app.on('will-quit', (e) => {
+  if (clearedOnExit || !browser?.wantsClearOnExit) return;
+  e.preventDefault();
+  void browser
+    .clearSiteData()
+    .catch(() => undefined)
+    .finally(() => {
+      clearedOnExit = true;
+      app.quit();
+    });
+});
 app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && app.isReady() && createWindow());
