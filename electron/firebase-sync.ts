@@ -598,16 +598,13 @@ export class FirebaseSyncManager {
       return;
     }
 
-    // 2. Firebase Web Loopback Sign-In (opens on http://localhost:<port> in the system browser,
-    // supporting Passkeys & FIDO2 Security Keys, and allowing one-step Firebase config if not yet set)
-    const tokens = await this.runFirebaseLoopbackWebSignIn(cfg);
-    if (tokens.apiKey && tokens.projectId && (!cfg || !cfg.apiKey || !cfg.projectId)) {
-      this.setFirebaseConfig({
-        apiKey: tokens.apiKey,
-        projectId: tokens.projectId,
-        authDomain: tokens.authDomain || `${tokens.projectId}.firebaseapp.com`,
-      });
+    // 2. Firebase Web Loopback Sign-In (system browser) when only a Firebase project is configured.
+    if (!cfg?.apiKey || !cfg?.projectId) {
+      throw new Error(
+        'חסר מפתח חיבור ל-Google. הוסיפו אותו בהגדרות ← סנכרון ← "מפתח חיבור ל-Google" (ראו docs/GOOGLE-SYNC.md). · Missing Google connection key: add it in Settings → Sync.',
+      );
     }
+    const tokens = await this.runFirebaseLoopbackWebSignIn(cfg);
     if (!tokens.idToken && !tokens.accessToken) {
       throw new Error('Google Sign-In did not return a valid token.');
     }
