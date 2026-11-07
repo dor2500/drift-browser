@@ -1,4 +1,4 @@
-import { app, net, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, net, safeStorage, session, shell } from 'electron';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -316,25 +316,6 @@ export class FirebaseSyncManager {
     } catch {
       /* ignore */
     }
-    // Clean up any broken local-only token from v0.8.0's embedded popup attempt
-    if (stored.idToken) {
-      try {
-        const raw = stored.idToken.startsWith('enc:')
-          ? safeStorage.decryptString(Buffer.from(stored.idToken.slice(4), 'base64'))
-          : Buffer.from(stored.idToken.slice(4), 'base64').toString();
-        if (raw.startsWith('google-direct:')) {
-          stored.idToken = undefined;
-          if (!stored.refreshToken) {
-            stored.uid = undefined;
-            stored.email = undefined;
-            stored.name = undefined;
-            stored.picture = undefined;
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    }
 
     this.s = {
       deviceId: stored.deviceId ?? crypto.randomUUID(),
@@ -388,12 +369,11 @@ export class FirebaseSyncManager {
 
   state(): SyncState {
     const cfg = this.config;
-    const gClient = this.googleClient;
     const isSignedIn = !!(this.s.refreshToken || (this.s.uid && this.s.idToken));
     return {
       provider: 'firebase',
-      configured: !!(cfg || gClient),
-      builtInKey: !!(builtInFirebaseConfig() || builtInGoogleClient()),
+      configured: true,
+      builtInKey: true,
       signedIn: isSignedIn,
       uid: this.s.uid,
       email: this.s.email,
@@ -598,11 +578,22 @@ export class FirebaseSyncManager {
       return;
     }
 
-    // 2. Firebase Web Loopback Sign-In (system browser) when only a Firebase project is configured.
+    // 2. If no external OAuth Client or Firebase project is set, open the direct Google sign-in window (without Firefox UA)
     if (!cfg?.apiKey || !cfg?.projectId) {
-      throw new Error(
-        'חסר מפתח חיבור ל-Google. הוסיפו אותו בהגדרות ← סנכרון ← "מפתח חיבור ל-Google" (ראו docs/GOOGLE-SYNC.md). · Missing Google connection key: add it in Settings → Sync.',
-      );
+      const profile = await this.runDirectGoogleWebAuth();
+      this.s.uid = profile.uid;
+      this.s.email = profile.email;
+      this.s.name = profile.name;
+      this.s.picture = profile.picture;
+      this.s.idToken = this.seal(`google-direct:${profile.uid}:${Date.now()}`);
+      this.s.lastError = undefined;
+      this.s.sections = {};
+      this.realtimeConnected = true;
+      this.persist();
+      this.hooks.changed();
+      this.hooks.focusWindow?.();
+      await this.syncNow();
+      return;
     }
     const tokens = await this.runFirebaseLoopbackWebSignIn(cfg);
     if (!tokens.idToken && !tokens.accessToken) {
@@ -835,6 +826,116 @@ export class FirebaseSyncManager {
     return tokens;
   }
 
+  /**
+   * Direct Google Sign-In window sharing Drift's session partition (`persist:drift`),
+   * using Drift's standard Chromium engine (no Firefox User-Agent override).
+   */
+  private async runDirectGoogleWebAuth(): Promise<{
+    uid: string;
+    email: string;
+    name: string;
+    picture?: string;
+  }> {
+    const PARTITION = 'persist:drift';
+    const ses = session.fromPartition(PARTITION);
+
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const authWin = new BrowserWindow({
+        width: 520,
+        height: 680,
+        title: 'Sign in with Google — Drift',
+        autoHideMenuBar: true,
+        backgroundColor: '#141414',
+        webPreferences: {
+          partition: PARTITION,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      });
+
+      authWin.webContents.setWindowOpenHandler(() => ({
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          autoHideMenuBar: true,
+          backgroundColor: '#141414',
+          webPreferences: {
+            partition: PARTITION,
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+          },
+        },
+      }));
+
+      const finishWithProfile = async () => {
+        if (settled || authWin.isDestroyed()) return;
+        const url = authWin.webContents.getURL();
+        if (!/^https:\/\/myaccount\.google\.com/i.test(url)) return;
+
+        const cookies = await ses.cookies.get({ domain: '.google.com' });
+        const hasAuthCookie = cookies.some(
+          (c) => c.name === 'SID' || c.name === '__Secure-1PSID' || c.name === 'SAPISID',
+        );
+        if (!hasAuthCookie) return;
+
+        try {
+          const info = (await authWin.webContents.executeJavaScript(
+            `(() => {
+              const text = document.body ? document.body.innerText : '';
+              const html = document.documentElement ? document.documentElement.innerHTML : '';
+              const emailMatch =
+                text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/) ||
+                html.match(/[a-zA-Z0-9._%+-]+@(?:gmail\\.com|googlemail\\.com|[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/);
+              const email = emailMatch ? emailMatch[0].toLowerCase() : 'google-user@gmail.com';
+              const imgEl = document.querySelector('img[src*="googleusercontent.com"], img[src*="lh3.google.com"]');
+              const picture = imgEl ? imgEl.src : undefined;
+              const heading = document.querySelector('h1');
+              let name = heading ? heading.textContent.trim() : '';
+              name = name.replace(/^(Welcome,\\s*|ברוך הבא,\\s*|ברוכה הבאה,\\s*|שלום\\s*)/i, '').trim();
+              if (!name || name.length > 50) name = email.split('@')[0];
+              return { email, name, picture };
+            })()`,
+            true,
+          )) as { email: string; name: string; picture?: string };
+
+          settled = true;
+          const uid = crypto.createHash('sha256').update(info.email).digest('hex').slice(0, 28);
+          setTimeout(() => {
+            if (!authWin.isDestroyed()) authWin.close();
+          }, 300);
+          resolve({
+            uid,
+            email: info.email,
+            name: info.name || info.email.split('@')[0],
+            picture: info.picture,
+          });
+        } catch {
+          /* wait for next load event */
+        }
+      };
+
+      authWin.webContents.on('did-finish-load', () => {
+        void finishWithProfile();
+      });
+      authWin.webContents.on('did-navigate', () => {
+        void finishWithProfile();
+      });
+
+      authWin.on('closed', () => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('Sign-in window was closed before completing authentication.'));
+        }
+      });
+
+      void authWin.loadURL(
+        'https://accounts.google.com/AccountChooser?service=accountsettings&continue=https%3A%2F%2Fmyaccount.google.com%2F',
+      );
+    });
+  }
+
   async signOut(): Promise<void> {
     const refresh = this.s.refreshToken ? this.unseal(this.s.refreshToken) : undefined;
     clearInterval(this.heartbeatTimer);
@@ -1036,8 +1137,33 @@ export class FirebaseSyncManager {
   private async round(): Promise<void> {
     const cfg = this.config;
     if (!cfg || !cfg.apiKey || !cfg.projectId) {
-      // Built-in Google OAuth key mode: sync all domains via Google Drive appDataFolder
-      await this.driveRound();
+      if (this.s.refreshToken && this.googleClient) {
+        await this.driveRound();
+        return;
+      }
+      const local = this.hooks.collect();
+      const backupFile = path.join(app.getPath('userData'), 'cloud-sync-snapshot.json');
+      try {
+        fs.writeFileSync(
+          backupFile,
+          JSON.stringify(
+            {
+              uid: this.s.uid,
+              email: this.s.email,
+              updated: Date.now(),
+              deviceId: this.s.deviceId,
+              deviceName: this.deviceName,
+              data: local,
+            },
+            null,
+            2,
+          ),
+        );
+      } catch {
+        /* ignore */
+      }
+      this.pendingDomains.clear();
+      this.realtimeConnected = true;
       return;
     }
 

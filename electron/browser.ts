@@ -79,7 +79,6 @@ const EMOJI_ICONS: Record<string, string> = {
 };
 
 const newId = () => randomUUID();
-const FIREFOX_UA = `Mozilla/5.0 (${process.platform === 'darwin' ? 'Macintosh; Intel Mac OS X 10.15' : process.platform === 'win32' ? 'Windows NT 10.0; Win64; x64' : 'X11; Linux x86_64'}; rv:140.0) Gecko/20100101 Firefox/140.0`;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /**
@@ -170,7 +169,6 @@ export class Browser {
       blocker: () => this.adblock.engine,
       isPaused: (url) => this.sitePaused(url),
       httpAllowed: (host) => this.httpOk.has(host),
-      firefoxUA: FIREFOX_UA,
       geckoUA: () => getGeckoUserAgent(),
     });
     this.hub.install();

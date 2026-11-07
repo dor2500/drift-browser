@@ -1,7 +1,7 @@
 {
   "name": "drift-browser",
   "productName": "Drift",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "A Chromium-based browser with vertical tabs, spaces and split view, in the style of Zen.",
   "private": true,
   "main": "dist-electron/electron/main.js",

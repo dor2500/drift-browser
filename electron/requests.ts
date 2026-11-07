@@ -10,7 +10,6 @@ import type { PrivacySettings } from '../shared/settings';
  *   3. Ad and tracker blocking (Ghostery engine), unless paused for the site
  *   4. Privacy signals (Global Privacy Control, Do Not Track)
  *   5. Third-party cookie blocking (Cookie / Set-Cookie on cross-site requests)
- *   6. Google's sign-in page sees a Firefox user agent
  */
 export interface RequestHooks {
   privacy(): PrivacySettings;
@@ -20,7 +19,6 @@ export interface RequestHooks {
   isPaused(pageUrl: string): boolean;
   /** Hosts whose https upgrade failed, so they load over http. */
   httpAllowed(host: string): boolean;
-  firefoxUA: string;
   geckoUA(): string;
 }
 
