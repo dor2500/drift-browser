@@ -212,6 +212,7 @@
 /* Sections follow the chosen browser's own order (SETTINGS_ORDER in shared/themes.ts). */
 .settings-scroll { display: flex; flex-direction: column; }
 .settings-scroll > .empty-note { order: -1; }
+#settings-sync { order: calc(var(--order-sync, 0) * 2); }
 #settings-appearance { order: calc(var(--order-appearance, 0) * 2); }
 #settings-engine { order: calc(var(--order-engine, 1) * 2); }
 #settings-language { order: calc(var(--order-language, 2) * 2); }
@@ -259,3 +260,48 @@
 :root[data-theme='tor'] .settings-section h2 { font-size: 20px; font-weight: 600; }
 :root[data-theme='tor'] .settings-search { border-radius: 4px; background: #2b2a33; }
 :root[data-theme='tor'] .switch:checked { background: #9059ff; }
+
+/* ------------------------------------------------------------------ Drift Sync (Settings) */
+
+.sync-panel { display: grid; gap: 10px; }
+.sync-card { overflow: hidden; border-radius: 14px; background: var(--panel); box-shadow: 0 0 0 1px var(--border-contrast); }
+.sync-hero {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, #0b1430) 0%, #161616 32%, #161616 68%, color-mix(in srgb, var(--accent) 22%, #0b1430) 100%);
+}
+.sync-hero .blob { position: absolute; border-radius: 50%; background: color-mix(in srgb, var(--accent) 30%, #0a1636); }
+.sync-hero .b1 { width: 160px; height: 120px; left: -30px; bottom: -50px; }
+.sync-hero .b2 { width: 120px; height: 120px; right: 30px; top: -50px; }
+.sync-hero .b3 { width: 90px; height: 90px; right: -20px; bottom: -20px; }
+.sync-art { position: relative; width: 170px; height: 110px; }
+.sync-art .laptop { position: absolute; left: 22px; bottom: 6px; width: 92px; height: 60px; border: 3px solid #5f6368; border-radius: 6px; background: #202124; }
+.sync-art .laptop::after { content: ''; position: absolute; left: -12px; right: -12px; bottom: -9px; height: 4px; border-radius: 2px; background: var(--accent); }
+.sync-art .laptop i { position: absolute; inset: 22px 4px 4px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 70%, #1a3a8a); }
+.sync-art .phone { position: absolute; right: 18px; top: 18px; width: 30px; height: 56px; border: 3px solid #5f6368; border-radius: 6px; background: #202124; }
+.sync-art .phone i { position: absolute; inset: 8px 3px 3px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 70%, #1a3a8a); }
+.sync-art .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; }
+.sync-art .d1 { left: 4px; top: 40px; background: #f9ab00; }
+.sync-art .d2 { left: 30px; top: 10px; background: #34a853; width: 12px; height: 12px; }
+.sync-art .d3 { left: 70px; top: 0; background: var(--accent); width: 18px; height: 12px; }
+.sync-art .d4 { left: 108px; top: 4px; background: #34a853; }
+.sync-art .d5 { left: 12px; top: 70px; background: var(--accent); width: 6px; height: 6px; }
+.sync-row { display: flex; align-items: center; gap: 12px; padding: 16px 20px; }
+.sync-row.error { padding-top: 0; color: #f28b82; font-size: 12.5px; }
+.sync-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.sync-title { font-size: 16px; font-weight: 600; }
+.sync-body { color: var(--text-dim); font-size: 13px; line-height: 1.45; }
+.sync-signin { border-radius: 20px; padding: 0 18px; height: 38px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.sync-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.sync-avatar.letter { display: grid; place-items: center; background: var(--accent); color: #111; font-weight: 700; text-transform: uppercase; }
+.sync-device { padding: 10px 12px; border-radius: 10px; background: var(--element-bg); display: grid; gap: 2px; }
+.sync-device-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; padding-bottom: 4px; }
+.sync-device-when { margin-inline-start: auto; font-weight: 400; color: var(--text-faint); font-size: 12px; }
+.sync-tab { text-align: start; padding: 5px 8px; border-radius: 6px; color: var(--text-dim); font-size: 12.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sync-tab:hover { background: var(--hover); color: var(--text); }
+.sync-key summary { cursor: pointer; color: var(--text-dim); font-size: 13px; padding: 4px 0; }
+.sync-key-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.sync-key-row input { flex: 1 1 200px; height: 32px; padding: 0 10px; border-radius: var(--button-radius); border: 1px solid var(--border-contrast); background: var(--element-bg); color: var(--text); user-select: text; }

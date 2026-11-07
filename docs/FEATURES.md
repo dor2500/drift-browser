@@ -83,7 +83,8 @@ Browsers surveyed: Chrome, Edge, Firefox, Brave, Arc, Vivaldi, Opera, Safari, Ze
 | Feature | Seen in | Drift |
 |---|---|---|
 | Sign in to Google sites | all | ✅ (Google's sign-in page works) |
-| Chrome Sync | Chrome only | ➖ Google allows it only in Chrome |
+| Chrome Sync | Chrome only | ➖ Google allows it only in Chrome. Instead: |
+| Sync and backup with a Google account | Chrome, Edge, Firefox, Brave, Opera (own accounts) | ✅ Drift Sync: bookmarks, pins, spaces, open tabs, history, settings, stored in a private Google Drive app folder (desktop; Android next) |
 | Import from other browsers | all | ✅ Zen, Firefox, Chrome, Brave, Edge |
 | Choice of rendering engine | – | ✅ Android: Chromium and Gecko (GeckoView) both built in, per tab · Desktop: Chromium built in or Gecko (Firefox with a Drift-managed profile that follows Drift's settings, with uBlock Origin); plus "Open page in" any installed browser |
 | Extensions | Chrome, Edge, Firefox, Brave | 🔜 partial (Electron supports a subset of Chrome extensions) |

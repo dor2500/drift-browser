@@ -67,8 +67,20 @@ jobs:
       - run: npm ci
       # Catches API breaks when the engine watch moves to a new Electron major.
       - run: npm run typecheck
-      - name: Build and upload to the draft release
-        run: npm run build && npx electron-builder ${{ matrix.target }} --publish always
+      - name: Build
+        run: npm run build
+      # Drift Sync: the Google connection key goes into the app when the repository has it (docs/GOOGLE-SYNC.md).
+      - name: Google connection key
+        shell: bash
+        env:
+          ID: ${{ secrets.DRIFT_GOOGLE_CLIENT_ID }}
+          SECRET: ${{ secrets.DRIFT_GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -n "$ID" ] && [ -n "$SECRET" ]; then
+            node -e "require('fs').writeFileSync('dist-electron/google-client.json', JSON.stringify({ clientId: process.env.ID, clientSecret: process.env.SECRET }))"
+          fi
+      - name: Upload to the draft release
+        run: npx electron-builder ${{ matrix.target }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # macOS builds are unsigned until an Apple Developer ID is added.

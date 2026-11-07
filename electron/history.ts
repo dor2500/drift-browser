@@ -74,6 +74,37 @@ export class HistoryIndex {
     return added;
   }
 
+  /** Recent visits and every bookmark, for Drift Sync. */
+  exportForSync(limit: number) {
+    return [...this.entries.values()]
+      .filter((e) => e.last > 0 || e.bookmark)
+      .sort((a, b) => Number(!!b.bookmark) - Number(!!a.bookmark) || b.last - a.last)
+      .slice(0, limit)
+      .map(({ url, title, visits, last, bookmark }) => ({ url, title, visits, last, bookmark }));
+  }
+
+  /** History and bookmarks from your other devices. */
+  importSynced(list: { url: string; title: string; visits: number; last: number; bookmark?: boolean }[]) {
+    let changed = false;
+    for (const it of list) {
+      if (!/^https?:/i.test(it.url)) continue;
+      const e = this.entries.get(it.url);
+      if (!e) {
+        this.entries.set(it.url, { url: it.url, title: it.title || it.url, visits: it.visits, bookmark: it.bookmark, source: 'sync', last: it.last });
+        changed = true;
+      } else if (it.visits > e.visits || it.last > e.last || (it.bookmark && !e.bookmark)) {
+        e.visits = Math.max(e.visits, it.visits);
+        e.last = Math.max(e.last, it.last);
+        e.bookmark ||= it.bookmark;
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.trim();
+      this.save();
+    }
+  }
+
   suggest(query: string, limit = 6): Suggestion[] {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     if (words.length === 0) return [];

@@ -153,6 +153,22 @@ export interface Suggestion {
   source?: string;
 }
 
+/** Drift Sync with a Google account (electron/gsync.ts). */
+export interface SyncState {
+  /** A Google connection key is available (built in or entered in Settings). */
+  configured: boolean;
+  builtInKey: boolean;
+  signedIn: boolean;
+  email?: string;
+  name?: string;
+  picture?: string;
+  lastSync?: number;
+  error?: string;
+  syncing: boolean;
+  what: { bookmarks: boolean; tabs: boolean; history: boolean; settings: boolean };
+  otherDevices: { name: string; platform: string; updated: number; tabs: { url: string; title: string }[] }[];
+}
+
 export interface BrowserState {
   tabs: TabState[];
   spaces: SpaceState[];
@@ -168,6 +184,7 @@ export interface BrowserState {
   updates: UpdateStatus;
   compact: boolean;
   sidebarWidth: number;
+  sync: SyncState;
 }
 
 /** A placeholder rectangle in the shell where a tab's native web view goes. */
@@ -203,6 +220,11 @@ export type Command =
   | { type: 'settings:set'; patch: SettingsPatch }
   | { type: 'settings:open' }
   | { type: 'privacy:newIdentity' }
+  | { type: 'sync:signin' }
+  | { type: 'sync:signout' }
+  | { type: 'sync:now' }
+  | { type: 'sync:what'; what: Partial<SyncState['what']> }
+  | { type: 'sync:key'; clientId: string; clientSecret: string }
   | { type: 'updates:check' }
   | { type: 'adblock:site'; host: string; paused: boolean }
   | { type: 'media:control'; id: string; action: 'toggle' | 'next' | 'prev' }

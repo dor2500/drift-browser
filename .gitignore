@@ -9,3 +9,4 @@ android/local.properties
 *.jks
 *.keystore
 *.log
+google-client.json

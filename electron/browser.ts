@@ -47,6 +47,7 @@ import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
 import { geckoStatus, launchGecko, readGeckoSession } from './gecko';
+import { GoogleSync, type Incoming, type LocalData } from './gsync';
 import { HistoryIndex } from './history';
 import { RequestHub } from './requests';
 import { readSource, sourceName } from './importer';
@@ -104,6 +105,7 @@ export class Browser {
   readonly updater: Updater;
   readonly history = new HistoryIndex();
   readonly adblock: AdBlock;
+  private sync!: GoogleSync;
   private settings: Settings = loadSettings();
   /** Hosts whose https upgrade failed; they load over http. */
   private httpOk = new Set<string>();
@@ -152,6 +154,13 @@ export class Browser {
     this.hub.install();
     void this.adblock.init(session.fromPartition(PARTITION), this.settings.hideAnnoyances);
     this.restore(store.load());
+    this.sync = new GoogleSync({
+      collect: () => this.collectForSync(),
+      apply: (incoming) => this.applySynced(incoming),
+      changed: () => this.emit(),
+      otherDevicesChanged: () => this.emit(),
+    });
+    this.sync.start();
     win.on('resize', () => this.fullscreenTab && this.applyLayout());
     this.updater.schedule();
     try {
@@ -261,6 +270,7 @@ export class Browser {
       updates: this.updater.status,
       compact: this.compact,
       sidebarWidth: this.sidebarWidth,
+      sync: this.sync.state(),
     };
   }
 
@@ -518,6 +528,22 @@ export class Browser {
         break;
       case 'privacy:newIdentity':
         void this.newIdentity();
+        break;
+      case 'sync:signin':
+        void this.sync.signIn().catch((err: Error) => this.sync.fail(err.message));
+        break;
+      case 'sync:signout':
+        void this.sync.signOut();
+        break;
+      case 'sync:now':
+        void this.sync.syncNow();
+        break;
+      case 'sync:what':
+        this.sync.setWhat(c.what);
+        void this.sync.syncNow();
+        break;
+      case 'sync:key':
+        this.sync.setClient({ clientId: c.clientId, clientSecret: c.clientSecret });
         break;
       case 'updates:check':
         void this.updater.checkApp();
@@ -1244,6 +1270,68 @@ export class Browser {
 
   shouldConfirmClose() {
     return this.settings.confirmClose && this.tabs.filter((t) => !t.glanceOf && !t.pinned && !t.essential).length > 1;
+  }
+
+  // ---------------------------------------------------------------- Drift Sync
+
+  /** Settings that follow you between devices (not engine, graphics, updates or first-run state). */
+  private static readonly SYNCED_SETTINGS = [
+    'theme', 'colorTheme', 'customAccent', 'spaceColors', 'verticalTabs', 'searchEngine', 'homePage', 'newTabPage',
+    'restoreSession', 'confirmClose', 'smoothScrolling', 'adblock', 'adblockPaused', 'hideAnnoyances', 'clearOnExit',
+    'sleepAfter', 'forceDark', 'siteZoom', 'openInRules', 'privacy', 'language',
+  ] as const;
+
+  private collectForSync(): LocalData {
+    const s = this.settings as unknown as Record<string, unknown>;
+    return {
+      tabs: this.tabs.filter((t) => !t.glanceOf && /^https?:/.test(t.url)).map((t) => ({ url: t.url, title: t.title })),
+      spaces: this.spaces.map(({ id, name, icon, accent }) => ({ id, name, icon, accent })),
+      pins: this.tabs
+        .filter((t) => (t.pinned || t.essential) && /^https?:/.test(t.url))
+        .map((t) => ({ url: t.url, title: t.title, spaceId: t.spaceId, essential: !!t.essential })),
+      settings: Object.fromEntries(Browser.SYNCED_SETTINGS.map((k) => [k, s[k]])),
+      history: this.history.exportForSync(4000),
+    };
+  }
+
+  /** Brings in what your other devices changed. Open tabs are never closed by sync. */
+  private applySynced(inc: Incoming) {
+    if (inc.spaces?.length) {
+      const known = new Map(this.spaces.map((sp) => [sp.id, sp]));
+      this.spaces = inc.spaces.map((sp) => ({ ...known.get(sp.id), ...sp }));
+      const first = this.spaces[0].id;
+      for (const t of this.tabs) if (!t.essential && !this.spaces.some((sp) => sp.id === t.spaceId)) t.spaceId = first;
+      if (!this.spaces.some((sp) => sp.id === this.activeSpaceId)) this.activeSpaceId = first;
+    }
+    if (inc.pins) {
+      const want = new Map(inc.pins.map((p) => [p.url, p]));
+      for (const t of this.tabs) {
+        const p = want.get(t.url);
+        if (p) {
+          t.essential = p.essential;
+          t.pinned = !p.essential;
+          if (!p.essential && this.spaces.some((sp) => sp.id === p.spaceId)) t.spaceId = p.spaceId;
+          want.delete(t.url);
+        } else if (t.pinned || t.essential) {
+          // Unpinned on another device: it stays open here as a normal tab.
+          t.pinned = false;
+          t.essential = false;
+        }
+      }
+      for (const p of want.values()) {
+        const spaceId = this.spaces.some((sp) => sp.id === p.spaceId) ? p.spaceId : this.activeSpaceId;
+        const t = { ...this.newTabState(p.url, spaceId), title: p.title, pinned: !p.essential, essential: p.essential };
+        this.tabs.push(t);
+      }
+    }
+    if (inc.settings) {
+      const patch: Record<string, unknown> = {};
+      const cur = this.settings as unknown as Record<string, unknown>;
+      for (const k of Browser.SYNCED_SETTINGS) if (k in inc.settings && JSON.stringify(inc.settings[k]) !== JSON.stringify(cur[k])) patch[k] = inc.settings[k];
+      if (Object.keys(patch).length) this.setSettings(patch as SettingsPatch);
+    }
+    if (inc.history) this.history.importSynced(inc.history);
+    this.emit();
   }
 
   /**

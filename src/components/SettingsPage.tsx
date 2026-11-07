@@ -7,6 +7,7 @@ import type { BrowserState, DriftEnv, SitePermissions } from '../../shared/types
 import { cmd, cx } from '../lib';
 import { Icon, type IconName } from './Icon';
 import { ImportPanel } from './ImportPanel';
+import { SyncPanel } from './SyncPanel';
 import { ColorThemePicker } from './ColorThemePicker';
 import { EnginePicker } from './EnginePicker';
 import { LanguagePicker } from './LanguagePicker';
@@ -14,7 +15,7 @@ import { ThemePicker } from './ThemePicker';
 import { CommitInput, EngineCard, Toggle, UpdateSourceForm } from './UpdatePanels';
 import { t, useLocale } from '../i18n';
 
-const SECTIONS = ['appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'] as const;
+const SECTIONS = ['sync', 'appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'] as const;
 
 /** A section's name in the chosen browser's own words (Chrome's "You and Google", Edge's "Profiles"…). */
 function sectionName(theme: string, id: string) {
@@ -23,6 +24,7 @@ function sectionName(theme: string, id: string) {
   return named === key ? t(`set.nav.${id}` as MessageKey) : named;
 }
 const EN_KEYS: Record<string, string[]> = {
+  sync: ['set.nav.sync', 'sync.'],
   appearance: ['set.nav.appearance', 'theme.', 'set.colorTheme', 'set.themeDefault', 'set.customAccent', 'set.spaceColors', 'set.verticalTabs', 'set.compact'],
   engine: ['set.nav.engine', 'eng.'],
   language: ['set.nav.language', 'set.language'],
@@ -40,6 +42,7 @@ const englishFor = (section: string) =>
     .join(' ');
 
 const NAV_ICONS: Record<(typeof SECTIONS)[number], IconName> = {
+  sync: 'google',
   appearance: 'palette',
   engine: 'globe',
   language: 'chat',
@@ -121,6 +124,11 @@ export function SettingsPage({ state }: { state: BrowserState }) {
         style={Object.fromEntries(SETTINGS_ORDER[s.theme].map((id, i) => [`--order-${id}`, i])) as CSSProperties}
       >
         {query && noMatch && <div className="empty-note">{t('set.searchNone', { q: query })}</div>}
+        <section id="settings-sync" className="settings-section">
+          <span hidden className="search-en">{englishFor('sync')}</span>
+          <h2>{sectionName(s.theme, 'sync')}</h2>
+          <SyncPanel sync={state.sync} />
+        </section>
         <section id="settings-appearance" className="settings-section">
           <span hidden className="search-en">{englishFor('appearance')}</span>
           <h2>{sectionName(s.theme, 'appearance')}</h2>

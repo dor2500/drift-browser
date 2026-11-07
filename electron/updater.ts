@@ -75,7 +75,9 @@ export class Updater {
   }
 
   install() {
-    if (this.status.app.state === 'ready') autoUpdater.quitAndInstall();
+    // Silent install, then Drift reopens by itself: no setup wizard on every update.
+    // (A copy installed for all users in Program Files still needs Windows' one-click admin approval.)
+    if (this.status.app.state === 'ready') autoUpdater.quitAndInstall(true, true);
   }
 
   async checkEngine() {

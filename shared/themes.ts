@@ -102,15 +102,15 @@ export const THEMES: Record<ThemeId, ThemeInfo> = {
 };
 
 /** Settings sections in the order each browser shows them (see the mode.* labels). */
-export type SettingsSection = 'appearance' | 'engine' | 'language' | 'general' | 'privacy' | 'import' | 'updates' | 'about';
+export type SettingsSection = 'sync' | 'appearance' | 'engine' | 'language' | 'general' | 'privacy' | 'import' | 'updates' | 'about';
 export const SETTINGS_ORDER: Record<ThemeId, SettingsSection[]> = {
-  zen: ['appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'],
-  chrome: ['import', 'privacy', 'engine', 'appearance', 'general', 'language', 'updates', 'about'],
-  edge: ['import', 'privacy', 'appearance', 'general', 'language', 'engine', 'updates', 'about'],
-  firefox: ['appearance', 'general', 'privacy', 'language', 'engine', 'import', 'updates', 'about'],
-  tor: ['appearance', 'general', 'privacy', 'language', 'engine', 'import', 'updates', 'about'],
-  brave: ['general', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
-  opera: ['general', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
+  zen: ['sync', 'appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'],
+  chrome: ['sync', 'import', 'privacy', 'engine', 'appearance', 'general', 'language', 'updates', 'about'],
+  edge: ['sync', 'import', 'privacy', 'appearance', 'general', 'language', 'engine', 'updates', 'about'],
+  firefox: ['appearance', 'general', 'privacy', 'sync', 'language', 'engine', 'import', 'updates', 'about'],
+  tor: ['appearance', 'general', 'privacy', 'sync', 'language', 'engine', 'import', 'updates', 'about'],
+  brave: ['general', 'sync', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
+  opera: ['general', 'sync', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
 };
 
 /** Rounded floating page only in sidebar layouts; top-tab browsers draw the page edge to edge. */
