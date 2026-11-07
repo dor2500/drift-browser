@@ -59,6 +59,8 @@ class BrowserModel(private val activity: Activity) {
     var activeSpaceId by mutableStateOf("")
     var activeTabId by mutableStateOf<String?>(null)
     var adblockOn by mutableStateOf(true)
+    var themeMode by mutableIntStateOf(THEME_SYSTEM)
+    var dynamicColor by mutableStateOf(true)
     var updateVersion by mutableStateOf<String?>(null)
     var updateUrl: String? = null
     var findMatches by mutableIntStateOf(0)
@@ -279,6 +281,8 @@ class BrowserModel(private val activity: Activity) {
         json.put("activeSpace", activeSpaceId)
         json.put("activeTab", activeTabId ?: "")
         json.put("adblock", adblockOn)
+        json.put("theme", themeMode)
+        json.put("dynamic", dynamicColor)
         json.put("spaces", JSONArray().apply { spaces.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("color", it.color)) } })
         json.put("tabs", JSONArray().apply {
             tabs.forEach { put(JSONObject().put("id", it.id).put("url", it.url).put("title", it.title).put("space", it.spaceId).put("pinned", it.pinned)) }
@@ -291,6 +295,8 @@ class BrowserModel(private val activity: Activity) {
         if (raw != null) runCatching {
             val json = JSONObject(raw)
             adblockOn = json.optBoolean("adblock", true)
+            themeMode = json.optInt("theme", THEME_SYSTEM)
+            dynamicColor = json.optBoolean("dynamic", true)
             val sp = json.getJSONArray("spaces")
             for (i in 0 until sp.length()) sp.getJSONObject(i).let { spaces.add(Space(it.getString("id"), it.getString("name"), it.getLong("color"))) }
             val ts = json.getJSONArray("tabs")

@@ -30,4 +30,19 @@
     <string name="pin">נעיצת כרטיסייה</string>
     <string name="unpin">ביטול נעיצה</string>
     <string name="pinned">נעוצות</string>
+    <string name="settings">הגדרות</string>
+    <string name="appearance">מראה</string>
+    <string name="theme">ערכת נושא</string>
+    <string name="theme_system">מערכת</string>
+    <string name="theme_light">בהיר</string>
+    <string name="theme_dark">כהה</string>
+    <string name="dynamic_color">צבעי Material You</string>
+    <string name="dynamic_color_desc">צבעים מהטפט שלך</string>
+    <string name="dynamic_color_unsupported">דורש Android 12 ומעלה; Drift משתמש בצבע המרחב</string>
+    <string name="privacy">פרטיות</string>
+    <string name="adblock_desc">חוסם פרסומות, רכיבי מעקב ופרסומות ביוטיוב</string>
+    <string name="about_section">אודות</string>
+    <string name="chromium_version">Chromium %1$s</string>
+    <string name="up_to_date">Drift מעודכן</string>
+    <string name="update_now">עדכון</string>
 </resources>

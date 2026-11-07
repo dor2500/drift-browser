@@ -68,17 +68,19 @@ Or download `Drift-Setup-x.y.z.exe` (Windows), the `.dmg` (macOS) or the `.AppIm
 ## Drift for Android
 
 A native Kotlin + Jetpack Compose app in [`android/`](android/), built on Android's Chromium WebView, with:
-- Drift's floating rounded page over the space colour, and a thumb-friendly bottom bar (back, address pill with a shield, tab counter, menu).
+- **Material You** design: colours from your wallpaper (Android 12+, or your space's colour), light, dark or system theme, Material 3 components throughout, and a themed icon.
+- A rounded floating page and a thumb-friendly bottom bar (address pill with a shield, tab counter, menu sheet with quick actions).
 - Tabs in spaces, kept across restarts, and a tab grid.
 - Ad and tracker blocking plus the YouTube ad skipper; downloads; find in page; desktop-site mode; share.
 - Google sign-in that works (the WebView's `; wv` marker that Google blocks is removed).
+- A settings screen (theme, wallpaper colours, ad blocking, version and updates).
 - English and Hebrew.
 
 Build locally with `cd android` then `gradlew assembleRelease`. CI builds a signed APK for every release.
 
-| Page | Tabs and spaces |
-|---|---|
-| ![Android](docs/screenshots/android-youtube.png) | ![Android tabs](docs/screenshots/android-tabs.png) |
+| Light | Menu | Dark tabs | Settings |
+|---|---|---|---|
+| ![Android light](docs/screenshots/android-material-light.png) | ![Android menu](docs/screenshots/android-material-menu.png) | ![Android dark tabs](docs/screenshots/android-material-dark-tabs.png) | ![Android settings](docs/screenshots/android-material-settings.png) |
 
 ## Updates and Chromium security
 
