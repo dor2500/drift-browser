@@ -74,14 +74,24 @@ function geckoProfile(root: string): string | undefined {
       sections[cur][line.slice(0, i).trim()] = line.slice(i + 1).trim();
     }
   }
-  const resolve = (p: string) => (path.isAbsolute(p) ? p : path.join(root, p));
+  // Keep the resolved profile dir inside the browser's own profile root. A
+  // crafted profiles.ini could otherwise set Path= to an absolute/UNC path or
+  // use ../ to escape — reading another user's profile or (on Windows) leaking
+  // an NTLM hash via an outbound SMB probe.
+  const resolve = (p: string): string | undefined => {
+    const abs = path.resolve(root, p);
+    return abs === root || abs.startsWith(root + path.sep) ? abs : undefined;
+  };
   const install = Object.entries(sections).find(([k, v]) => k.startsWith('Install') && v.Default);
   const candidates = [
     install?.[1].Default,
     ...Object.values(sections).filter((v) => v.Path && v.Default === '1').map((v) => v.Path),
     ...Object.values(sections).filter((v) => v.Path).map((v) => v.Path),
   ].filter((p): p is string => !!p);
-  return candidates.map(resolve).find((p) => fs.existsSync(path.join(p, 'places.sqlite')));
+  return candidates
+    .map(resolve)
+    .filter((p): p is string => !!p)
+    .find((p) => fs.existsSync(path.join(p, 'places.sqlite')));
 }
 
 export function detectSources(): ImportSource[] {

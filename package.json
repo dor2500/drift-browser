@@ -33,6 +33,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.6"
   },
+  "overrides": {
+    "@grpc/grpc-js": ">=1.13.6"
+  },
   "build": {
     "appId": "app.drift.browser",
     "productName": "Drift",

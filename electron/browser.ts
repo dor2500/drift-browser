@@ -1197,6 +1197,14 @@ export class Browser {
     wc.on('did-fail-load', (_e, code, _desc, url, isMainFrame) => {
       if (!isMainFrame || code === -3 || !this.hub.upgraded.has(url)) return; // -3: aborted
       this.hub.upgraded.delete(url);
+      // Only fall back to plaintext http when the failure means the host has no
+      // HTTPS listener (connection refused/reset/closed/failed/timeout, address
+      // unreachable, TLS protocol/cipher mismatch). NEVER downgrade on a
+      // certificate error (-200..-299) or any other code: a forged/invalid
+      // certificate is exactly the signal an SSL-strip MITM produces, so
+      // downgrading there would strip TLS on an active attack.
+      const HTTP_FALLBACK_CODES = new Set([-100, -101, -102, -104, -107, -109, -113, -118]);
+      if (!HTTP_FALLBACK_CODES.has(code)) return;
       const host = hostOfUrl(url);
       if (!host) return;
       this.httpOk.add(new URL(url).hostname);
@@ -1237,7 +1245,20 @@ export class Browser {
     wc.setWindowOpenHandler(({ url, disposition }) => {
       // Real popups (OAuth, payment windows) keep window.opener, so let them open unless blocked.
       if (disposition === 'new-window') {
-        if (this.settings.privacy.blockPopups && !/accounts\.google\.com|firebaseapp\.com|paypal\.com|stripe\.com/i.test(url)) {
+        // Allow genuine OAuth/payment popups by exact host (or a dot-boundary
+        // subdomain) only — a substring test would let accounts.google.com.evil.com
+        // or ?x=stripe.com through and open a real native popup window.
+        const popupHost = (() => {
+          try {
+            return new URL(url).hostname.toLowerCase();
+          } catch {
+            return '';
+          }
+        })();
+        const popupAllowed = ['accounts.google.com', 'firebaseapp.com', 'paypal.com', 'stripe.com'].some(
+          (h) => popupHost === h || popupHost.endsWith('.' + h),
+        );
+        if (this.settings.privacy.blockPopups && !popupAllowed) {
           this.createTab({ url, afterId: id, background: false });
           return { action: 'deny' };
         }
