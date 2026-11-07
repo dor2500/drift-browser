@@ -248,6 +248,9 @@ const paths = {
       <path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 19h2v2h-2z" />
     </>
   ),
+  puzzle: (
+    <path d="M19 11h-1.5V7a2 2 0 0 0-2-2h-4a2.5 2.5 0 0 0-5 0H5a2 2 0 0 0-2 2v4a2.5 2.5 0 0 1 0 5v4a2 2 0 0 0 2 2h4a2.5 2.5 0 0 0 5 0h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z" />
+  ),
 } as const;
 
 export type IconName = keyof typeof paths;

@@ -174,6 +174,15 @@ export function TopBar({ state, onOpenBar }: Props) {
         )}
         {state.settings.theme === 'chrome' && (
           <button
+            className="tb-btn"
+            title="תוספים · Extensions"
+            onClick={() => cmd({ type: 'settings:open' })}
+          >
+            <Icon name="puzzle" size={16} />
+          </button>
+        )}
+        {state.settings.theme === 'chrome' && (
+          <button
             className="tb-btn chrome-profile-btn"
             title={state.sync.email || 'חשבון Google (Google Account)'}
             onClick={() => {
@@ -227,6 +236,17 @@ export function TopBar({ state, onOpenBar }: Props) {
             >
               <Icon name="plus" size={12} />
               <span>הוסף סימנייה</span>
+            </button>
+          )}
+          {state.settings.theme === 'chrome' && (
+            <button
+              className="bm-item bm-all"
+              style={{ marginInlineStart: 'auto' }}
+              title="כל הסימניות · All Bookmarks"
+              onClick={() => cmd({ type: 'settings:open' })}
+            >
+              <Icon name="book" size={12} />
+              <span>כל הסימניות</span>
             </button>
           )}
         </div>

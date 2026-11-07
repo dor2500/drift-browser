@@ -127,7 +127,7 @@ export class Updater {
     if (u.source === 'github') {
       const [owner, repo] = u.githubRepo.split('/').map((x) => x.trim());
       if (!owner || !repo) return { state: 'error', message: this.t('updmsg.repo') };
-      autoUpdater.setFeedURL({ provider: 'github', owner, repo });
+      autoUpdater.setFeedURL({ provider: 'github', owner, repo, releaseType: 'release' } as any);
     } else {
       if (!/^https:\/\//i.test(u.customUrl)) return { state: 'error', message: this.t('updmsg.url') };
       autoUpdater.setFeedURL({ provider: 'generic', url: u.customUrl, channel: u.channel === 'beta' ? 'beta' : 'latest' });
