@@ -146,6 +146,8 @@ export interface Settings {
   fontSize: FontSizePreset;
   /** Chrome Appearance: show preview cards when hovering over tabs. */
   tabHoverCard: boolean;
+  /** Swipe tabs left or right to close them. */
+  swipeToCloseTabs: boolean;
   /** Chrome On Startup mode ('newtab' | 'continue' | 'urls'). */
   startupMode: StartupMode;
   /** Custom URLs opened on startup when startupMode === 'urls'. */
@@ -245,6 +247,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultZoom: 100,
   fontSize: 'medium',
   tabHoverCard: true,
+  swipeToCloseTabs: true,
   startupMode: 'continue',
   startupUrls: ['https://www.google.com/'],
   memorySaver: true,

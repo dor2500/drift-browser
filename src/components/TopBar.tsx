@@ -11,6 +11,7 @@ import { SpaceIcon } from './SpaceIcon';
 import { iconForPermission } from './PermissionCard';
 import { hasUpdateBadge } from './UpdatePanels';
 import { t } from '../i18n';
+import { useTabSwipe } from './useTabSwipe';
 
 export interface Anchor {
   left: number;
@@ -94,6 +95,7 @@ export function TopBar({ state, onOpenBar }: Props) {
               compact={t.essential || t.pinned}
               attention={waiting.has(t.id) && t.id !== state.activeTabId}
               showHoverCard={state.settings.tabHoverCard}
+              swipeEnabled={state.settings.swipeToCloseTabs}
               dropPos={drop?.id === t.id ? drop.pos : undefined}
               onDragOverTab={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
             />
@@ -272,6 +274,7 @@ function HTab({
   compact,
   attention,
   showHoverCard,
+  swipeEnabled = true,
   dropPos,
   onDragOverTab,
 }: {
@@ -280,16 +283,34 @@ function HTab({
   compact: boolean;
   attention: boolean;
   showHoverCard: boolean;
+  swipeEnabled?: boolean;
   dropPos?: DropPosition;
   onDragOverTab: (pos: DropPosition) => void;
 }) {
+  const swipe = useTabSwipe({
+    enabled: swipeEnabled && !tab.essential,
+    onClose: () => cmd({ type: 'tab:close', id: tab.id }),
+  });
+
   return (
     <div
-      className={cx('htab', selected && 'selected', compact && 'compact', tab.asleep && !selected && 'asleep', dropPos && `drop-${dropPos}`)}
+      className={cx(
+        'htab',
+        selected && 'selected',
+        compact && 'compact',
+        tab.asleep && !selected && 'asleep',
+        dropPos && `drop-${dropPos}`,
+        swipe.closing && 'closing',
+      )}
+      style={swipe.style}
       title={showHoverCard ? `${tab.title}\n${tab.url}${tab.asleep ? '\n💤 כרטיסייה במצב חיסכון בזיכרון (Memory Saver)' : ''}` : tab.title}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}
       onDragEnd={endTabDrag}
+      onWheel={swipe.onWheel}
+      onTouchStart={swipe.onTouchStart}
+      onTouchMove={swipe.onTouchMove}
+      onTouchEnd={swipe.onTouchEnd}
       onDragOver={(e) => {
         if (!isTabDrag(e)) return;
         e.preventDefault();

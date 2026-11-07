@@ -4,6 +4,7 @@ import { cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { t } from '../i18n';
+import { useTabSwipe } from './useTabSwipe';
 
 interface Props {
   tab: TabState;
@@ -12,19 +13,37 @@ interface Props {
   /** A permission prompt is waiting in this background tab. */
   attention?: boolean;
   dropPos?: DropPosition;
+  swipeEnabled?: boolean;
   onDragOverItem: (pos: DropPosition) => void;
 }
 
 const stop = (e: SyntheticEvent) => e.stopPropagation();
 
-export function TabItem({ tab, selected, inSplit, attention, dropPos, onDragOverItem }: Props) {
+export function TabItem({ tab, selected, inSplit, attention, dropPos, swipeEnabled = true, onDragOverItem }: Props) {
+  const swipe = useTabSwipe({
+    enabled: swipeEnabled && !tab.essential,
+    onClose: () => cmd({ type: 'tab:close', id: tab.id }),
+  });
+
   return (
     <div
-      className={cx('tab', selected && 'selected', inSplit && 'in-split', tab.asleep && !selected && 'asleep', dropPos && `drop-${dropPos}`)}
+      className={cx(
+        'tab',
+        selected && 'selected',
+        inSplit && 'in-split',
+        tab.asleep && !selected && 'asleep',
+        dropPos && `drop-${dropPos}`,
+        swipe.closing && 'closing',
+      )}
+      style={swipe.style}
       title={`${tab.title}\n${tab.url}`}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}
       onDragEnd={endTabDrag}
+      onWheel={swipe.onWheel}
+      onTouchStart={swipe.onTouchStart}
+      onTouchMove={swipe.onTouchMove}
+      onTouchEnd={swipe.onTouchEnd}
       onDragOver={(e) => {
         if (!isTabDrag(e)) return;
         e.preventDefault();

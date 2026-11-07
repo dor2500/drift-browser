@@ -131,7 +131,7 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
       <div className="space-viewport">
         <div key={space.id} className={`space-content slide-${dir.current}`}>
           <SpaceHeader space={space} renaming={renamingSpace === space.id} onDone={onRenameDone} />
-          <TabSection zone="pinned" tabs={pinned} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} />
+          <TabSection zone="pinned" tabs={pinned} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} swipeEnabled={state.settings.swipeToCloseTabs} />
           <div className="pinned-separator">
             {regular.length > 0 && (
               <button title={t('tabs.clearHint')} onClick={() => cmd({ type: 'space:clear', id: space.id })}>
@@ -143,7 +143,7 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
             <Icon name="plus" />
             <span className="tab-label">{t('tabs.new')}</span>
           </button>
-          <TabSection zone="tabs" tabs={regular} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} />
+          <TabSection zone="tabs" tabs={regular} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} swipeEnabled={state.settings.swipeToCloseTabs} />
         </div>
       </div>
 
@@ -204,7 +204,7 @@ function Essentials({ tabs, activeId }: { tabs: TabState[]; activeId?: string })
   );
 }
 
-function TabSection({ zone, tabs, activeId, splitIds, waiting }: { zone: DropZone; tabs: TabState[]; activeId?: string; splitIds: string[]; waiting: Set<string> }) {
+function TabSection({ zone, tabs, activeId, splitIds, waiting, swipeEnabled }: { zone: DropZone; tabs: TabState[]; activeId?: string; splitIds: string[]; waiting: Set<string>; swipeEnabled?: boolean }) {
   const [drop, setDrop] = useState<{ id: string; pos: DropPosition } | null>(null);
   return (
     <div
@@ -227,6 +227,7 @@ function TabSection({ zone, tabs, activeId, splitIds, waiting }: { zone: DropZon
           inSplit={splitIds.includes(t.id)}
           attention={waiting.has(t.id) && t.id !== activeId}
           dropPos={drop?.id === t.id ? drop.pos : undefined}
+          swipeEnabled={swipeEnabled}
           onDragOverItem={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
         />
       ))}

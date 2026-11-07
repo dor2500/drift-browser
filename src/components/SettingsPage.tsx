@@ -200,6 +200,12 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label="הצג תצוגה מקדימה במעבר עכבר על כרטיסייה (Show tab hover preview card)"
             hint="מציג את כתובת האתר ומצב הזיכרון בעת ריחוף מעל כרטיסייה"
           />
+          <Toggle
+            checked={s.swipeToCloseTabs}
+            onChange={(swipeToCloseTabs) => cmd({ type: 'settings:set', patch: { swipeToCloseTabs } })}
+            label="החלקה ימינה ושמאלה על כרטיסייה לסגירה (Swipe tabs left/right to close)"
+            hint="מאפשר להחליק על כרטיסייה ימינה או שמאלה (במשטח מגע, במסך מגע או גלילה אופקית) כדי לסגור אותה במהירות"
+          />
           <div className="field">
             <span className="field-label">גודל גופן בדפים (Font size)</span>
             <select

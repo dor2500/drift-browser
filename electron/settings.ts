@@ -87,6 +87,7 @@ function sanitize(s: Settings): Settings {
     defaultZoom: clampNum(s.defaultZoom, d.defaultZoom, 25, 500),
     fontSize: ['xsmall', 'small', 'medium', 'large', 'xlarge'].includes(s.fontSize) ? s.fontSize : d.fontSize,
     tabHoverCard: typeof s.tabHoverCard === 'boolean' ? s.tabHoverCard : d.tabHoverCard,
+    swipeToCloseTabs: typeof s.swipeToCloseTabs === 'boolean' ? s.swipeToCloseTabs : true,
     startupMode: ['newtab', 'continue', 'urls'].includes(s.startupMode) ? s.startupMode : d.startupMode,
     startupUrls: Array.isArray(s.startupUrls)
       ? [...new Set(s.startupUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u)))].slice(0, 100)
