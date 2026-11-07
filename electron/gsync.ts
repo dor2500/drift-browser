@@ -1,4 +1,4 @@
-import { app, net, safeStorage, shell } from 'electron';
+import { app, net, safeStorage } from 'electron';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -14,8 +14,8 @@ import type { SyncState } from '../shared/types';
  * Google lets only Google Chrome use Chrome Sync, so Drift keeps its own copy
  * in Google Drive's app data folder: a private space only Drift can read,
  * hidden from your Drive files and counted against your Drive storage.
- * Sign-in happens in your default browser (Google doesn't allow sign-in inside
- * embedded windows), with PKCE and a one-time local address to receive the answer.
+ * Sign-in happens on Google's own sign-in page, opened in a Drift tab like any
+ * browser's Google sign-in, with PKCE and a one-time local address to receive the answer.
  */
 
 const SCOPES = ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/drive.appdata'];
@@ -143,6 +143,9 @@ export class GoogleSync {
       apply: (incoming: Incoming) => void;
       changed: () => void;
       otherDevicesChanged: () => void;
+      /** Opens Google's sign-in page in a Drift tab; returns the tab's id. */
+      openSignIn: (url: string) => string | undefined;
+      closeSignIn: (tabId: string) => void;
     },
   ) {
     let stored: Partial<Stored> = {};
@@ -224,6 +227,7 @@ export class GoogleSync {
     const stateParam = crypto.randomBytes(16).toString('hex');
 
     // A one-time local address receives Google's answer (the loopback flow for desktop apps).
+    let signInTab: string | undefined;
     const { code, redirectUri } = await new Promise<{ code: string; redirectUri: string }>((resolve, reject) => {
       const server = http.createServer((req, res) => {
         const u = new URL(req.url ?? '/', 'http://127.0.0.1');
@@ -257,10 +261,12 @@ export class GoogleSync {
           prompt: 'consent',
           state: stateParam,
         }).toString();
-        void shell.openExternal(auth.toString());
+        signInTab = this.hooks.openSignIn(auth.toString());
       });
     });
 
+    // The sign-in tab has done its job.
+    if (signInTab) setTimeout(() => this.hooks.closeSignIn(signInTab!), 1500);
     const tokens = await this.token({
       code,
       code_verifier: verifier,

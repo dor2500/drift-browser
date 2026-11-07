@@ -159,6 +159,8 @@ export class Browser {
       apply: (incoming) => this.applySynced(incoming),
       changed: () => this.emit(),
       otherDevicesChanged: () => this.emit(),
+      openSignIn: (url) => this.createTab({ url }).id,
+      closeSignIn: (id) => this.closeTab(id, false),
     });
     this.sync.start();
     win.on('resize', () => this.fullscreenTab && this.applyLayout());

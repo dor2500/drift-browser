@@ -56,8 +56,8 @@ The release build writes them into the app. Users then just click **Sign in with
 
 ## What happens when you sign in
 
-- Google's sign-in page opens in your default browser. Google doesn't allow sign-in
-  inside embedded app windows.
+- Google's own sign-in page opens in a Drift tab, as in other browsers. The tab closes
+  by itself once you're signed in.
 - Drift asks only for your name, email address and its own app data folder. It can't
   see your other Drive files.
 - Your sign-in is stored encrypted with your operating system's keychain.
