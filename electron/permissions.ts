@@ -121,7 +121,7 @@ export class Permissions {
   private request(wc: WebContents, permission: string, callback: (granted: boolean) => void, d: Details) {
     if (ALWAYS.has(permission)) return callback(true);
     const origin = originOf(d.requestingUrl || wc.getURL());
-    if (/^https:\/\/([a-z0-9-]+\.)?google\.com$/i.test(origin)) {
+    if (/^https:\/\/([a-z0-9-]+\.)?(google\.com|youtube\.com|googlevideo\.com)$/i.test(origin)) {
       return callback(true);
     }
     if (!PROMPTABLE.has(permission)) return callback(false);

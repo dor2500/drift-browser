@@ -288,6 +288,15 @@ export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
     ai: { ...(base.ai ?? DEFAULT_AI_SETTINGS), ...(patch.ai ?? {}) },
     clipboardSync: { ...(base.clipboardSync ?? DEFAULT_CLIPBOARD_SYNC), ...(patch.clipboardSync ?? {}) },
   };
+  if (patch.theme && patch.theme !== base.theme && patch.verticalTabs === undefined) {
+    if (patch.theme === 'chrome' || patch.theme === 'firefox' || patch.theme === 'brave') {
+      next.verticalTabs = false;
+      if (patch.spaceColors === undefined) next.spaceColors = false;
+    } else if (patch.theme === 'zen') {
+      next.verticalTabs = true;
+      if (patch.spaceColors === undefined) next.spaceColors = true;
+    }
+  }
   if (patch.forceDark !== undefined && patch.darkMode?.enabled === undefined) {
     next.darkMode.enabled = patch.forceDark;
   }

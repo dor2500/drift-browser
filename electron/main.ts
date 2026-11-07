@@ -26,10 +26,10 @@ app.userAgentFallback =
 nativeTheme.themeSource = 'dark';
 {
   const early = loadSettings();
-  if (early.forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark,PlatformHEVCDecoderSupport,CanvasOopRasterization');
-  else app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport,CanvasOopRasterization');
+  if (early.forceDark) app.commandLine.appendSwitch('enable-features', 'WebContentsForceDark');
   if (!early.smoothScrolling) app.commandLine.appendSwitch('disable-smooth-scrolling');
   if (!early.hardwareAcceleration) app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 }
 
 let win: BrowserWindow | undefined;

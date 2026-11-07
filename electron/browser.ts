@@ -1368,6 +1368,7 @@ export class Browser {
       { label: t.muted ? this.i18n.t('menu.unmute') : this.i18n.t('menu.mute'), click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
       { label: 'השתקת כרטיסיות אחרות · Mute other tabs', click: () => this.run({ type: 'tab:muteOthers', id }) },
       { label: this.i18n.t('menu.reload'), click: () => this.run({ type: 'tab:reload', id }) },
+      { label: 'כרטיסייה חדשה מימין · New tab to the right', click: () => this.createTab({ afterId: id }) },
       { label: 'שכפול כרטיסייה · Duplicate tab', click: () => this.createTab({ url: t.url, afterId: id }) },
       { label: 'יצירת קוד QR עבור כרטיסייה זו · Create QR code', click: () => this.run({ type: 'page:qr', url: t.url }) },
       { label: this.i18n.t('menu.copyLink'), click: () => this.clipboardMonitor.captureNow(t.url) },
@@ -1401,6 +1402,8 @@ export class Browser {
       { label: 'סגירת כרטיסיות מימין · Close tabs to the right', click: () => this.run({ type: 'tab:closeRight', id }) },
       { label: 'סגירת כרטיסיות אחרות · Close other tabs', click: () => this.run({ type: 'tab:closeOthers', id }) },
       { label: this.i18n.t('menu.closeTab'), accelerator: 'Ctrl+W', click: () => this.run({ type: 'tab:close', id }) },
+      { type: 'separator' },
+      { label: this.i18n.t('menu.reopen'), accelerator: 'Ctrl+Shift+T', enabled: this.closed.length > 0, click: () => this.run({ type: 'tab:reopen' }) },
     ];
     Menu.buildFromTemplate(items).popup({ window: this.win });
   }

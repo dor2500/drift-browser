@@ -35,6 +35,23 @@ export function siteOf(host: string): string {
   return SECOND_LEVEL.test(lastTwo) ? parts.slice(-3).join('.') : lastTwo;
 }
 
+export function isGoogleFamily(site: string): boolean {
+  return (
+    site === 'youtube.com' ||
+    site === 'googlevideo.com' ||
+    site === 'ytimg.com' ||
+    site === 'google.com' ||
+    site === 'gstatic.com' ||
+    site === 'googleapis.com' ||
+    site === 'googleusercontent.com'
+  );
+}
+
+export function isSameSiteOrFamily(siteA: string, siteB: string): boolean {
+  if (siteA === siteB) return true;
+  return isGoogleFamily(siteA) && isGoogleFamily(siteB);
+}
+
 const hostOf = (url: string) => {
   try {
     return new URL(url).hostname;
@@ -127,7 +144,7 @@ export class RequestHub {
       }
       if (p.block3pCookies && details.resourceType !== 'mainFrame') {
         const top = this.topSite(details.webContentsId, details.url, false);
-        if (top && siteOf(host) !== top) for (const k of Object.keys(headers)) if (k.toLowerCase() === 'cookie') delete headers[k];
+        if (top && !isSameSiteOrFamily(siteOf(host), top)) for (const k of Object.keys(headers)) if (k.toLowerCase() === 'cookie') delete headers[k];
       }
       cb({ requestHeaders: headers });
     });
@@ -140,7 +157,7 @@ export class RequestHub {
         const norm = () => Object.fromEntries(Object.entries(headers).map(([k, v]) => [k, Array.isArray(v) ? v : [v]]));
         if (!p.block3pCookies || main) return norm();
         const top = this.topSite(details.webContentsId, details.url, false);
-        if (!top || siteOf(hostOf(details.url)) === top) return norm();
+        if (!top || isSameSiteOrFamily(siteOf(hostOf(details.url)), top)) return norm();
         const out: Record<string, string[]> = {};
         for (const [k, v] of Object.entries(headers)) if (k.toLowerCase() !== 'set-cookie') out[k] = Array.isArray(v) ? v : [v];
         return out;

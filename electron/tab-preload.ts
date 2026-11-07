@@ -28,7 +28,6 @@ window.addEventListener(
 
 const YT_HIDE = [
   '#masthead-ad',
-  '#player-ads',
   'ytd-ad-slot-renderer',
   'ytd-in-feed-ad-layout-renderer',
   'ytd-banner-promo-renderer',
@@ -50,23 +49,38 @@ function startYouTubeAdSkipper() {
   if (document.documentElement) attach();
   else document.addEventListener('DOMContentLoaded', attach, { once: true });
 
-  // While a video ad plays: mute it, jump to its end and press Skip. Restore
-  // the sound afterwards so the real video isn't left muted.
+  // While a video ad plays: mute it, safely accelerate it and press Skip.
+  // Never seek past actual content or seek long videos (that would end real videos!).
   let mutedByUs = false;
   setInterval(() => {
     const player = document.querySelector('#movie_player, .html5-video-player');
     const video = player?.querySelector('video');
     if (!player || !video) return;
-    if (player.classList.contains('ad-showing')) {
-      if (!video.muted) {
-        video.muted = true;
-        mutedByUs = true;
+
+    const isAd = player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting');
+    if (isAd) {
+      // Only speed up or seek if this is genuinely a short ad clip (< 180s)
+      if (Number.isFinite(video.duration) && video.duration > 0 && video.duration < 180) {
+        if (!video.muted) {
+          video.muted = true;
+          mutedByUs = true;
+        }
+        video.playbackRate = 16;
+        if (video.currentTime < video.duration - 0.2) {
+          video.currentTime = video.duration - 0.1;
+        }
       }
-      if (Number.isFinite(video.duration) && video.duration > 0) video.currentTime = video.duration;
-      document.querySelectorAll<HTMLElement>(YT_SKIP_BUTTONS).forEach((b) => b.click());
-    } else if (mutedByUs) {
-      video.muted = false;
-      mutedByUs = false;
+      document.querySelectorAll<HTMLElement>(YT_SKIP_BUTTONS).forEach((b) => {
+        try { b.click(); } catch {}
+      });
+    } else {
+      if (video.playbackRate > 2) {
+        video.playbackRate = 1;
+      }
+      if (mutedByUs) {
+        video.muted = false;
+        mutedByUs = false;
+      }
     }
   }, 250);
 }
