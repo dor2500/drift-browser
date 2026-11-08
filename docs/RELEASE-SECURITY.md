@@ -23,7 +23,27 @@ and continue; any release built by the current workflow will have it.
 This defends against a tampered *individual asset* (e.g. a replaced
 `browser_download_url` target). It is not a substitute for code signing, because
 the manifest itself is served from the same release — a full release compromise
-could replace both. Code signing (below) closes that gap.
+could replace both. Build provenance (below) and code signing close that gap.
+
+## Build provenance attestation (always on)
+
+The `checksums` job also emits a signed [build-provenance attestation]
+(https://docs.github.com/actions/security-guides/using-artifact-attestations)
+for every release asset, via `actions/attest-build-provenance`. This is signed
+by GitHub's OIDC identity (Sigstore), so it needs **no certificate of your own**
+and proves an artifact was built by this repository's release workflow and not
+altered afterwards. Unlike SHA256SUMS, the attestation is stored by GitHub
+independently of the release, so a release-asset swap cannot forge it.
+
+Verify any download:
+
+```sh
+gh attestation verify ./Drift-Setup-0.9.6.exe --repo dor2500/drift-browser
+```
+
+This is the closest thing to publisher verification available without a paid
+code-signing certificate; the signing below adds OS-level trust (Gatekeeper /
+SmartScreen) on top.
 
 ## Code signing & notarization (optional — needs your certificates)
 
