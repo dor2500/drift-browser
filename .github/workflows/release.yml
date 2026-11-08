@@ -148,6 +148,10 @@ jobs:
   checksums:
     needs: [build, android]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # upload SHA256SUMS to the release
+      id-token: write # sign the build-provenance attestation
+      attestations: write # record the attestation
     steps:
       - name: Generate and upload SHA256SUMS
         env:
@@ -160,6 +164,15 @@ jobs:
           cd ..
           cat SHA256SUMS
           gh release upload "$TAG" SHA256SUMS -R "$GITHUB_REPOSITORY" --clobber
+      # Cryptographic build-provenance for every release asset, signed by GitHub's
+      # OIDC identity. Users can verify a download is a genuine, unmodified build
+      # from this repo's workflow with:
+      #   gh attestation verify <file> --repo dor2500/drift-browser
+      # This gives publisher/build authenticity without a paid code-signing cert.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: assets/*
 
   publish:
     needs: [checksums]
