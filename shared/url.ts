@@ -17,6 +17,7 @@ export const SETTINGS_URL = 'drift://settings';
 export const NEWTAB_URL = 'drift://newtab';
 export const STORE_URL = 'drift://store';
 export const SHORTCUTS_URL = 'drift://shortcuts';
+export const PERFORMANCE_URL = 'drift://performance';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -24,6 +25,7 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(NEWTAB_URL)) return 'New Tab';
   if (url.startsWith(STORE_URL)) return 'Drift Store';
   if (url.startsWith(SHORTCUTS_URL)) return 'קיצורי מקלדת · Shortcuts';
+  if (url.startsWith(PERFORMANCE_URL)) return 'ביצועים וזיכרון · Performance';
   return 'Drift';
 };
 

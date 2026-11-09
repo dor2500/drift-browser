@@ -88,6 +88,15 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
         icon: 'sliders',
       },
       {
+        id: 'performance',
+        category: 'tools',
+        titleHe: 'לוח ביצועים וזיכרון (Performance Dashboard)',
+        descHe: 'ניטור צריכת RAM של כרטיסיות, שחרור זיכרון וניהול חוסך הסוללה',
+        keys: ['Shift', 'Esc / drift://perf'],
+        icon: 'bolt',
+        action: () => cmd({ type: 'performance:open' }),
+      },
+      {
         id: 'settings',
         category: 'tools',
         titleHe: 'הגדרות הדפדפן (Settings)',

@@ -303,6 +303,9 @@ export type Command =
   | { type: 'settings:reset' }
   | { type: 'store:open' }
   | { type: 'shortcuts:open' }
+  | { type: 'performance:open' }
+  | { type: 'tab:sleep'; id?: string }
+  | { type: 'tab:wake'; id: string }
   | { type: 'privacy:newIdentity' }
   | {
       type: 'privacy:clearData';
