@@ -149,6 +149,9 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
 
       <MediaBar state={state} />
       <div className="sidebar-bottom">
+        <button className="icon-btn" title="חנות תוספים וערכות · Drift Store (Ctrl+Shift+E)" onClick={() => cmd({ type: 'store:open' })}>
+          <Icon name="puzzle" size={15} />
+        </button>
         <button className="icon-btn settings-btn" title={t('settings.open')} onClick={() => cmd({ type: 'settings:open' })}>
           <Icon name="gear" size={15} />
           {hasUpdateBadge(state.updates, state.settings.updates.engineAlerts) && <span className="update-dot" />}

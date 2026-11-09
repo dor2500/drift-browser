@@ -63,6 +63,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
     const id = active?.id;
     const host = active && /^https?:/.test(active.url) ? new URL(active.url).hostname.replace(/^www\./, '').toLowerCase() : '';
     const list: Action[] = [
+      { id: 'store', label: 'פתח את חנות התוספים והערכות · Open Drift Store (Ctrl+Shift+E)', en: 'open drift store extensions add-ons themes', run: () => cmd({ type: 'store:open' }) },
       { id: 'ai-panel', label: `${t('ai.title')} (Ctrl+Shift+A)`, en: 'local ai assistant ollama panel', run: () => aiActions.togglePanel() },
       { id: 'ai-sum', label: `${t('ai.summarize')} (Ollama)`, en: 'summarize page with local ai ollama', run: () => aiActions.summarizeCurrentPage() },
       { id: 'ai-exp', label: `${t('ai.explain')} (Ollama)`, en: 'explain page key points with local ai ollama', run: () => aiActions.explainCurrentPage() },

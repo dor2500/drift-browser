@@ -137,6 +137,9 @@ export function NewTabPage({ state }: { state: BrowserState }) {
     <div className={`ntp ntp-${style}`}>
       {style === 'chrome' && (
         <header className="ntp-chrome-header">
+          <button className="ntp-chrome-link btn-link" onClick={() => cmd({ type: 'store:open' })}>
+            חנות התוספים (Drift Store)
+          </button>
           <button className="ntp-chrome-link btn-link" onClick={() => go('https://mail.google.com')}>
             Gmail
           </button>

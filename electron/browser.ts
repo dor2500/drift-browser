@@ -42,7 +42,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -318,6 +318,12 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(SETTINGS_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: SETTINGS_URL });
+  }
+
+  private openStore() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(STORE_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: STORE_URL });
   }
 
   // ---------------------------------------------------------------- model
@@ -652,6 +658,9 @@ export class Browser {
         break;
       case 'settings:open':
         this.openSettings();
+        break;
+      case 'store:open':
+        this.openStore();
         break;
       case 'settings:reset':
         this.setSettings({ ...DEFAULT_SETTINGS, onboarded: true });
@@ -1352,6 +1361,7 @@ export class Browser {
       return run({ type: 'settings:set', patch: { showBookmarksBar: next } });
     }
     if (!ctrl && !i.alt && i.shift && k === 'escape') return run({ type: 'win:taskManager' });
+    if (ctrl && i.shift && !i.alt && k === 'e') return run({ type: 'store:open' });
     if (ctrl && i.shift && !i.alt && k === 'delete') return run({ type: 'settings:open' });
     if (!ctrl && !i.alt && !i.shift && k === 'f7') {
       return run({ type: 'settings:set', patch: { caretBrowsing: !this.settings.caretBrowsing } });
@@ -2109,6 +2119,7 @@ export class Browser {
         ],
       },
       { type: 'separator' },
+      { label: 'חנות תוספים וערכות · Drift Store', accelerator: 'Ctrl+Shift+E', click: () => this.openStore() },
       { label: this.i18n.t('menu.settings'), accelerator: 'Ctrl+,', click: () => this.openSettings() },
       { type: 'separator' },
       { label: this.i18n.t('menu.exit'), click: () => this.win.close() },

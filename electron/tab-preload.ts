@@ -3,7 +3,107 @@
 //  1. Alt+click on a link opens a Glance instead of downloading it.
 //  2. On YouTube, a video-ad skipper backs up the ad-block filters.
 //  3. Ensures Google Chrome vendor & runtime identity for web applications.
+//  4. Drift Shield Pro: Anti-fingerprinting cloaking (Canvas, WebGL, AudioContext, Battery).
+//  5. IDN Homograph phishing & attack detector.
 import { ipcRenderer } from 'electron';
+
+// ------------------------------------------------------------------ Anti-Fingerprint & Security Shield
+function initAntiFingerprintShield() {
+  try {
+    // 1. Canvas protection: subtly perturb least significant pixel bits to defeat fingerprint hash databases
+    if (typeof HTMLCanvasElement !== 'undefined') {
+      const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+      HTMLCanvasElement.prototype.toDataURL = function (type?: string, ...args: unknown[]) {
+        try {
+          const ctx = this.getContext('2d');
+          if (ctx && this.width > 0 && this.height > 0 && this.width < 500 && this.height < 500) {
+            const imgData = ctx.getImageData(0, 0, Math.min(this.width, 8), Math.min(this.height, 8));
+            if (imgData.data.length >= 4) {
+              imgData.data[0] = imgData.data[0] ^ 1;
+              ctx.putImageData(imgData, 0, 0);
+            }
+          }
+        } catch {}
+        return (origToDataURL as (...a: unknown[]) => string).apply(this, [type, ...args]);
+      };
+
+      const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+      CanvasRenderingContext2D.prototype.getImageData = function (sx: number, sy: number, sw: number, sh: number, ...rest: unknown[]) {
+        const res = (origGetImageData as (...a: unknown[]) => ImageData).apply(this, [sx, sy, sw, sh, ...rest]);
+        try {
+          if (res && res.data && res.data.length > 4) {
+            res.data[0] = res.data[0] ^ 1;
+          }
+        } catch {}
+        return res;
+      };
+    }
+
+    // 2. WebGL unmasked vendor/renderer spoofing (standardize across devices)
+    const spoofWebGL = (proto: typeof WebGLRenderingContext.prototype | typeof WebGL2RenderingContext.prototype) => {
+      if (!proto) return;
+      const origGetParameter = proto.getParameter;
+      proto.getParameter = function (param: number) {
+        if (param === 37445 /* UNMASKED_VENDOR_WEBGL */) return 'Google Inc. (NVIDIA)';
+        if (param === 37446 /* UNMASKED_RENDERER_WEBGL */) return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0)';
+        return origGetParameter.apply(this, [param]);
+      };
+    };
+    if (typeof WebGLRenderingContext !== 'undefined') spoofWebGL(WebGLRenderingContext.prototype);
+    if (typeof WebGL2RenderingContext !== 'undefined') spoofWebGL(WebGL2RenderingContext.prototype);
+
+    // 3. AudioContext frequency spoofing
+    if (typeof AnalyserNode !== 'undefined') {
+      const origGetFloatFreq = AnalyserNode.prototype.getFloatFrequencyData;
+      AnalyserNode.prototype.getFloatFrequencyData = function (array: Float32Array) {
+        (origGetFloatFreq as (...a: unknown[]) => void).apply(this, [array]);
+        if (array.length > 0) array[0] += 0.0001;
+      };
+    }
+
+    // 4. Battery API cloaking
+    if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+      (navigator as unknown as { getBattery: () => Promise<unknown> }).getBattery = () =>
+        Promise.resolve({
+          charging: true,
+          chargingTime: 0,
+          dischargingTime: Infinity,
+          level: 1.0,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        });
+    }
+  } catch {}
+}
+
+function initHomographProtection() {
+  try {
+    const host = location.hostname;
+    if (!host) return;
+    const hasCyrillic = /[\u0400-\u04FF]/.test(host);
+    const hasLatin = /[a-zA-Z]/.test(host);
+    if (hasCyrillic && hasLatin) {
+      const showWarning = () => {
+        const banner = document.createElement('div');
+        banner.style.cssText =
+          'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#b91c1c;color:#fff;padding:10px 18px;font-family:sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 4px 14px rgba(0,0,0,0.5);';
+        banner.innerHTML =
+          '<span>⚠️ אזהרת אבטחה של Drift: זוהה אתר בעל תווים מעורבים (IDN Homograph) - חשד לאתר מתחזה או פישינג!</span>';
+        const close = document.createElement('button');
+        close.textContent = '✕';
+        close.style.cssText = 'background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 6px;';
+        close.onclick = () => banner.remove();
+        banner.appendChild(close);
+        (document.body || document.documentElement).appendChild(banner);
+      };
+      if (document.body) showWarning();
+      else document.addEventListener('DOMContentLoaded', showWarning, { once: true });
+    }
+  } catch {}
+}
+
+initAntiFingerprintShield();
+initHomographProtection();
 
 try {
   if (typeof Object.defineProperty === 'function') {

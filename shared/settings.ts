@@ -43,7 +43,55 @@ export interface PrivacySettings {
   dnsOverHttps: DnsOverHttpsMode;
   /** Block unsolicited pop-ups and redirects. */
   blockPopups: boolean;
+  /** Advanced anti-fingerprinting shield (Canvas, WebGL, AudioContext, Battery cloaking). */
+  antiFingerprint: boolean;
 }
+
+export interface StoreCustomScript {
+  id: string;
+  name: string;
+  match: string;
+  code: string;
+  enabled: boolean;
+}
+
+export interface StoreSettings {
+  /** IDs of installed extensions/mods. */
+  installed: string[];
+  /** IDs of disabled extensions/mods. */
+  disabled: string[];
+  /** Active custom theme ID installed from Drift Store. */
+  activeTheme?: string;
+  /** Custom user scripts / mods. */
+  customScripts: StoreCustomScript[];
+  /** Anti-fingerprint shield active status. */
+  antiFingerprint: boolean;
+  /** Built-in Drift Zen Aura ambient sound generator. */
+  ambientSound: {
+    playing: boolean;
+    sound: 'rain' | 'ocean' | 'drone' | 'whitenoise' | 'binaural';
+    volume: number;
+  };
+  /** Fast persistent scratchpad notes. */
+  scratchpadNotes: string;
+}
+
+export const DEFAULT_STORE_SETTINGS: StoreSettings = {
+  installed: [
+    'drift-shield-pro',
+    'drift-zen-aura',
+    'drift-reader-mode',
+    'drift-scratchpad',
+    'drift-security-auditor',
+    'drift-video-booster',
+  ],
+  disabled: [],
+  activeTheme: '',
+  customScripts: [],
+  antiFingerprint: true,
+  ambientSound: { playing: false, sound: 'rain', volume: 0.5 },
+  scratchpadNotes: '',
+};
 
 export interface DarkModeSettings {
   /** Master toggle for the live Advanced Dark Mode Engine. */
@@ -170,14 +218,16 @@ export interface Settings {
   caretBrowsing: boolean;
   privacy: PrivacySettings;
   updates: UpdateSettings;
+  store: StoreSettings;
 }
 
-export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync'>> & {
+export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync' | 'store'>> & {
   updates?: Partial<UpdateSettings>;
   privacy?: Partial<PrivacySettings>;
   darkMode?: Partial<DarkModeSettings>;
   ai?: Partial<AiSettings>;
   clipboardSync?: Partial<ClipboardSyncSettings>;
+  store?: Partial<StoreSettings>;
 };
 
 export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string; home: string }> = {
@@ -269,6 +319,7 @@ export const DEFAULT_SETTINGS: Settings = {
     safeBrowsing: 'standard',
     dnsOverHttps: 'auto',
     blockPopups: true,
+    antiFingerprint: true,
   },
   updates: {
     source: 'github',
@@ -279,6 +330,7 @@ export const DEFAULT_SETTINGS: Settings = {
     autoCheck: true,
     engineAlerts: true,
   },
+  store: { ...DEFAULT_STORE_SETTINGS },
 };
 
 export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
@@ -290,6 +342,7 @@ export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
     darkMode: { ...(base.darkMode ?? DEFAULT_DARK_MODE), ...(patch.darkMode ?? {}) },
     ai: { ...(base.ai ?? DEFAULT_AI_SETTINGS), ...(patch.ai ?? {}) },
     clipboardSync: { ...(base.clipboardSync ?? DEFAULT_CLIPBOARD_SYNC), ...(patch.clipboardSync ?? {}) },
+    store: { ...(base.store ?? DEFAULT_STORE_SETTINGS), ...(patch.store ?? {}) },
   };
   if (patch.theme && patch.theme !== base.theme && patch.verticalTabs === undefined) {
     if (patch.theme === 'chrome' || patch.theme === 'firefox' || patch.theme === 'brave') {

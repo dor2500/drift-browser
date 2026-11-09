@@ -6,6 +6,7 @@ import { FindBar } from './FindBar';
 import { Glance } from './Glance';
 import { NewTabPage } from './NewTabPage';
 import { SettingsPage } from './SettingsPage';
+import { StorePage } from './StorePage';
 import { t } from '../i18n';
 
 interface Props {
@@ -111,7 +112,13 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                   onMouseDown={() => split && id !== active && cmd({ type: 'tab:activate', id })}
                 >
                   {internal.has(id) ? (
-                    state.tabs.find((t) => t.id === id)?.url.startsWith('drift://newtab') ? <NewTabPage state={state} /> : <SettingsPage state={state} />
+                    state.tabs.find((t) => t.id === id)?.url.startsWith('drift://newtab') ? (
+                      <NewTabPage state={state} />
+                    ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://store') ? (
+                      <StorePage state={state} />
+                    ) : (
+                      <SettingsPage state={state} />
+                    )
                   ) : (
                     snap && <img className="pane-snapshot" src={snap.dataUrl} alt="" />
                   )}

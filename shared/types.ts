@@ -301,6 +301,7 @@ export type Command =
   | { type: 'settings:set'; patch: SettingsPatch }
   | { type: 'settings:open' }
   | { type: 'settings:reset' }
+  | { type: 'store:open' }
   | { type: 'privacy:newIdentity' }
   | {
       type: 'privacy:clearData';

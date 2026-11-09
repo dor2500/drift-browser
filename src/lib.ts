@@ -32,7 +32,13 @@ export {
 
 /** Title to show for a tab; internal pages (drift://settings) follow the UI language. */
 export const tabTitle = (tab: { url: string; title: string }, settingsTitle: string, newTabTitle = 'New Tab') =>
-  tab.url.startsWith('drift://settings') ? settingsTitle : tab.url.startsWith('drift://newtab') ? newTabTitle : tab.title || tab.url;
+  tab.url.startsWith('drift://settings')
+    ? settingsTitle
+    : tab.url.startsWith('drift://store')
+      ? 'חנות תוספים וערכות · Drift Store'
+      : tab.url.startsWith('drift://newtab')
+        ? newTabTitle
+        : tab.title || tab.url;
 
 export const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
 

@@ -24,6 +24,12 @@ export const COLOR_THEMES: ColorTheme[] = [
   { id: 'solarized', name: 'Solarized Dark', accent: '#2aa198', bg: '#00212b', surface: '#002b36' },
   { id: 'mono', name: 'Mono', accent: '#d4d4d4', bg: '#0a0a0a', surface: '#161616' },
   { id: 'amoled', name: 'AMOLED Black', accent: '#8aa4ff', bg: '#000000', surface: '#050505' },
+  { id: 'cyberpunk', name: 'Cyberpunk Neon (Drift Store)', accent: '#00f0ff', bg: '#080812', surface: '#111126' },
+  { id: 'emerald', name: 'Emerald Matrix (Drift Store)', accent: '#00ff88', bg: '#05140b', surface: '#0b2415' },
+  { id: 'synthwave', name: 'Synthwave 1984 (Drift Store)', accent: '#ff2a85', bg: '#140c24', surface: '#21153b' },
+  { id: 'aurora', name: 'Aurora Borealis (Drift Store)', accent: '#4ef2bb', bg: '#07161b', surface: '#0e2329' },
+  { id: 'obsidian', name: 'Solarized Obsidian (Drift Store)', accent: '#f59e0b', bg: '#0e0e11', surface: '#18181f' },
+  { id: 'lavender', name: 'Lavender Dream (Drift Store)', accent: '#c084fc', bg: '#120f1c', surface: '#1c182c' },
 ];
 
 export const colorTheme = (id: string) => COLOR_THEMES.find((t) => t.id === id);

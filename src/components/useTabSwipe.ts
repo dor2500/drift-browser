@@ -113,3 +113,4 @@ export function useTabSwipe({ enabled = true, onClose, threshold = 65 }: UseTabS
     closing,
   };
 }
+

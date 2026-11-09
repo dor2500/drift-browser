@@ -680,6 +680,22 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label="חסימת חלונות קופצים והפניות אוטומטיות (Block Pop-ups and Redirects)"
             hint="מונע מאתרים לפתוח חלונות קופצים ללא פעולת משתמש"
           />
+          <Toggle
+            checked={s.privacy.antiFingerprint}
+            onChange={(v) => cmd({ type: 'settings:set', patch: { privacy: { antiFingerprint: v } } })}
+            label="הגנה מקסימאלית מפני טביעות אצבע (Drift Anti-Fingerprinting Shield)"
+            hint="ממסך קריאות Canvas, WebGL, AudioContext ו-Battery API ומגן מפני מעקב חוצה-אתרים"
+          />
+
+          <div className="site-row" style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>חנות התוספים וההרחבות של Drift (Drift Store)</strong>
+              <div className="field-label">גלו תוספים מקוריים, כלי אבטחה, צלילי רקע וערכות נושא מעוצבות</div>
+            </div>
+            <button className="btn primary" onClick={() => cmd({ type: 'store:open' })}>
+              <Icon name="puzzle" size={15} /> פתח את Drift Store
+            </button>
+          </div>
 
           <Toggle
             checked={s.adblock}

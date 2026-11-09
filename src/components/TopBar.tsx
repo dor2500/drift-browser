@@ -183,15 +183,13 @@ export function TopBar({ state, onOpenBar }: Props) {
             <Icon name="sidebar" size={16} />
           </button>
         )}
-        {state.settings.theme === 'chrome' && (
-          <button
-            className="tb-btn"
-            title="תוספים · Extensions"
-            onClick={() => cmd({ type: 'settings:open' })}
-          >
-            <Icon name="puzzle" size={16} />
-          </button>
-        )}
+        <button
+          className="tb-btn"
+          title="חנות תוספים והרחבות · Drift Store (Ctrl+Shift+E)"
+          onClick={() => cmd({ type: 'store:open' })}
+        >
+          <Icon name="puzzle" size={16} />
+        </button>
         {state.settings.theme === 'chrome' && (
           <button
             className="tb-btn chrome-profile-btn"

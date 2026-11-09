@@ -15,8 +15,15 @@ export const isSafeRemoteUrl = (url: string): boolean => SAFE_REMOTE_SCHEME.test
 /** Pages drawn by the shell itself instead of a web view. */
 export const SETTINGS_URL = 'drift://settings';
 export const NEWTAB_URL = 'drift://newtab';
+export const STORE_URL = 'drift://store';
+
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
-export const internalTitle = (url: string) => (url.startsWith(SETTINGS_URL) ? 'Settings' : url.startsWith(NEWTAB_URL) ? 'New Tab' : 'Drift');
+export const internalTitle = (url: string) => {
+  if (url.startsWith(SETTINGS_URL)) return 'Settings';
+  if (url.startsWith(NEWTAB_URL)) return 'New Tab';
+  if (url.startsWith(STORE_URL)) return 'Drift Store';
+  return 'Drift';
+};
 
 const SEARCH_HOSTS = /(^|\.)(google\.[a-z.]+|duckduckgo\.com|bing\.com|search\.brave\.com|startpage\.com)$/i;
 const HOST_LIKE = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i;

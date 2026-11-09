@@ -6,6 +6,7 @@ import {
   DEFAULT_CLIPBOARD_SYNC,
   DEFAULT_DARK_MODE,
   DEFAULT_SETTINGS,
+  DEFAULT_STORE_SETTINGS,
   SEARCH_ENGINES,
   mergeSettings,
   type Settings,
@@ -113,6 +114,7 @@ function sanitize(s: Settings): Settings {
       safeBrowsing: ['enhanced', 'standard', 'off'].includes(s.privacy?.safeBrowsing) ? s.privacy.safeBrowsing : d.privacy.safeBrowsing,
       dnsOverHttps: ['auto', 'cloudflare', 'google', 'quad9', 'off'].includes(s.privacy?.dnsOverHttps) ? s.privacy.dnsOverHttps : d.privacy.dnsOverHttps,
       blockPopups: typeof s.privacy?.blockPopups === 'boolean' ? s.privacy.blockPopups : d.privacy.blockPopups,
+      antiFingerprint: typeof s.privacy?.antiFingerprint === 'boolean' ? s.privacy.antiFingerprint : d.privacy.antiFingerprint,
     },
     updates: {
       source: ['github', 'custom', 'off'].includes(u?.source) ? u.source : d.updates.source,
@@ -121,6 +123,29 @@ function sanitize(s: Settings): Settings {
       channel: u?.channel === 'beta' ? 'beta' : 'stable',
       autoCheck: typeof u?.autoCheck === 'boolean' ? u.autoCheck : d.updates.autoCheck,
       engineAlerts: typeof u?.engineAlerts === 'boolean' ? u.engineAlerts : d.updates.engineAlerts,
+    },
+    store: {
+      installed: Array.isArray(s.store?.installed)
+        ? [...new Set(s.store.installed.filter((id) => typeof id === 'string' && id.length < 120))]
+        : [...DEFAULT_STORE_SETTINGS.installed],
+      disabled: Array.isArray(s.store?.disabled)
+        ? [...new Set(s.store.disabled.filter((id) => typeof id === 'string' && id.length < 120))]
+        : [],
+      activeTheme: typeof s.store?.activeTheme === 'string' ? s.store.activeTheme.slice(0, 60) : '',
+      customScripts: Array.isArray(s.store?.customScripts)
+        ? s.store.customScripts
+            .filter((cs) => cs && typeof cs.id === 'string' && typeof cs.code === 'string')
+            .slice(0, 50)
+        : [],
+      antiFingerprint: typeof s.store?.antiFingerprint === 'boolean' ? s.store.antiFingerprint : DEFAULT_STORE_SETTINGS.antiFingerprint,
+      ambientSound: {
+        playing: !!s.store?.ambientSound?.playing,
+        sound: ['rain', 'ocean', 'drone', 'whitenoise', 'binaural'].includes(s.store?.ambientSound?.sound as string)
+          ? s.store!.ambientSound.sound
+          : 'rain',
+        volume: clampNum(s.store?.ambientSound?.volume, 0.5, 0, 1),
+      },
+      scratchpadNotes: typeof s.store?.scratchpadNotes === 'string' ? s.store.scratchpadNotes.slice(0, 100000) : '',
     },
   };
 }
@@ -136,6 +161,7 @@ export function loadSettings(): Settings {
       darkMode: { ...DEFAULT_DARK_MODE },
       ai: { ...DEFAULT_AI_SETTINGS },
       clipboardSync: { ...DEFAULT_CLIPBOARD_SYNC },
+      store: { ...DEFAULT_STORE_SETTINGS },
     };
   }
 }

@@ -23,7 +23,9 @@ export interface RequestHooks {
 }
 
 const TRACKING_PARAMS =
-  /^(utm_[a-z_]+|fbclid|gclid|gclsrc|dclid|gbraid|wbraid|msclkid|mc_cid|mc_eid|yclid|_hsenc|_hsmi|igshid|mkt_tok|oly_anon_id|oly_enc_id|vero_id|wickedid|twclid|ttclid|li_fat_id|s_cid|_openstat|rb_clickid|epik)$/i;
+  /^(utm_[a-z_]+|fbclid|gclid|gclsrc|dclid|gbraid|wbraid|msclkid|mc_cid|mc_eid|yclid|_hsenc|_hsmi|igshid|mkt_tok|oly_anon_id|oly_enc_id|vero_id|wickedid|twclid|ttclid|li_fat_id|s_cid|s_kwcid|gad_source|irclickid|rb_clickid|epik|_openstat)$/i;
+
+const DANGEROUS_PROTOCOLS = /^(ms-msdt|disk|smb|powershell|cmd|vbs|wsf|reg|bat):/i;
 
 /** Two-part public suffixes common enough to matter (example.co.il, example.co.uk …). */
 const SECOND_LEVEL = /^(co|com|org|net|gov|ac|edu|ne|or|go|gob|muni)\.[a-z]{2}$/i;
@@ -104,6 +106,9 @@ export class RequestHub {
     const { ses, hooks } = this;
 
     ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, cb) => {
+      if (DANGEROUS_PROTOCOLS.test(details.url)) {
+        return cb({ cancel: true });
+      }
       const p = hooks.privacy();
       const main = details.resourceType === 'mainFrame';
       if (main && p.httpsOnly && details.url.startsWith('http://')) {
