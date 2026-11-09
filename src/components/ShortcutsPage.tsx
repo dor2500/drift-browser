@@ -132,6 +132,15 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
         action: () => cmd({ type: 'split:toggle' }),
       },
       {
+        id: 'reader-mode',
+        category: 'nav',
+        titleHe: 'מצב קריאה מתקדם (Reader Mode Pro)',
+        descHe: 'ניקוי פרסומות, שינוי גופן וגודל, רקע ספיה והקראה קולית חיה (TTS)',
+        keys: ['F9', 'Ctrl+Alt+R'],
+        icon: 'book',
+        action: () => cmd({ type: 'page:readingMode' }),
+      },
+      {
         id: 'switch-space',
         category: 'split',
         titleHe: 'מעבר בין מרחבי עבודה (Spaces)',
@@ -335,3 +344,4 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
     </div>
   );
 }
+

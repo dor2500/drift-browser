@@ -1395,6 +1395,7 @@ export class Browser {
     if (ctrl && i.alt && k === 'arrowright') return run({ type: 'space:cycle', dir: 1 });
     if (ctrl && i.alt && k === 'arrowleft') return run({ type: 'space:cycle', dir: -1 });
     if (ctrl && i.alt && k === 'v') return run({ type: 'split:toggle' });
+    if ((ctrl && i.alt && k === 'r') || (!ctrl && !i.alt && !i.shift && k === 'f9')) return run({ type: 'page:readingMode' });
     if (ctrl && !i.alt && !i.shift && k === 'f') return this.ui({ type: 'find' }), true;
     if (ctrl && !i.alt && (k === '=' || k === '+')) return run({ type: 'zoom', dir: 1 });
     if (ctrl && !i.alt && (k === '-' || k === '_')) return run({ type: 'zoom', dir: -1 });
@@ -2287,27 +2288,211 @@ export class Browser {
       .executeJavaScript(
         `(() => {
           const existing = document.getElementById('__drift_reader_overlay');
-          if (existing) { existing.remove(); return; }
-          const article = document.querySelector('article, main, [role="main"]') || document.body;
-          const title = document.title;
-          const text = article.innerText;
+          if (existing) {
+            if (window.__drift_tts_utterance) window.speechSynthesis.cancel();
+            existing.remove();
+            return;
+          }
+
+          const article = document.querySelector('article, [role="main"], main, .post-content, .article-content, .entry-content') || document.body;
+          const title = document.querySelector('h1')?.innerText?.trim() || document.title;
+          const rawText = article.innerText || '';
+          const wordCount = rawText.trim().split(/\\s+/).filter(Boolean).length;
+          const readTimeMin = Math.max(1, Math.round(wordCount / 200));
+
+          // Extract readable blocks (paragraphs, subheadings, blockquotes, images)
+          const elements = Array.from(article.querySelectorAll('h2, h3, h4, p, blockquote, ul, ol, img'))
+            .filter(el => {
+              if (el.closest('nav, footer, header, aside, .comments, #comments, .share-buttons, .ads')) return false;
+              if (el.tagName === 'IMG') {
+                return (el.naturalWidth > 180 || el.width > 180) && el.src && !el.src.includes('avatar');
+              }
+              const t = el.innerText?.trim();
+              return t && t.length > 15;
+            });
+
+          // Overlay container
           const overlay = document.createElement('div');
           overlay.id = '__drift_reader_overlay';
-          overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#16181e;color:#e8eaed;overflow-y:auto;padding:48px 24px;font:18px/1.75 system-ui,sans-serif;';
-          const inner = document.createElement('div');
-          inner.style.cssText = 'max-width:720px;margin:0 auto;';
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#161820;color:#e2e8f0;overflow-y:auto;padding:0;font-family:system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.8;transition:background 0.2s,color 0.2s;';
+
+          // Reading progress bar
+          const progressBar = document.createElement('div');
+          progressBar.style.cssText = 'position:fixed;top:0;left:0;height:3px;background:#8aa4ff;width:0%;z-index:2147483648;transition:width 0.1s;';
+          overlay.appendChild(progressBar);
+
+          overlay.onscroll = () => {
+            const total = overlay.scrollHeight - overlay.clientHeight;
+            const progress = total > 0 ? (overlay.scrollTop / total) * 100 : 0;
+            progressBar.style.width = progress + '%';
+          };
+
+          // Sticky Top Controls Toolbar
+          const toolbar = document.createElement('div');
+          toolbar.style.cssText = 'position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:rgba(22,24,32,0.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.1);z-index:10;flex-wrap:wrap;';
+
+          // Left tools (Exit + Stats)
+          const leftTools = document.createElement('div');
+          leftTools.style.cssText = 'display:flex;align-items:center;gap:12px;';
+
           const closeBtn = document.createElement('button');
-          closeBtn.textContent = '✕ סגירת מצב קריאה · Exit Reading Mode';
-          closeBtn.style.cssText = 'padding:8px 16px;border-radius:18px;border:0;background:#8aa4ff;color:#111;font-weight:600;cursor:pointer;margin-bottom:24px;';
-          closeBtn.onclick = () => overlay.remove();
+          closeBtn.textContent = '✕ סגור מצב קריאה (Exit)';
+          closeBtn.style.cssText = 'padding:6px 14px;border-radius:18px;border:0;background:#8aa4ff;color:#090d16;font-weight:700;font-size:13px;cursor:pointer;transition:transform 0.1s;';
+          closeBtn.onclick = () => {
+            if (window.__drift_tts_utterance) window.speechSynthesis.cancel();
+            overlay.remove();
+          };
+
+          const statsBadge = document.createElement('span');
+          statsBadge.textContent = '📖 ' + readTimeMin + ' דקות קריאה · ' + wordCount.toLocaleString() + ' מילים';
+          statsBadge.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:12px;';
+
+          leftTools.append(closeBtn, statsBadge);
+
+          // Right controls (Themes, Fonts, Size, TTS)
+          const rightTools = document.createElement('div');
+          rightTools.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+
+          // Theme Buttons
+          const themes = [
+            { id: 'dark', name: '🌙 לילה', bg: '#161820', color: '#e2e8f0', border: 'rgba(255,255,255,0.1)' },
+            { id: 'sepia', name: '📜 ספיה', bg: '#fbf0d9', color: '#433422', border: 'rgba(0,0,0,0.15)' },
+            { id: 'light', name: '☀️ יום', bg: '#ffffff', color: '#202124', border: 'rgba(0,0,0,0.12)' },
+            { id: 'amoled', name: '🖤 שחור', bg: '#000000', color: '#d1d5db', border: 'rgba(255,255,255,0.15)' },
+          ];
+
+          let currentTheme = themes[0];
+          themes.forEach(th => {
+            const btn = document.createElement('button');
+            btn.textContent = th.name;
+            btn.style.cssText = 'padding:4px 10px;border-radius:12px;border:1px solid ' + th.border + ';background:' + th.bg + ';color:' + th.color + ';font-size:12px;font-weight:600;cursor:pointer;';
+            btn.onclick = () => {
+              currentTheme = th;
+              overlay.style.background = th.bg;
+              overlay.style.color = th.color;
+              toolbar.style.background = th.bg === '#ffffff' ? 'rgba(255,255,255,0.92)' : th.bg === '#fbf0d9' ? 'rgba(251,240,217,0.92)' : 'rgba(22,24,32,0.92)';
+              toolbar.style.borderBottomColor = th.border;
+            };
+            rightTools.appendChild(btn);
+          });
+
+          // Font Family Switcher
+          const fontSelect = document.createElement('select');
+          fontSelect.style.cssText = 'padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:inherit;font-size:12px;cursor:pointer;outline:none;';
+          const fontOptions = [
+            { label: 'אלגנטי (Sans)', val: 'system-ui,-apple-system,sans-serif' },
+            { label: 'ספרותי (Serif)', val: 'Georgia,Cambria,"Times New Roman",serif' },
+            { label: 'מונוספייס (Mono)', val: 'monospace' },
+          ];
+          fontOptions.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.val;
+            opt.textContent = f.label;
+            fontSelect.appendChild(opt);
+          });
+          fontSelect.onchange = (e) => {
+            contentWrap.style.fontFamily = e.target.value;
+          };
+          rightTools.appendChild(fontSelect);
+
+          // Font Size A- / A+
+          let currentSize = 18;
+          const sizeMinus = document.createElement('button');
+          sizeMinus.textContent = 'A-';
+          sizeMinus.style.cssText = 'padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:inherit;font-size:12px;font-weight:700;cursor:pointer;';
+          sizeMinus.onclick = () => {
+            if (currentSize > 14) {
+              currentSize -= 2;
+              contentWrap.style.fontSize = currentSize + 'px';
+            }
+          };
+
+          const sizePlus = document.createElement('button');
+          sizePlus.textContent = 'A+';
+          sizePlus.style.cssText = 'padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:inherit;font-size:12px;font-weight:700;cursor:pointer;';
+          sizePlus.onclick = () => {
+            if (currentSize < 30) {
+              currentSize += 2;
+              contentWrap.style.fontSize = currentSize + 'px';
+            }
+          };
+          rightTools.append(sizeMinus, sizePlus);
+
+          // Text to Speech (TTS) Read Aloud Button
+          const ttsBtn = document.createElement('button');
+          ttsBtn.textContent = '🔊 הקרא בקול';
+          ttsBtn.style.cssText = 'padding:5px 12px;border-radius:14px;border:1px solid #8aa4ff;background:rgba(138,164,255,0.15);color:#8aa4ff;font-size:12px;font-weight:600;cursor:pointer;';
+          let isSpeaking = false;
+          ttsBtn.onclick = () => {
+            if (isSpeaking) {
+              window.speechSynthesis.cancel();
+              isSpeaking = false;
+              ttsBtn.textContent = '🔊 הקרא בקול';
+              ttsBtn.style.background = 'rgba(138,164,255,0.15)';
+            } else {
+              const fullSpeechText = title + '. ' + Array.from(contentWrap.querySelectorAll('p, h2, h3')).map(p => p.innerText).join(' ');
+              const utter = new SpeechSynthesisUtterance(fullSpeechText.slice(0, 5000));
+              window.__drift_tts_utterance = utter;
+              utter.onend = () => {
+                isSpeaking = false;
+                ttsBtn.textContent = '🔊 הקרא בקול';
+                ttsBtn.style.background = 'rgba(138,164,255,0.15)';
+              };
+              utter.onerror = () => {
+                isSpeaking = false;
+                ttsBtn.textContent = '🔊 הקרא בקול';
+                ttsBtn.style.background = 'rgba(138,164,255,0.15)';
+              };
+              window.speechSynthesis.speak(utter);
+              isSpeaking = true;
+              ttsBtn.textContent = '⏹ עצור הקראה';
+              ttsBtn.style.background = '#8aa4ff';
+              ttsBtn.style.color = '#111';
+            }
+          };
+          rightTools.appendChild(ttsBtn);
+
+          toolbar.append(leftTools, rightTools);
+          overlay.appendChild(toolbar);
+
+          // Content Wrapper
+          const contentWrap = document.createElement('div');
+          contentWrap.style.cssText = 'max-width:740px;margin:36px auto 80px;padding:0 24px;direction:auto;';
+
           const h1 = document.createElement('h1');
           h1.textContent = title;
-          h1.style.cssText = 'font-size:28px;line-height:1.3;margin-bottom:20px;color:#fff;';
-          const body = document.createElement('div');
-          body.style.cssText = 'white-space:pre-wrap;';
-          body.textContent = text;
-          inner.append(closeBtn, h1, body);
-          overlay.appendChild(inner);
+          h1.style.cssText = 'font-size:32px;font-weight:800;line-height:1.3;margin-bottom:28px;letter-spacing:-0.5px;';
+          contentWrap.appendChild(h1);
+
+          if (elements.length > 0) {
+            elements.forEach(node => {
+              if (node.tagName === 'IMG') {
+                const img = document.createElement('img');
+                img.src = node.src;
+                img.alt = node.alt || '';
+                img.style.cssText = 'max-width:100%;height:auto;border-radius:10px;margin:20px 0;display:block;box-shadow:0 6px 18px rgba(0,0,0,0.25);';
+                contentWrap.appendChild(img);
+              } else {
+                const el = document.createElement(node.tagName.toLowerCase());
+                el.innerText = node.innerText.trim();
+                if (/^h[2-4]$/i.test(node.tagName)) {
+                  el.style.cssText = 'font-size:22px;font-weight:700;margin:28px 0 12px;line-height:1.4;';
+                } else if (node.tagName === 'BLOCKQUOTE') {
+                  el.style.cssText = 'border-inline-start:4px solid #8aa4ff;padding-inline-start:16px;margin:20px 0;font-style:italic;opacity:0.9;';
+                } else {
+                  el.style.cssText = 'margin:18px 0;';
+                }
+                contentWrap.appendChild(el);
+              }
+            });
+          } else {
+            const bodyP = document.createElement('div');
+            bodyP.style.cssText = 'white-space:pre-wrap;';
+            bodyP.textContent = rawText;
+            contentWrap.appendChild(bodyP);
+          }
+
+          overlay.appendChild(contentWrap);
           document.body.appendChild(overlay);
         })()`,
         true,
