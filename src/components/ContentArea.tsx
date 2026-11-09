@@ -8,6 +8,7 @@ import { Glance } from './Glance';
 import { NewTabPage } from './NewTabPage';
 import { SettingsPage } from './SettingsPage';
 import { StorePage } from './StorePage';
+import { ShortcutsPage } from './ShortcutsPage';
 import { t } from '../i18n';
 
 interface Props {
@@ -117,6 +118,8 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                       <NewTabPage state={state} />
                     ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://store') ? (
                       <StorePage state={state} />
+                    ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://shortcuts') ? (
+                      <ShortcutsPage state={state} />
                     ) : (
                       <SettingsPage state={state} />
                     )

@@ -302,6 +302,7 @@ export type Command =
   | { type: 'settings:open' }
   | { type: 'settings:reset' }
   | { type: 'store:open' }
+  | { type: 'shortcuts:open' }
   | { type: 'privacy:newIdentity' }
   | {
       type: 'privacy:clearData';

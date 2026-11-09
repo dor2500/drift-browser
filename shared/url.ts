@@ -16,12 +16,14 @@ export const isSafeRemoteUrl = (url: string): boolean => SAFE_REMOTE_SCHEME.test
 export const SETTINGS_URL = 'drift://settings';
 export const NEWTAB_URL = 'drift://newtab';
 export const STORE_URL = 'drift://store';
+export const SHORTCUTS_URL = 'drift://shortcuts';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
   if (url.startsWith(SETTINGS_URL)) return 'Settings';
   if (url.startsWith(NEWTAB_URL)) return 'New Tab';
   if (url.startsWith(STORE_URL)) return 'Drift Store';
+  if (url.startsWith(SHORTCUTS_URL)) return 'קיצורי מקלדת · Shortcuts';
   return 'Drift';
 };
 
