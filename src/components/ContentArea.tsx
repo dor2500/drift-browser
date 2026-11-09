@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState, type PointerEvent a
 import type { BrowserState, Pane, Snapshot } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { isInternalUrl } from '../../shared/url';
+import { Icon } from './Icon';
 import { FindBar } from './FindBar';
 import { Glance } from './Glance';
 import { NewTabPage } from './NewTabPage';
@@ -126,6 +127,49 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
               </Fragment>
             );
           })}
+        </div>
+      )}
+      {split && (
+        <div className="split-pro-toolbar">
+          <div className="split-pro-pill">
+            <button
+              className={cx('split-pro-btn', Math.abs(ratio - 0.5) < 0.05 && 'active')}
+              title="יחס שווה 50:50 (Equal split)"
+              onClick={() => cmd({ type: 'split:ratio', ratio: 0.5 })}
+            >
+              50:50
+            </button>
+            <button
+              className={cx('split-pro-btn', Math.abs(ratio - 0.7) < 0.05 && 'active')}
+              title="חלון שמאל רחב 70:30 (Focus primary)"
+              onClick={() => cmd({ type: 'split:ratio', ratio: 0.7 })}
+            >
+              70:30
+            </button>
+            <button
+              className={cx('split-pro-btn', Math.abs(ratio - 0.3) < 0.05 && 'active')}
+              title="חלון ימין רחב 30:70 (Focus secondary)"
+              onClick={() => cmd({ type: 'split:ratio', ratio: 0.3 })}
+            >
+              30:70
+            </button>
+            <span className="split-pro-sep" />
+            <button
+              className="split-pro-btn"
+              title="החלף בין הכרטיסיות (Swap panes)"
+              onClick={() => cmd({ type: 'split:create', ids: [split.tabIds[1], split.tabIds[0]] })}
+            >
+              <Icon name="reload" size={12} />
+              <span>החלף צדדים</span>
+            </button>
+            <button
+              className="split-pro-btn close-btn"
+              title="סגור תצוגה מפוצלת (Close split view)"
+              onClick={() => cmd({ type: 'split:close' })}
+            >
+              <Icon name="x" size={13} />
+            </button>
+          </div>
         </div>
       )}
       {findOpen && ids.length > 0 && !internal.has(ids[0]) && <FindBar find={state.find} onClose={onCloseFind} />}

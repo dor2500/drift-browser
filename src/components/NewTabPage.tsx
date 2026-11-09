@@ -4,6 +4,7 @@ import type { BrowserState } from '../../shared/types';
 import { t, useLocale } from '../i18n';
 import { cmd } from '../lib';
 import { Icon } from './Icon';
+import { playAmbientSound, stopAmbientSound } from '../lib/ambientSound';
 
 type Site = { url: string; title: string };
 
@@ -193,6 +194,36 @@ export function NewTabPage({ state }: { state: BrowserState }) {
         )}
         {style === 'opera' && <div className="ntp-wordmark ntp-opera-greet">{greeting}</div>}
         {search}
+        <div className="ntp-quick-sound-dock">
+          <button
+            className="ntp-sound-pill"
+            title="הפעל צלילי גשם לפוקוס מוגבר (Web Audio)"
+            onClick={() => playAmbientSound('rain', 0.5)}
+          >
+            🌧️ גשם לפוקוס
+          </button>
+          <button
+            className="ntp-sound-pill"
+            title="הפעל גלי אוקיינוס מרגיעים (Web Audio)"
+            onClick={() => playAmbientSound('ocean', 0.5)}
+          >
+            🌊 גלי אוקיינוס
+          </button>
+          <button
+            className="ntp-sound-pill"
+            title="הפעל גלי אלפא 10Hz לריכוז ולמידה (Web Audio)"
+            onClick={() => playAmbientSound('binaural', 0.5)}
+          >
+            🧠 גלי אלפא 10Hz
+          </button>
+          <button
+            className="ntp-sound-pill stop-pill"
+            title="עצור צלילי רקע"
+            onClick={() => stopAmbientSound()}
+          >
+            ⏹️ כיבוי
+          </button>
+        </div>
         {(style === 'firefox' || style === 'opera') && <h3 className="ntp-heading">{t(style === 'opera' ? 'ntp.speedDial' : 'ntp.shortcuts')}</h3>}
         {shortcuts}
       </div>

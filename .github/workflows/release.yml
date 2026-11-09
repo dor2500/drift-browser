@@ -90,21 +90,23 @@ jobs:
             node -e "require('fs').writeFileSync('dist-electron/google-client.json', JSON.stringify({ clientId: process.env.ID, clientSecret: process.env.SECRET }))"
           fi
       - name: Upload to the draft release
-        run: npx electron-builder ${{ matrix.target }} --publish always
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Code signing (optional): set these repository secrets to sign and
-          # notarize — see docs/RELEASE-SECURITY.md. Windows/macOS: a base64
-          # Authenticode PFX / Apple Developer ID cert in CSC_LINK. macOS
-          # notarization: the Apple ID credentials below.
-          CSC_LINK: ${{ secrets.DRIFT_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.DRIFT_CSC_KEY_PASSWORD }}
+          DRIFT_CSC_LINK: ${{ secrets.DRIFT_CSC_LINK }}
+          DRIFT_CSC_KEY_PASSWORD: ${{ secrets.DRIFT_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.DRIFT_APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.DRIFT_APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.DRIFT_APPLE_TEAM_ID }}
-          # Only try to auto-discover/sign when a certificate is actually provided,
-          # so unconfigured forks still produce (unsigned) builds.
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.DRIFT_CSC_LINK != '' }}
+        run: |
+          if [ -n "$DRIFT_CSC_LINK" ]; then
+            export CSC_LINK="$DRIFT_CSC_LINK"
+            export CSC_KEY_PASSWORD="$DRIFT_CSC_KEY_PASSWORD"
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+          else
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          npx electron-builder ${{ matrix.target }} --publish always
 
   # Drift for Android: a signed APK attached to the same release. The key comes
   # from repository secrets so every APK installs over the previous one.

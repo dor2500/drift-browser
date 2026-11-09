@@ -44,6 +44,44 @@
 .ntp-empty { grid-column: 1 / -1; color: var(--text-faint); font-size: 13px; }
 .ntp-heading { align-self: flex-start; margin: 0; font-size: 13px; font-weight: 600; color: var(--text-dim); }
 
+.ntp-quick-sound-dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: -6px;
+}
+
+.ntp-sound-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-contrast);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.ntp-sound-pill:hover {
+  background: var(--hover);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.ntp-sound-pill.stop-pill {
+  color: #ef4444;
+}
+
+.ntp-sound-pill.stop-pill:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 /* Chrome: search-engine wordmark above a pill, round shortcut tiles. */
 .ntp-chrome {
   background: #202124;
