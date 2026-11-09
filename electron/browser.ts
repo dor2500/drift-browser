@@ -674,6 +674,15 @@ export class Browser {
       case 'downloads:chooseFolder':
         void this.chooseDownloadFolder();
         break;
+      case 'app:setDefaultBrowser':
+        try {
+          app.setAsDefaultProtocolClient('http');
+          app.setAsDefaultProtocolClient('https');
+        } catch (e) {
+          console.warn('[drift] failed to set as default protocol client', e);
+        }
+        this.emit();
+        break;
       case 'win:incognito':
         this.openIncognitoWindow(c.url);
         break;

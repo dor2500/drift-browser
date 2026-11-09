@@ -125,6 +125,7 @@ ipcMain.handle('drift:gecko-download', async (e) => {
 });
 ipcMain.on('drift:downloads-menu', (e) => fromShell(e) && browser?.downloadsMenu());
 ipcMain.handle('drift:google-status', (e) => (fromShell(e) ? browser?.googleStatus() : false));
+ipcMain.handle('drift:is-default-browser', (e) => (fromShell(e) ? app.isDefaultProtocolClient('http') : false));
 ipcMain.handle('drift:other-browsers', (e) => (fromShell(e) ? otherBrowsers().map(({ id, name }) => ({ id, name })) : []));
 ipcMain.handle('drift:locale', (e) => (fromShell(e) ? browser?.i18n.bundle() : undefined));
 ipcMain.handle('drift:languages', (e) => (fromShell(e) ? browser?.i18n.list() : undefined));

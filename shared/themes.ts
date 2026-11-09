@@ -102,15 +102,150 @@ export const THEMES: Record<ThemeId, ThemeInfo> = {
 };
 
 /** Settings sections in the order each browser shows them (see the mode.* labels). */
-export type SettingsSection = 'sync' | 'appearance' | 'engine' | 'language' | 'general' | 'privacy' | 'import' | 'updates' | 'about';
+export type SettingsSection =
+  | 'sync'
+  | 'autofill'
+  | 'privacy'
+  | 'appearance'
+  | 'search'
+  | 'default'
+  | 'startup'
+  | 'language'
+  | 'downloads'
+  | 'accessibility'
+  | 'performance'
+  | 'system'
+  | 'reset'
+  | 'about'
+  | 'engine'
+  | 'general'
+  | 'import'
+  | 'updates';
+
 export const SETTINGS_ORDER: Record<ThemeId, SettingsSection[]> = {
-  zen: ['sync', 'appearance', 'engine', 'language', 'general', 'privacy', 'import', 'updates', 'about'],
-  chrome: ['sync', 'import', 'privacy', 'engine', 'appearance', 'general', 'language', 'updates', 'about'],
-  edge: ['sync', 'import', 'privacy', 'appearance', 'general', 'language', 'engine', 'updates', 'about'],
-  firefox: ['appearance', 'general', 'privacy', 'sync', 'language', 'engine', 'import', 'updates', 'about'],
-  tor: ['appearance', 'general', 'privacy', 'sync', 'language', 'engine', 'import', 'updates', 'about'],
-  brave: ['general', 'sync', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
-  opera: ['general', 'sync', 'appearance', 'privacy', 'import', 'language', 'engine', 'updates', 'about'],
+  chrome: [
+    'sync',
+    'autofill',
+    'privacy',
+    'appearance',
+    'search',
+    'default',
+    'startup',
+    'language',
+    'downloads',
+    'accessibility',
+    'performance',
+    'system',
+    'reset',
+    'about',
+  ],
+  zen: [
+    'sync',
+    'autofill',
+    'privacy',
+    'appearance',
+    'search',
+    'default',
+    'startup',
+    'language',
+    'downloads',
+    'accessibility',
+    'performance',
+    'system',
+    'engine',
+    'import',
+    'updates',
+    'reset',
+    'about',
+  ],
+  edge: [
+    'sync',
+    'autofill',
+    'import',
+    'privacy',
+    'appearance',
+    'search',
+    'default',
+    'startup',
+    'language',
+    'downloads',
+    'performance',
+    'system',
+    'engine',
+    'updates',
+    'reset',
+    'about',
+  ],
+  firefox: [
+    'appearance',
+    'search',
+    'privacy',
+    'sync',
+    'autofill',
+    'startup',
+    'language',
+    'downloads',
+    'accessibility',
+    'performance',
+    'system',
+    'engine',
+    'import',
+    'updates',
+    'reset',
+    'about',
+  ],
+  tor: [
+    'privacy',
+    'appearance',
+    'search',
+    'startup',
+    'language',
+    'downloads',
+    'accessibility',
+    'performance',
+    'system',
+    'engine',
+    'import',
+    'updates',
+    'reset',
+    'about',
+  ],
+  brave: [
+    'privacy',
+    'sync',
+    'autofill',
+    'appearance',
+    'search',
+    'default',
+    'startup',
+    'language',
+    'downloads',
+    'performance',
+    'system',
+    'engine',
+    'import',
+    'updates',
+    'reset',
+    'about',
+  ],
+  opera: [
+    'appearance',
+    'privacy',
+    'sync',
+    'autofill',
+    'search',
+    'default',
+    'startup',
+    'language',
+    'downloads',
+    'performance',
+    'system',
+    'engine',
+    'import',
+    'updates',
+    'reset',
+    'about',
+  ],
 };
 
 /** Rounded floating page only in sidebar layouts; top-tab browsers draw the page edge to edge. */

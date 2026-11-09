@@ -25,6 +25,7 @@ const api: DriftApi = {
   shieldMenu: () => ipcRenderer.send('drift:shield-menu'),
   downloadsMenu: () => ipcRenderer.send('drift:downloads-menu'),
   googleStatus: () => ipcRenderer.invoke('drift:google-status'),
+  isDefaultBrowser: () => ipcRenderer.invoke('drift:is-default-browser'),
   topSites: () => ipcRenderer.invoke('drift:top-sites'),
   stats: () => ipcRenderer.invoke('drift:stats'),
   geckoStatus: () => ipcRenderer.invoke('drift:gecko-status'),

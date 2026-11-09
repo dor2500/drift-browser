@@ -311,6 +311,7 @@ export type Command =
       cache: boolean;
     }
   | { type: 'downloads:chooseFolder' }
+  | { type: 'app:setDefaultBrowser' }
   | { type: 'win:incognito'; url?: string }
   | { type: 'win:taskManager' }
   | { type: 'bookmark:toggle'; url?: string; title?: string }
@@ -390,6 +391,7 @@ export interface DriftApi {
   shieldMenu(): void;
   downloadsMenu(): void;
   googleStatus(): Promise<boolean>;
+  isDefaultBrowser(): Promise<boolean>;
   topSites(): Promise<{ url: string; title: string }[]>;
   stats(): Promise<{ blocked: number; since: number }>;
   geckoStatus(): Promise<{ available: boolean; kind?: 'installed' | 'downloaded' }>;

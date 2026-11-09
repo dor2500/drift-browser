@@ -9,6 +9,24 @@ export type SafeBrowsingMode = 'enhanced' | 'standard' | 'off';
 export type DnsOverHttpsMode = 'auto' | 'cloudflare' | 'google' | 'quad9' | 'off';
 export type PreloadPagesMode = 'standard' | 'extended' | 'off';
 
+export interface AutofillSettings {
+  /** Offer to save passwords when logging into websites. */
+  offerToSavePasswords: boolean;
+  /** Automatically sign in to websites using stored credentials. */
+  autoSignIn: boolean;
+  /** Save and fill payment methods and credit cards. */
+  saveAndFillPayments: boolean;
+  /** Save and fill physical addresses, emails, and phone numbers. */
+  saveAndFillAddresses: boolean;
+}
+
+export const DEFAULT_AUTOFILL_SETTINGS: AutofillSettings = {
+  offerToSavePasswords: true,
+  autoSignIn: true,
+  saveAndFillPayments: true,
+  saveAndFillAddresses: true,
+};
+
 export interface UpdateSettings {
   /** Where Drift downloads new versions (each one also carries a newer Chromium). */
   source: UpdateSource;
@@ -214,20 +232,28 @@ export interface Settings {
   showDownloadsWhenDone: boolean;
   /** Chrome Languages: enable spell check in text fields. */
   spellCheck: boolean;
+  /** Chrome Languages: offer to translate pages in other languages. */
+  offerTranslation: boolean;
+  /** Chrome Accessibility: high contrast accessibility mode. */
+  highContrast: boolean;
+  /** Chrome System: continue running background apps when browser is closed. */
+  backgroundApps: boolean;
   /** Chrome Accessibility: navigate pages with a text cursor (F7). */
   caretBrowsing: boolean;
+  autofill: AutofillSettings;
   privacy: PrivacySettings;
   updates: UpdateSettings;
   store: StoreSettings;
 }
 
-export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync' | 'store'>> & {
+export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync' | 'store' | 'autofill'>> & {
   updates?: Partial<UpdateSettings>;
   privacy?: Partial<PrivacySettings>;
   darkMode?: Partial<DarkModeSettings>;
   ai?: Partial<AiSettings>;
   clipboardSync?: Partial<ClipboardSyncSettings>;
   store?: Partial<StoreSettings>;
+  autofill?: Partial<AutofillSettings>;
 };
 
 export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string; home: string }> = {
@@ -307,7 +333,11 @@ export const DEFAULT_SETTINGS: Settings = {
   downloadPath: '',
   showDownloadsWhenDone: true,
   spellCheck: true,
+  offerTranslation: true,
+  highContrast: false,
+  backgroundApps: false,
   caretBrowsing: false,
+  autofill: { ...DEFAULT_AUTOFILL_SETTINGS },
   privacy: {
     httpsOnly: true,
     stripTracking: true,
@@ -343,6 +373,7 @@ export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
     ai: { ...(base.ai ?? DEFAULT_AI_SETTINGS), ...(patch.ai ?? {}) },
     clipboardSync: { ...(base.clipboardSync ?? DEFAULT_CLIPBOARD_SYNC), ...(patch.clipboardSync ?? {}) },
     store: { ...(base.store ?? DEFAULT_STORE_SETTINGS), ...(patch.store ?? {}) },
+    autofill: { ...(base.autofill ?? DEFAULT_AUTOFILL_SETTINGS), ...(patch.autofill ?? {}) },
   };
   if (patch.theme && patch.theme !== base.theme && patch.verticalTabs === undefined) {
     if (patch.theme === 'chrome' || patch.theme === 'firefox' || patch.theme === 'brave') {

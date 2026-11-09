@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   DEFAULT_AI_SETTINGS,
+  DEFAULT_AUTOFILL_SETTINGS,
   DEFAULT_CLIPBOARD_SYNC,
   DEFAULT_DARK_MODE,
   DEFAULT_SETTINGS,
@@ -102,7 +103,16 @@ function sanitize(s: Settings): Settings {
     downloadPath: typeof s.downloadPath === 'string' ? s.downloadPath.trim() : d.downloadPath,
     showDownloadsWhenDone: typeof s.showDownloadsWhenDone === 'boolean' ? s.showDownloadsWhenDone : d.showDownloadsWhenDone,
     spellCheck: typeof s.spellCheck === 'boolean' ? s.spellCheck : d.spellCheck,
+    offerTranslation: typeof s.offerTranslation === 'boolean' ? s.offerTranslation : true,
+    highContrast: typeof s.highContrast === 'boolean' ? s.highContrast : false,
+    backgroundApps: typeof s.backgroundApps === 'boolean' ? s.backgroundApps : false,
     caretBrowsing: typeof s.caretBrowsing === 'boolean' ? s.caretBrowsing : d.caretBrowsing,
+    autofill: {
+      offerToSavePasswords: typeof s.autofill?.offerToSavePasswords === 'boolean' ? s.autofill.offerToSavePasswords : true,
+      autoSignIn: typeof s.autofill?.autoSignIn === 'boolean' ? s.autofill.autoSignIn : true,
+      saveAndFillPayments: typeof s.autofill?.saveAndFillPayments === 'boolean' ? s.autofill.saveAndFillPayments : true,
+      saveAndFillAddresses: typeof s.autofill?.saveAndFillAddresses === 'boolean' ? s.autofill.saveAndFillAddresses : true,
+    },
     privacy: {
       httpsOnly: typeof s.privacy?.httpsOnly === 'boolean' ? s.privacy.httpsOnly : d.privacy.httpsOnly,
       stripTracking: typeof s.privacy?.stripTracking === 'boolean' ? s.privacy.stripTracking : d.privacy.stripTracking,
@@ -162,6 +172,7 @@ export function loadSettings(): Settings {
       ai: { ...DEFAULT_AI_SETTINGS },
       clipboardSync: { ...DEFAULT_CLIPBOARD_SYNC },
       store: { ...DEFAULT_STORE_SETTINGS },
+      autofill: { ...DEFAULT_AUTOFILL_SETTINGS },
     };
   }
 }
