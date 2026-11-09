@@ -7,6 +7,20 @@ import { playAmbientSound, setAmbientVolume, stopAmbientSound } from '../lib/amb
 
 type StoreCategory = 'all' | 'security' | 'productivity' | 'media' | 'themes' | 'scripts';
 
+interface ScreenshotSlide {
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  features: string[];
+}
+
+interface StoreReview {
+  author: string;
+  stars: number;
+  date: string;
+  comment: string;
+}
+
 interface StoreItem {
   id: string;
   name: string;
@@ -19,6 +33,14 @@ interface StoreItem {
   descriptionHe: string;
   tags: string[];
   featuresHe: string[];
+  rating: number;
+  ratingCount: number;
+  users: string;
+  bannerGradient: string;
+  bannerBadge: string;
+  accentColor: string;
+  screenshots: ScreenshotSlide[];
+  reviews: StoreReview[];
 }
 
 const STORE_CATALOG: StoreItem[] = [
@@ -30,6 +52,12 @@ const STORE_CATALOG: StoreItem[] = [
     version: '2.4.0',
     author: 'Drift Security Labs',
     icon: 'shield',
+    rating: 4.95,
+    ratingCount: 28450,
+    users: '240,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #091a2f 0%, #0d2d4d 50%, #0284c7 100%)',
+    bannerBadge: '🛡️ MAXIMUM PRIVACY',
+    accentColor: '#38bdf8',
     description:
       'Ultra privacy suite with Anti-Canvas fingerprinting, WebGL vendor cloaking, AudioContext jitter, battery protection, and homograph phishing detection.',
     descriptionHe:
@@ -42,6 +70,24 @@ const STORE_CATALOG: StoreItem[] = [
       'חסימת דליפות סטטוס סוללה (Battery API)',
       'איתור אוטומטי של התקפות פישינג וכתובות מתחזות (IDN Homograph)',
     ],
+    screenshots: [
+      {
+        title: 'מסך הגנת טביעות אצבע רב-שכבתי',
+        subtitle: 'סיכול מעקב מתקדם של חברות פרסום ברשת',
+        icon: 'shield',
+        features: ['הזרקת רעש אקראי דטרמיניסטי ל-Canvas', 'הסוואה אחידה של WebGL GPU', 'הגנת דליפות סוללה ואודיו'],
+      },
+      {
+        title: 'סורק פישינג IDN Homograph בזמן אמת',
+        subtitle: 'הגנה מפני שמות מתחם המשתמשים באותיות קיריליות מתחזות',
+        icon: 'lock',
+        features: ['זיהוי שמות מתחם בעלי תווים מעורבים', 'התרעה מיידית לפני הזנת סיסמאות', 'חסימת פרוטוקולים מסוכנים'],
+      },
+    ],
+    reviews: [
+      { author: 'רועי ל.', stars: 5, date: 'לפני יומיים', comment: 'התוסף הכי טוב שנוצר לפרטיות. כל בדיקות ה-Fingerprint עברו חלק!' },
+      { author: 'Daniel S.', stars: 5, date: 'לפני שבוע', comment: 'Zero tracking, zero lag. Drift feels completely safe now.' },
+    ],
   },
   {
     id: 'drift-zen-aura',
@@ -51,6 +97,12 @@ const STORE_CATALOG: StoreItem[] = [
     version: '1.8.2',
     author: 'Drift Audio Engine',
     icon: 'music',
+    rating: 4.92,
+    ratingCount: 19800,
+    users: '185,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #1e112a 0%, #3b0764 50%, #a21caf 100%)',
+    bannerBadge: '🎧 AMBIENT FOCUS AUDIO',
+    accentColor: '#e879f9',
     description:
       'Offline ambient sound generator powered by Web Audio API. Pink rain, deep ocean, focus drone, and 10Hz binaural alpha beats without external internet or files.',
     descriptionHe:
@@ -63,6 +115,24 @@ const STORE_CATALOG: StoreItem[] = [
       'סינתזה בזמן אמת ב-Web Audio ללא הורדת קבצים',
       'עבודה חלקה לחלוטין ברקע בזמן גלישה',
     ],
+    screenshots: [
+      {
+        title: 'סינתזת שמע חיה באמצעות Web Audio API',
+        subtitle: 'צלילי טבע, גשם וגלי מוח ללא צורך בחיבור לרשת',
+        icon: 'music',
+        features: ['רעש ורוד של גשם טיפות טבעי', 'גלי אוקיינוס משתנים באטיות', 'גלי אלפא בינאורליים לריכוז לימודי ועבודה'],
+      },
+      {
+        title: 'שליטה מהירה מוטמעת בעמוד הטאב החדש',
+        subtitle: 'הפעלה וכיבוי ישירות תחת שורת החיפוש',
+        icon: 'play',
+        features: ['סליידר ווליום דינמי', 'מעבר בלחיצה בין צלילים', 'אפס עומס על הזיכרון'],
+      },
+    ],
+    reviews: [
+      { author: 'מיכל ב.', stars: 5, date: 'לפני 3 ימים', comment: 'צלילי הגשם המובנים עוזרים לי לעבוד שעות ברצף בלי הסחות דעת!' },
+      { author: 'Alex M.', stars: 5, date: 'לפני שבועיים', comment: 'Binaural 10Hz mode is pure magic for coding sessions.' },
+    ],
   },
   {
     id: 'drift-scratchpad',
@@ -72,6 +142,12 @@ const STORE_CATALOG: StoreItem[] = [
     version: '1.5.0',
     author: 'Drift Productivity Team',
     icon: 'book',
+    rating: 4.88,
+    ratingCount: 12600,
+    users: '110,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #1c1917 0%, #292524 50%, #b45309 100%)',
+    bannerBadge: '📝 INSTANT SCRATCHPAD',
+    accentColor: '#f59e0b',
     description:
       'Fast, private scratchpad for notes, code snippets, and to-do lists, permanently preserved across browser sessions.',
     descriptionHe:
@@ -83,6 +159,17 @@ const STORE_CATALOG: StoreItem[] = [
       'העתקה מהירה בלחיצת כפתור',
       'ללא שמירה בענן — פרטיות מקסימלית במכשיר בלבד',
     ],
+    screenshots: [
+      {
+        title: 'עורך פתקים וקוד קל משקל',
+        subtitle: 'שמירה אוטומטית בכל הקלדה במכשיר שלך בלבד',
+        icon: 'book',
+        features: ['העתקה מהירה ללוח המערכת', 'תמיכה בפתקים ארוכים וקוד', 'ללא שליחת נתונים לשום שרת'],
+      },
+    ],
+    reviews: [
+      { author: 'אורן ק.', stars: 5, date: 'לפני 4 ימים', comment: 'סוף סוף פנקס נוח בלי לפתוח תוכנות חיצוניות כל פעם שרוצים להעתיק משהו.' },
+    ],
   },
   {
     id: 'drift-focus-timer',
@@ -92,12 +179,29 @@ const STORE_CATALOG: StoreItem[] = [
     version: '1.2.0',
     author: 'Drift Focus Lab',
     icon: 'clock',
+    rating: 4.85,
+    ratingCount: 9400,
+    users: '95,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #2a0b12 0%, #4c0519 50%, #e11d48 100%)',
+    bannerBadge: '⏱️ 25/5 POMODORO',
+    accentColor: '#fb7185',
     description:
       'Integrated Pomodoro focus timer with 25-minute sprints and 5-minute restorative breaks.',
     descriptionHe:
       'טיימר פומומורו מובנה לגלישה יעילה: 25 דקות פוקוס ו-5 דקות הפסקה עם התראות שמע נעימות לשמירה על ריכוז עבודה גבוה.',
     tags: ['פומומורו', 'טיימר', 'ניהול זמן', 'ריכוז'],
     featuresHe: ['מחזורי 25 דקות ריכוז / 5 דקות הפסקה', 'טיימר ויזואלי ברור', 'צליל סיום מובנה'],
+    screenshots: [
+      {
+        title: 'שעון פוקוס וניהול זמנים',
+        subtitle: 'ספרינטים מוגדרים של 25 דקות עבודה ו-5 דקות מנוחה',
+        icon: 'clock',
+        features: ['טיימר עבודה ויזואלי בולט', 'התראת סיום נעימה', 'איפוס וסנכרון מהיר בלחיצה'],
+      },
+    ],
+    reviews: [
+      { author: 'שירה ד.', stars: 5, date: 'אתמול', comment: 'שומר אותי ממוקדת בעבודה ולא מאבדת שעות בשיטוטים ברשת.' },
+    ],
   },
   {
     id: 'drift-security-auditor',
@@ -107,6 +211,12 @@ const STORE_CATALOG: StoreItem[] = [
     version: '2.0.1',
     author: 'Drift Security Labs',
     icon: 'lock',
+    rating: 4.96,
+    ratingCount: 22100,
+    users: '160,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #052e16 0%, #064e3b 50%, #10b981 100%)',
+    bannerBadge: '🔒 TLS 1.3 & CSP AUDITOR',
+    accentColor: '#34d399',
     description:
       'Real-time website security inspector checking SSL/TLS encryption, CSP headers, X-Frame clickjacking defense, and mixed content rating.',
     descriptionHe:
@@ -118,6 +228,17 @@ const STORE_CATALOG: StoreItem[] = [
       'הגנה מפני Clickjacking ו-Mixed Content',
       'ציון אבטחה מהיר בזמן אמת',
     ],
+    screenshots: [
+      {
+        title: 'דוח אבטחה מלא לכל דף אינטרנט',
+        subtitle: 'אישורי הצפנה, כותרות HSTS והגנה מפני הזרקות',
+        icon: 'lock',
+        features: ['ציון אבטחה חי (A+ עד F)', 'איתור תוכן מעורב לא מוצפן (Mixed Content)', 'בדיקת תקפות תעודת SSL של האתר'],
+      },
+    ],
+    reviews: [
+      { author: 'Eliyahu V.', stars: 5, date: 'לפני יומיים', comment: 'מושלם למפתחי אתרים ולכל מי שחשוב לו לדעת אם האתר שהוא גולש בו באמת מאובטח.' },
+    ],
   },
   {
     id: 'drift-video-booster',
@@ -127,12 +248,29 @@ const STORE_CATALOG: StoreItem[] = [
     version: '1.6.4',
     author: 'Drift Media Works',
     icon: 'pip',
+    rating: 4.89,
+    ratingCount: 15300,
+    users: '135,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #172554 0%, #1e1b4b 50%, #6366f1 100%)',
+    bannerBadge: '🎬 300% AUDIO & PIP',
+    accentColor: '#818cf8',
     description:
       'Picture-in-picture controller, volume booster up to 300% for quiet web videos, and variable playback speed controls.',
     descriptionHe:
       'הגברת שמע של סרטונים עד 300% (לסרטונים חלשים), מעבר מיידי ל-Picture-in-Picture ושליטה במהירות ניגון מ-0.25x עד 4.0x.',
     tags: ['וידאו', 'PiP', 'ווליום', 'מדיה'],
     featuresHe: ['מגבר ווליום ייעודי עד 300%', 'שליטה גלובלית במהירות ניגון', 'לחצן PiP צף חכם'],
+    screenshots: [
+      {
+        title: 'מגבר שמע עד 300% לסרטונים חלשים',
+        subtitle: 'שימוש ב-GainNode של Web Audio להגברה נקייה מעיוותים',
+        icon: 'speaker',
+        features: ['הגברת קול נקייה וחזקה', 'לחצן תמונה בתוך תמונה (PiP) בכל אתר וידאו', 'שליטה במהירויות מ-0.25x עד 4.0x'],
+      },
+    ],
+    reviews: [
+      { author: 'יונתן ש.', stars: 5, date: 'לפני 5 ימים', comment: 'סוף סוף שומעים מעולה בהרצאות ובסרטונים מוקלטים חלשים ביוטיוב!' },
+    ],
   },
   {
     id: 'drift-reader-mode',
@@ -142,12 +280,29 @@ const STORE_CATALOG: StoreItem[] = [
     version: '2.1.0',
     author: 'Drift Editorial',
     icon: 'book',
+    rating: 4.91,
+    ratingCount: 17800,
+    users: '145,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #18181b 0%, #27272a 50%, #71717a 100%)',
+    bannerBadge: '📖 CLEAN READER & TTS',
+    accentColor: '#a1a1aa',
     description:
       'Distraction-free reading environment stripping clutter and ads, with customizable typography, dark/sepia modes, and text-to-speech voice narration.',
     descriptionHe:
       'מנקה מאמרים ודפי תוכן מפרסומות והפרעות, מאפשר בחירת גופנים וצבעי קריאה, ותומך בהקראת המאמר בקול באמצעות Text-to-Speech.',
     tags: ['קריאה', 'מאמרים', 'הקראה בקול', 'נגישות'],
     featuresHe: ['ממשק קריאה נקי ומבודד', 'בחירת גופנים, גדלים ומרווחים', 'הקראה קולית ישירה בדפדפן'],
+    screenshots: [
+      {
+        title: 'חוויית קריאה נקייה מפרסומות והפרעות',
+        subtitle: 'חילוץ תוכן חכם, גופנים אלגנטיים ומצב כהה/ספיה',
+        icon: 'book',
+        features: ['התאמת גודל אות וריווח שורות', 'הקראת טקסט קולית בעברית ובאנגלית', 'ייצוא קריאה ל-Markdown'],
+      },
+    ],
+    reviews: [
+      { author: 'טל כ.', stars: 5, date: 'לפני שבוע', comment: 'הקראת הטקסט בקול היא פשוט תענוג כשאני קורא כתבות ארוכות תוך כדי משימות.' },
+    ],
   },
 ];
 
@@ -156,6 +311,13 @@ export function StorePage({ state }: { state: BrowserState }) {
   const [activeTab, setActiveTab] = useState<StoreCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Selected item for Detailed Modal & Screenshots Gallery
+  const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
+  const [activeScreenshotIdx, setActiveScreenshotIdx] = useState(0);
+
+  // Featured carousel index
+  const [featuredIdx, setFeaturedIdx] = useState(0);
 
   // Zen Aura sound preview state
   const [audioPlaying, setAudioPlaying] = useState(storeSettings?.ambientSound?.playing ?? false);
@@ -275,25 +437,27 @@ export function StorePage({ state }: { state: BrowserState }) {
   const activeUrl = activeTabDetails?.url ?? '';
   const isHttps = activeUrl.startsWith('https://');
 
+  const featuredItem = STORE_CATALOG[featuredIdx % STORE_CATALOG.length];
+
   return (
     <div className="store-page" dir="rtl">
-      {/* Top Banner */}
+      {/* Top Banner & Header */}
       <header className="store-header">
         <div className="store-hero">
           <div className="store-hero-badge">
             <Icon name="puzzle" size={16} />
-            <span>חנות התוספים והערכות הרשמית של Drift</span>
+            <span>חנות התוספים, האבטחה והערכות הרשמית של Drift</span>
           </div>
           <h1>Drift Store & Extensions Hub</h1>
           <p className="store-sub">
-            תוספים מקוריים, ערכות נושא מתקדמות, הגנת פרטיות מקסימלית וכלי פרודוקטיביות שעוצבו ונבנו במיוחד עבור Drift Browser.
+            חנות עשירה עם תוספים מקוריים, כלי אבטחה ופרטיות מקסימליים, צלילי אווירה, כלי פרודוקטיביות וערכות נושא מעוצבות.
           </p>
 
           <div className="store-search-wrap">
             <Icon name="search" size={18} />
             <input
               type="text"
-              placeholder="חיפוש תוספים, ערכות נושא, כלי אבטחה ופרטיות..."
+              placeholder="חיפוש תוספים, ערכות נושא, כלי אבטחה, צלילים ופרטיות..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="store-search-input"
@@ -342,21 +506,104 @@ export function StorePage({ state }: { state: BrowserState }) {
         </div>
       </header>
 
-      {/* Tabs / Filter Nav */}
+      {/* Featured Spotlight Hero Banner (Carousel like Chrome Web Store & App Store) */}
+      {!searchQuery && activeTab === 'all' && (
+        <section className="store-featured-hero" style={{ background: featuredItem.bannerGradient }}>
+          <div className="featured-hero-glow" />
+          <div className="featured-hero-content">
+            <div className="featured-hero-tag">
+              <span className="star-icon">★</span>
+              <span>נבחרת העורכים · תוסף מומלץ</span>
+              <span className="badge version">v{featuredItem.version}</span>
+            </div>
+            <h2 className="featured-hero-title">{featuredItem.nameHe}</h2>
+            <p className="featured-hero-desc">{featuredItem.descriptionHe}</p>
+
+            <div className="featured-hero-meta">
+              <div className="stars-rating">
+                <span className="stars-gold">★★★★★</span>
+                <span className="stars-val">{featuredItem.rating}</span>
+                <span className="stars-count">({featuredItem.ratingCount.toLocaleString()} דירוגים)</span>
+              </div>
+              <span className="meta-sep">•</span>
+              <div className="users-count">👥 {featuredItem.users}</div>
+              <span className="meta-sep">•</span>
+              <div className="verified-dev">✓ פותח במעבדות Drift</div>
+            </div>
+
+            <div className="featured-hero-actions">
+              <button
+                className={cx('btn primary')}
+                style={{ background: featuredItem.accentColor, color: '#090d16', fontWeight: 600, padding: '0 22px', height: '38px' }}
+                onClick={() => toggleInstall(featuredItem.id)}
+              >
+                <Icon name={installedSet.has(featuredItem.id) ? 'check' : 'plus'} size={16} />
+                <span>{installedSet.has(featuredItem.id) ? '✓ מותקן בדפדפן' : 'התקנה מהירה בלחיצה אחת'}</span>
+              </button>
+              <button
+                className="btn ghost"
+                style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', height: '38px', padding: '0 18px' }}
+                onClick={() => {
+                  setSelectedItem(featuredItem);
+                  setActiveScreenshotIdx(0);
+                }}
+              >
+                <Icon name="info" size={15} />
+                <span>צפה בצילומי מסך ופרטים</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Visual Artwork Showcase Mockup on Hero */}
+          <div className="featured-hero-visual" onClick={() => setSelectedItem(featuredItem)}>
+            <div className="hero-artwork-frame">
+              <div className="artwork-glass-card">
+                <div className="artwork-icon-large" style={{ color: featuredItem.accentColor }}>
+                  <Icon name={featuredItem.icon} size={48} />
+                </div>
+                <div className="artwork-badge">{featuredItem.bannerBadge}</div>
+                <div className="artwork-preview-list">
+                  {featuredItem.featuresHe.slice(0, 3).map((f, i) => (
+                    <div key={i} className="artwork-feat-item">
+                      <Icon name="check" size={13} />
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="artwork-overlay-pill">לחץ לתמונות ומבט מורחב 🔍</div>
+              </div>
+            </div>
+
+            {/* Carousel navigation buttons */}
+            <div className="hero-carousel-dots" onClick={(e) => e.stopPropagation()}>
+              {STORE_CATALOG.slice(0, 4).map((_, idx) => (
+                <button
+                  key={idx}
+                  className={cx('carousel-dot', (featuredIdx % 4) === idx && 'active')}
+                  onClick={() => setFeaturedIdx(idx)}
+                  title={`הצג תוסף מומלץ ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Tabs / Filter Navigation */}
       <nav className="store-nav">
         <button
           className={cx('store-nav-btn', activeTab === 'all' && 'active')}
           onClick={() => setActiveTab('all')}
         >
           <Icon name="puzzle" size={15} />
-          <span>הכל ({STORE_CATALOG.length})</span>
+          <span>כל התוספים ({STORE_CATALOG.length})</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'security' && 'active')}
           onClick={() => setActiveTab('security')}
         >
           <Icon name="shield" size={15} />
-          <span>אבטחה ופרטיות</span>
+          <span>אבטחה ופרטיות מקסימלית</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'productivity' && 'active')}
@@ -370,18 +617,18 @@ export function StorePage({ state }: { state: BrowserState }) {
           onClick={() => setActiveTab('media')}
         >
           <Icon name="play" size={15} />
-          <span>מולטימדיה ושמע</span>
+          <span>מולטימדיה ווידאו</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'themes' && 'active')}
           onClick={() => setActiveTab('themes')}
         >
           <Icon name="palette" size={15} />
-          <span>ערכות עיצוב וסטיילים</span>
+          <span>ערכות עיצוב וסטיילים ({COLOR_THEMES.length})</span>
         </button>
       </nav>
 
-      {/* Catalog Grid */}
+      {/* Catalog Cards Grid */}
       <div className="store-content">
         {activeTab !== 'themes' && (
           <div className="store-grid">
@@ -396,178 +643,224 @@ export function StorePage({ state }: { state: BrowserState }) {
 
               return (
                 <div key={item.id} className={cx('store-card', !installed && 'not-installed')}>
-                  <div className="store-card-header">
-                    <div className="store-card-icon">
-                      <Icon name={item.icon} size={22} />
-                    </div>
-                    <div className="store-card-titles">
-                      <div className="store-card-badges">
-                        <span className="badge official">מקורי Drift</span>
-                        <span className="badge verified">מאומת אבטחתית</span>
-                        <span className="badge version">v{item.version}</span>
+                  {/* Extension Card Graphic Banner (Visual Hero Artwork Image) */}
+                  <div
+                    className="store-card-banner"
+                    style={{ background: item.bannerGradient }}
+                    onClick={() => {
+                      setSelectedItem(item);
+                      setActiveScreenshotIdx(0);
+                    }}
+                  >
+                    <div className="card-banner-badge">{item.bannerBadge}</div>
+                    <div className="card-banner-center">
+                      <div className="banner-icon-circle" style={{ color: item.accentColor }}>
+                        <Icon name={item.icon} size={32} />
                       </div>
-                      <h3 className="store-card-title">{item.nameHe}</h3>
-                      <span className="store-card-author">{item.author}</span>
+                      <div className="banner-hover-overlay">
+                        <span>🔍 צפה בתמונות ומידע</span>
+                      </div>
+                    </div>
+                    <div className="card-banner-chips">
+                      <span className="banner-chip-version">v{item.version}</span>
+                      <span className="banner-chip-rating">★ {item.rating}</span>
                     </div>
                   </div>
 
-                  <p className="store-card-desc">{item.descriptionHe}</p>
-
-                  <div className="store-card-features">
-                    {item.featuresHe.map((feat, idx) => (
-                      <div key={idx} className="feature-item">
-                        <Icon name="check" size={12} />
-                        <span>{feat}</span>
+                  {/* Card Content & Details */}
+                  <div className="store-card-body">
+                    <div className="store-card-header">
+                      <div className="store-card-icon" style={{ color: item.accentColor }}>
+                        <Icon name={item.icon} size={20} />
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Interactive live widget for Shield Pro */}
-                  {isShield && installed && !disabled && (
-                    <div className="store-live-widget auditor-widget">
-                      <div className="auditor-header">
-                        <div className="auditor-grade">מצב הגנה: אקטיבי 100%</div>
-                        <div className="auditor-host">טביעות אצבע חסומות ומסוות</div>
-                      </div>
-                      <div className="auditor-checks">
-                        <div className="aud-check ok">✓ מיסוך Canvas Fingerprint: פעיל</div>
-                        <div className="aud-check ok">✓ הסוואת WebGL GPU Renderer: פעיל</div>
-                        <div className="aud-check ok">✓ שיבוש תדרי AudioContext: פעיל</div>
-                        <div className="aud-check ok">✓ הגנת דליפות סוללה Battery API: פעיל</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Interactive live widget for Zen Aura */}
-                  {isAura && installed && !disabled && (
-                    <div className="store-live-widget aura-widget">
-                      <div className="widget-row">
-                        <button
-                          className={cx('btn', audioPlaying ? 'ghost' : 'primary', 'small')}
-                          onClick={handleAudioToggle}
-                        >
-                          <Icon name={audioPlaying ? 'pause' : 'play'} size={14} />
-                          <span>{audioPlaying ? 'עצור צלילי רקע' : 'הפעל צלילי רקע עכשיו'}</span>
-                        </button>
-                        <select
-                          className="field-input widget-select"
-                          value={soundType}
-                          onChange={(e) => handleSoundChange(e.target.value as 'rain' | 'ocean' | 'drone' | 'whitenoise' | 'binaural')}
-                        >
-                          <option value="rain">🌧️ גשם מרגיע (Pink Rain)</option>
-                          <option value="ocean">🌊 גלי אוקיינוס (Ocean Swell)</option>
-                          <option value="binaural">🧠 גלי אלפא 10Hz (Focus Beats)</option>
-                          <option value="drone">🌌 צליל חלל עמוק (Cosmic Drone)</option>
-                          <option value="whitenoise">📻 רעש לבן (Pure White Noise)</option>
-                        </select>
-                      </div>
-                      <div className="volume-row">
-                        <Icon name="speaker" size={13} />
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={volume}
-                          onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                          className="volume-slider"
-                        />
-                        <span className="vol-percent">{Math.round(volume * 100)}%</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Interactive live widget for Scratchpad */}
-                  {isNotes && installed && !disabled && (
-                    <div className="store-live-widget notes-widget">
-                      <textarea
-                        className="notes-textarea"
-                        placeholder="פתקים ורשימות מהירות נשמרים אוטומטית מקומית..."
-                        value={notes}
-                        onChange={(e) => handleNotesChange(e.target.value)}
-                        rows={3}
-                      />
-                      <div className="notes-footer">
-                        <span>{notes.length} תווים</span>
-                        <button
-                          className="btn ghost small"
-                          onClick={() => {
-                            navigator.clipboard.writeText(notes);
-                            showToast('הפתק הועתק ללוח!');
-                          }}
-                        >
-                          <Icon name="link" size={12} />
-                          <span>העתק תוכן</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Interactive live widget for Pomodoro */}
-                  {isPomo && installed && !disabled && (
-                    <div className="store-live-widget pomo-widget">
-                      <div className="pomo-display">
-                        <span className="pomo-digits">
-                          {String(Math.floor(pomoSeconds / 60)).padStart(2, '0')}:
-                          {String(pomoSeconds % 60).padStart(2, '0')}
-                        </span>
-                        <div className="pomo-actions">
-                          <button
-                            className={cx('btn', pomoRunning ? 'ghost' : 'primary', 'small')}
-                            onClick={() => setPomoRunning(!pomoRunning)}
-                          >
-                            <Icon name={pomoRunning ? 'pause' : 'play'} size={13} />
-                            <span>{pomoRunning ? 'השהה' : 'התחל פוקוס'}</span>
-                          </button>
-                          <button
-                            className="btn ghost small"
-                            onClick={() => {
-                              setPomoRunning(false);
-                              setPomoSeconds(25 * 60);
-                            }}
-                          >
-                            <Icon name="reload" size={13} />
-                            <span>איפוס</span>
-                          </button>
+                      <div className="store-card-titles">
+                        <div className="store-card-badges">
+                          <span className="badge official">מקורי Drift</span>
+                          <span className="badge verified">מאומת אבטחתית</span>
+                        </div>
+                        <h3 className="store-card-title">{item.nameHe}</h3>
+                        <div className="card-meta-line">
+                          <span className="store-card-author">{item.author}</span>
+                          <span className="meta-dot">•</span>
+                          <span className="card-users-badge">👥 {item.users}</span>
                         </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* Interactive live widget for Security Auditor */}
-                  {isAuditor && installed && !disabled && (
-                    <div className="store-live-widget auditor-widget">
-                      <div className="auditor-header">
-                        <div className="auditor-grade">ציון: A+</div>
-                        <div className="auditor-host">{activeUrl ? new URL(activeUrl).hostname : 'Drift Safe Zone'}</div>
-                      </div>
-                      <div className="auditor-checks">
-                        <div className="aud-check ok">✓ הצפנת חיבור: {isHttps ? 'TLS 1.3 מאומתת' : 'אזור פנימי מוגן'}</div>
-                        <div className="aud-check ok">✓ חסימת עוגיות צד שלישי (3rd-Party Cookies): פעילה</div>
-                        <div className="aud-check ok">✓ הגנת הפשטת פרמטרי מעקב URL: פעילה</div>
-                      </div>
+                    <p className="store-card-desc">{item.descriptionHe}</p>
+
+                    {/* Features checklist */}
+                    <div className="store-card-features">
+                      {item.featuresHe.slice(0, 3).map((feat, idx) => (
+                        <div key={idx} className="feature-item">
+                          <Icon name="check" size={12} />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
                     </div>
-                  )}
 
-                  {/* Card Footer Actions */}
-                  <div className="store-card-footer">
-                    <button
-                      className={cx('btn', installed ? 'ghost' : 'primary', 'small')}
-                      onClick={() => toggleInstall(item.id)}
-                    >
-                      <Icon name={installed ? 'x' : 'plus'} size={14} />
-                      <span>{installed ? 'הסר תוסף' : 'התקן תוסף'}</span>
-                    </button>
-
-                    {installed && (
-                      <button
-                        className={cx('btn', disabled ? 'primary' : 'ghost', 'small')}
-                        onClick={() => toggleEnabled(item.id)}
-                      >
-                        <Icon name={disabled ? 'play' : 'pause'} size={13} />
-                        <span>{disabled ? 'הפעל תוסף' : 'השבת זמנית'}</span>
-                      </button>
+                    {/* Interactive live widget for Shield Pro */}
+                    {isShield && installed && !disabled && (
+                      <div className="store-live-widget auditor-widget">
+                        <div className="auditor-header">
+                          <div className="auditor-grade">מצב הגנה: אקטיבי 100%</div>
+                          <div className="auditor-host">טביעות אצבע חסומות ומסוות</div>
+                        </div>
+                        <div className="auditor-checks">
+                          <div className="aud-check ok">✓ מיסוך Canvas Fingerprint: פעיל</div>
+                          <div className="aud-check ok">✓ הסוואת WebGL GPU Renderer: פעיל</div>
+                          <div className="aud-check ok">✓ שיבוש תדרי AudioContext: פעיל</div>
+                          <div className="aud-check ok">✓ הגנת דליפות סוללה Battery API: פעיל</div>
+                        </div>
+                      </div>
                     )}
+
+                    {/* Interactive live widget for Zen Aura */}
+                    {isAura && installed && !disabled && (
+                      <div className="store-live-widget aura-widget">
+                        <div className="widget-row">
+                          <button
+                            className={cx('btn', audioPlaying ? 'ghost' : 'primary', 'small')}
+                            onClick={handleAudioToggle}
+                          >
+                            <Icon name={audioPlaying ? 'pause' : 'play'} size={14} />
+                            <span>{audioPlaying ? 'עצור צלילי רקע' : 'הפעל צלילי רקע עכשיו'}</span>
+                          </button>
+                          <select
+                            className="field-input widget-select"
+                            value={soundType}
+                            onChange={(e) => handleSoundChange(e.target.value as 'rain' | 'ocean' | 'drone' | 'whitenoise' | 'binaural')}
+                          >
+                            <option value="rain">🌧️ גשם מרגיע (Pink Rain)</option>
+                            <option value="ocean">🌊 גלי אוקיינוס (Ocean Swell)</option>
+                            <option value="binaural">🧠 גלי אלפא 10Hz (Focus Beats)</option>
+                            <option value="drone">🌌 צליל חלל עמוק (Cosmic Drone)</option>
+                            <option value="whitenoise">📻 רעש לבן (Pure White Noise)</option>
+                          </select>
+                        </div>
+                        <div className="volume-row">
+                          <Icon name="speaker" size={13} />
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={volume}
+                            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                            className="volume-slider"
+                          />
+                          <span className="vol-percent">{Math.round(volume * 100)}%</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive live widget for Scratchpad */}
+                    {isNotes && installed && !disabled && (
+                      <div className="store-live-widget notes-widget">
+                        <textarea
+                          className="notes-textarea"
+                          placeholder="פתקים ורשימות מהירות נשמרים אוטומטית מקומית..."
+                          value={notes}
+                          onChange={(e) => handleNotesChange(e.target.value)}
+                          rows={3}
+                        />
+                        <div className="notes-footer">
+                          <span>{notes.length} תווים</span>
+                          <button
+                            className="btn ghost small"
+                            onClick={() => {
+                              navigator.clipboard.writeText(notes);
+                              showToast('הפתק הועתק ללוח!');
+                            }}
+                          >
+                            <Icon name="link" size={12} />
+                            <span>העתק תוכן</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive live widget for Pomodoro */}
+                    {isPomo && installed && !disabled && (
+                      <div className="store-live-widget pomo-widget">
+                        <div className="pomo-display">
+                          <span className="pomo-digits">
+                            {String(Math.floor(pomoSeconds / 60)).padStart(2, '0')}:
+                            {String(pomoSeconds % 60).padStart(2, '0')}
+                          </span>
+                          <div className="pomo-actions">
+                            <button
+                              className={cx('btn', pomoRunning ? 'ghost' : 'primary', 'small')}
+                              onClick={() => setPomoRunning(!pomoRunning)}
+                            >
+                              <Icon name={pomoRunning ? 'pause' : 'play'} size={13} />
+                              <span>{pomoRunning ? 'השהה' : 'התחל פוקוס'}</span>
+                            </button>
+                            <button
+                              className="btn ghost small"
+                              onClick={() => {
+                                setPomoRunning(false);
+                                setPomoSeconds(25 * 60);
+                              }}
+                            >
+                              <Icon name="reload" size={13} />
+                              <span>איפוס</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive live widget for Security Auditor */}
+                    {isAuditor && installed && !disabled && (
+                      <div className="store-live-widget auditor-widget">
+                        <div className="auditor-header">
+                          <div className="auditor-grade">ציון: A+</div>
+                          <div className="auditor-host">{activeUrl ? new URL(activeUrl).hostname : 'Drift Safe Zone'}</div>
+                        </div>
+                        <div className="auditor-checks">
+                          <div className="aud-check ok">✓ הצפנת חיבור: {isHttps ? 'TLS 1.3 מאומתת' : 'אזור פנימי מוגן'}</div>
+                          <div className="aud-check ok">✓ חסימת עוגיות צד שלישי (3rd-Party Cookies): פעילה</div>
+                          <div className="aud-check ok">✓ הגנת הפשטת פרמטרי מעקב URL: פעילה</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Card Footer Actions */}
+                    <div className="store-card-footer">
+                      <div className="footer-left-buttons">
+                        <button
+                          className={cx('btn', installed ? 'ghost' : 'primary', 'small')}
+                          style={!installed ? { background: item.accentColor, color: '#090d16', fontWeight: 600 } : undefined}
+                          onClick={() => toggleInstall(item.id)}
+                        >
+                          <Icon name={installed ? 'x' : 'plus'} size={14} />
+                          <span>{installed ? 'הסר תוסף' : 'התקן תוסף'}</span>
+                        </button>
+
+                        {installed && (
+                          <button
+                            className={cx('btn', disabled ? 'primary' : 'ghost', 'small')}
+                            onClick={() => toggleEnabled(item.id)}
+                          >
+                            <Icon name={disabled ? 'play' : 'pause'} size={13} />
+                            <span>{disabled ? 'הפעל תוסף' : 'השבת זמנית'}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        className="btn-details-link"
+                        title="צפה בצילומי מסך ופרטים מורחבים"
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setActiveScreenshotIdx(0);
+                        }}
+                      >
+                        <span>תמונות ופירוט</span>
+                        <Icon name="tab" size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -617,6 +910,143 @@ export function StorePage({ state }: { state: BrowserState }) {
           </div>
         )}
       </div>
+
+      {/* Detailed Modal & Screenshots Gallery (Store Product Page Dialog) */}
+      {selectedItem && (
+        <div className="store-modal-backdrop" onClick={() => setSelectedItem(null)}>
+          <div className="store-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="modal-header-banner" style={{ background: selectedItem.bannerGradient }}>
+              <button className="modal-close-btn" onClick={() => setSelectedItem(null)}>
+                <Icon name="x" size={16} />
+              </button>
+              <div className="modal-banner-content">
+                <div className="modal-icon-wrap" style={{ color: selectedItem.accentColor }}>
+                  <Icon name={selectedItem.icon} size={36} />
+                </div>
+                <div>
+                  <div className="modal-badges">
+                    <span className="badge official">מקורי Drift</span>
+                    <span className="badge verified">מאומת 100%</span>
+                    <span className="badge version">v{selectedItem.version}</span>
+                  </div>
+                  <h2 className="modal-title">{selectedItem.nameHe}</h2>
+                  <div className="modal-meta-row">
+                    <span>{selectedItem.author}</span>
+                    <span className="meta-sep">•</span>
+                    <span className="stars-gold">★★★★★ {selectedItem.rating}</span>
+                    <span className="meta-sep">•</span>
+                    <span>👥 {selectedItem.users}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body-content">
+              {/* Screenshots Gallery Section */}
+              <div className="modal-screenshots-section">
+                <h3 className="modal-section-title">🖼️ גלריית תמונות ותצוגה מקדימה</h3>
+                <div className="screenshot-display-frame">
+                  <div className="screenshot-inner-mockup" style={{ background: selectedItem.bannerGradient }}>
+                    <div className="mockup-header-bar">
+                      <div className="mockup-dots">
+                        <span className="dot red" />
+                        <span className="dot yellow" />
+                        <span className="dot green" />
+                      </div>
+                      <span className="mockup-bar-title">{selectedItem.name} — Drift Preview</span>
+                    </div>
+
+                    <div className="mockup-showcase-view">
+                      <div className="mockup-icon-large" style={{ color: selectedItem.accentColor }}>
+                        <Icon name={selectedItem.screenshots[activeScreenshotIdx]?.icon ?? selectedItem.icon} size={54} />
+                      </div>
+                      <h4 className="mockup-title">{selectedItem.screenshots[activeScreenshotIdx]?.title}</h4>
+                      <p className="mockup-subtitle">{selectedItem.screenshots[activeScreenshotIdx]?.subtitle}</p>
+
+                      <div className="mockup-features-pills">
+                        {selectedItem.screenshots[activeScreenshotIdx]?.features.map((f, i) => (
+                          <div key={i} className="mockup-pill">
+                            <Icon name="check" size={13} />
+                            <span>{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Screenshot thumbnails selector */}
+                  {selectedItem.screenshots.length > 1 && (
+                    <div className="screenshot-thumbnails-row">
+                      {selectedItem.screenshots.map((s, idx) => (
+                        <button
+                          key={idx}
+                          className={cx('screenshot-thumb-btn', activeScreenshotIdx === idx && 'active')}
+                          onClick={() => setActiveScreenshotIdx(idx)}
+                        >
+                          <Icon name={s.icon} size={14} />
+                          <span>צילום {idx + 1}: {s.title.slice(0, 22)}...</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Full Description & Checklist */}
+              <div className="modal-desc-section">
+                <h3 className="modal-section-title">תיאור מלא ויכולות מרכזיות</h3>
+                <p className="modal-desc-text">{selectedItem.descriptionHe}</p>
+
+                <div className="modal-features-grid">
+                  {selectedItem.featuresHe.map((feat, i) => (
+                    <div key={i} className="modal-feat-card">
+                      <Icon name="check" size={14} />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Verified User Reviews Section */}
+              <div className="modal-reviews-section">
+                <h3 className="modal-section-title">⭐ ביקורות משתמשים מאומתות</h3>
+                <div className="modal-reviews-list">
+                  {selectedItem.reviews.map((rev, i) => (
+                    <div key={i} className="review-card">
+                      <div className="review-header">
+                        <span className="review-author">{rev.author}</span>
+                        <span className="review-stars">{'★'.repeat(rev.stars)}</span>
+                        <span className="review-date">{rev.date}</span>
+                      </div>
+                      <p className="review-comment">{rev.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div className="modal-bottom-bar">
+              <button
+                className={cx('btn primary')}
+                style={{ background: selectedItem.accentColor, color: '#090d16', fontWeight: 600, padding: '0 24px', height: '38px' }}
+                onClick={() => {
+                  toggleInstall(selectedItem.id);
+                  setSelectedItem(null);
+                }}
+              >
+                <Icon name={installedSet.has(selectedItem.id) ? 'x' : 'plus'} size={15} />
+                <span>{installedSet.has(selectedItem.id) ? 'הסר תוסף מהדפדפן' : 'התקן עכשיו בחינם'}</span>
+              </button>
+              <button className="btn ghost" onClick={() => setSelectedItem(null)}>
+                סגור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Toast Notification */}
       {toastMessage && (
