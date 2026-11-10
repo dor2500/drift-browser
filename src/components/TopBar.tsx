@@ -206,15 +206,13 @@ export function TopBar({ state, onOpenBar }: Props) {
             <Icon name="broom" size={17} />
           </button>
         )}
-        {state.settings.theme === 'chrome' && (
-          <button
-            className="tb-btn"
-            title="חלונית צדדית · Chrome Side Panel (Ctrl+Shift+A)"
-            onClick={() => cmd({ type: 'ai:toggle' })}
-          >
-            <Icon name="sidebar" size={16} />
-          </button>
-        )}
+        <button
+          className="tb-btn safety-check-tb-btn"
+          title="מרכז אבטחה ובדיקת בטיחות (Chrome Safety Check · drift://security)"
+          onClick={() => cmd({ type: 'security:open' })}
+        >
+          <Icon name="shield" size={16} />
+        </button>
         <button
           className="tb-btn"
           title="צילום מסך ועריכת תמונה · Web Capture (Ctrl+Shift+S / F10)"

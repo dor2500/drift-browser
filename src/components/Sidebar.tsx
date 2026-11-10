@@ -153,6 +153,9 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
         <button className="icon-btn" title="קיצורי מקלדת · Keyboard Shortcuts (Ctrl+/)" onClick={() => cmd({ type: 'shortcuts:open' })}>
           <Icon name="sliders" size={15} />
         </button>
+        <button className="icon-btn" title="מרכז אבטחה ובדיקת בטיחות · Safety Check (drift://security)" onClick={() => cmd({ type: 'security:open' })}>
+          <Icon name="shield" size={15} />
+        </button>
         <button className="icon-btn" title="חנות תוספים וערכות · Drift Store (Ctrl+Shift+E)" onClick={() => cmd({ type: 'store:open' })}>
           <Icon name="puzzle" size={15} />
         </button>
