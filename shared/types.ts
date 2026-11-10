@@ -401,7 +401,8 @@ export type Command =
   | { type: 'tab:activate'; id: string }
   | { type: 'tab:close'; id?: string }
   | { type: 'tab:navigate'; input: string; id?: string }
-  | { type: 'tab:back' | 'tab:forward' | 'tab:reload'; id?: string }
+  | { type: 'tab:back' | 'tab:forward'; id?: string }
+  | { type: 'tab:reload'; id?: string; ignoreCache?: boolean }
   | { type: 'tab:move'; id: string; zone: DropZone; targetId?: string; position?: DropPosition }
   | { type: 'tab:set'; id: string; pinned?: boolean; essential?: boolean; spaceId?: string; muted?: boolean }
   | { type: 'tab:reopen'; closedId?: string }

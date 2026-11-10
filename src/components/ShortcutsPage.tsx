@@ -52,6 +52,23 @@ const BASE_SHORTCUTS: ShortcutDef[] = [
     action: () => cmd({ type: 'tab:cycle', dir: 1 }),
   },
   {
+    id: 'reload-hard',
+    category: 'tabs',
+    titleHe: 'רענון קשיח ועקיפת מטמון (Hard Reload)',
+    descHe: 'טוען מחדש את הדף ישירות מהשרת תוך עקיפת קבצי המטמון וה-CSS',
+    defaultKeys: ['Ctrl', 'Shift', 'R'],
+    icon: 'reload',
+    action: () => cmd({ type: 'tab:reload', ignoreCache: true }),
+  },
+  {
+    id: 'fullscreen-toggle',
+    category: 'nav',
+    titleHe: 'מצב מסך מלא (Fullscreen)',
+    descHe: 'מעבר לתצוגת מסך מלאה וחזרה',
+    defaultKeys: ['F11'],
+    icon: 'tab',
+  },
+  {
     id: 'incognito',
     category: 'security',
     titleHe: 'חלון גלישה בסתר חדש (Incognito)',

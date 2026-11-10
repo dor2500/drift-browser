@@ -1066,7 +1066,11 @@ export class Browser {
         this.wc(c.id)?.navigationHistory.goForward();
         break;
       case 'tab:reload':
-        this.wc(c.id)?.reload();
+        if (c.ignoreCache) {
+          this.wc(c.id)?.reloadIgnoringCache();
+        } else {
+          this.wc(c.id)?.reload();
+        }
         break;
       case 'tab:move':
         this.move(c);
@@ -2101,6 +2105,12 @@ export class Browser {
       if (t) this.activate(t.id);
       return true;
     }
+    if (!ctrl && !i.alt && !i.shift && k === 'f11') {
+      const fs = !this.win.isFullScreen();
+      this.win.setFullScreen(fs);
+      return true;
+    }
+    if ((ctrl && i.shift && k === 'r') || (ctrl && k === 'f5')) return run({ type: 'tab:reload', ignoreCache: true });
     if ((ctrl && !i.shift && k === 'r') || k === 'f5') return run({ type: 'tab:reload' });
     if (i.alt && !ctrl && k === 'arrowleft') return run({ type: 'tab:back' });
     if (i.alt && !ctrl && k === 'arrowright') return run({ type: 'tab:forward' });
@@ -2171,6 +2181,7 @@ export class Browser {
         click: () => this.run({ type: 'tab:muteSite', id }),
       }] : []),
       { label: this.i18n.t('menu.reload'), click: () => this.run({ type: 'tab:reload', id }) },
+      { label: 'רענון קשיח (עקיפת מטמון) · Hard reload', click: () => this.run({ type: 'tab:reload', id, ignoreCache: true }) },
       { label: 'כרטיסייה חדשה מימין · New tab to the right', click: () => this.createTab({ afterId: id }) },
       { label: 'שכפול כרטיסייה · Duplicate tab', click: () => this.createTab({ url: t.url, afterId: id }) },
       { label: 'יצירת קוד QR עבור כרטיסייה זו · Create QR code', click: () => this.run({ type: 'page:qr', url: t.url }) },
