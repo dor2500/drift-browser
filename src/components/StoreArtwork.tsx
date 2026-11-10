@@ -521,6 +521,193 @@ export function StoreArtwork({ itemId, slideIdx = 0, className = '' }: ArtworkPr
         </div>
       );
 
+    case 'drift-speed-booster':
+      return slideIdx === 0 ? (
+        /* Speed Booster - Screenshot 1: RAM Saver Gauge & Turbo Engine */
+        <div className={`store-artwork-screen speed-screen-1 ${className}`}>
+          <div className="art-window-bar">
+            <span className="art-dot art-red" />
+            <span className="art-dot art-yellow" />
+            <span className="art-dot art-green" />
+            <span className="art-bar-title">🚀 Drift Turbo Speed & RAM Saver Pro</span>
+          </div>
+          <div className="art-screen-content speed-hud">
+            <div className="speed-gauge-wrap">
+              <svg viewBox="0 0 100 60" className="speed-gauge-svg">
+                <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke="rgba(245, 158, 11, 0.2)" strokeWidth="8" strokeLinecap="round" />
+                <path
+                  d="M 15 50 A 35 35 0 0 1 85 50"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="8"
+                  strokeDasharray="110"
+                  strokeDashoffset="28"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="speed-center-text">
+                <span className="speed-pct">65%</span>
+                <span className="speed-sub">חיסכון בזיכרון RAM</span>
+              </div>
+            </div>
+            <div className="speed-stats-col">
+              <div className="speed-metric-item">
+                <span className="spd-badge turbo">TURBO</span>
+                <span>טעינת דפים מואצת ב-3.4x</span>
+              </div>
+              <div className="speed-metric-item">
+                <span className="spd-badge ram">1.8 GB</span>
+                <span>זיכרון RAM ששוחרר אוטומטית</span>
+              </div>
+              <div className="speed-metric-item">
+                <span className="spd-badge cache">CACHE</span>
+                <span>שמירת נכסים סטטיים מקומית</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Speed Booster - Screenshot 2: Predictive Navigation Graph */
+        <div className={`store-artwork-screen speed-screen-2 ${className}`}>
+          <div className="art-window-bar">
+            <span className="art-dot art-red" />
+            <span className="art-dot art-yellow" />
+            <span className="art-dot art-green" />
+            <span className="art-bar-title">⚡ מנוע חיזוי וטעינה מוקדמת חכמה (Speculative Prerender)</span>
+          </div>
+          <div className="art-screen-content prerender-hud">
+            <div className="prerender-graph">
+              <div className="graph-col"><div className="graph-bar" style={{ height: '35%' }} /><span>לפני</span></div>
+              <div className="graph-col fast"><div className="graph-bar" style={{ height: '95%' }} /><span>לאחר ההאצה</span></div>
+            </div>
+            <div className="prerender-summary">
+              <div className="prerender-title">זמן טעינת אתר ממוצע: 180ms בלבד!</div>
+              <div className="prerender-tags">
+                <span className="ptag">✓ DNS Prefetch</span>
+                <span className="ptag">✓ TCP Preconnect</span>
+                <span className="ptag">✓ Brotli Fast Decompress</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'drift-translator':
+      return slideIdx === 0 ? (
+        /* Translator - Screenshot 1: Local Offline Translation */
+        <div className={`store-artwork-screen trans-screen-1 ${className}`}>
+          <div className="art-window-bar">
+            <span className="art-dot art-red" />
+            <span className="art-dot art-yellow" />
+            <span className="art-dot art-green" />
+            <span className="art-bar-title">🌐 Drift Local Translator — 100% Offline AI</span>
+          </div>
+          <div className="art-screen-content trans-hud">
+            <div className="trans-box-wrap">
+              <div className="trans-pane left">
+                <div className="trans-lang-tag">אנגלית (מקור)</div>
+                <div className="trans-text">"Browse the web with unprecedented security and lightning speed."</div>
+              </div>
+              <div className="trans-arrow">⇄</div>
+              <div className="trans-pane right">
+                <div className="trans-lang-tag">עברית (תרגום מקומי)</div>
+                <div className="trans-text">״גלוש ברשת עם אבטחה חסרת תקדים ומהירות ברק.״</div>
+              </div>
+            </div>
+            <div className="trans-privacy-pill">
+              <span>🔒 ללא שליחת טקסט לענן · פרטיות 100% במחשב שלך</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Translator - Screenshot 2: In-Page Hover Translation Bubble */
+        <div className={`store-artwork-screen trans-screen-2 ${className}`}>
+          <div className="art-window-bar">
+            <span className="art-dot art-red" />
+            <span className="art-dot art-yellow" />
+            <span className="art-dot art-green" />
+            <span className="art-bar-title">💬 בועת תרגום מיידית בריחוף מעל מילים</span>
+          </div>
+          <div className="art-screen-content bubble-hud">
+            <div className="mock-webpage-text">
+              Drift is built for users who prioritize privacy and <span className="highlight-word">performance</span> above all.
+            </div>
+            <div className="trans-bubble-popup">
+              <span className="bubble-icon">✨</span>
+              <div className="bubble-body">
+                <span className="bubble-tr-word">ביצועים / יעילות</span>
+                <span className="bubble-phonetic">[pər-ˈfȯr-mən(t)s] · שם עצם</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'drift-tab-matrix':
+      return slideIdx === 0 ? (
+        /* Tab Matrix - Screenshot 1: Smart Tab Stacks & Tree */
+        <div className={`store-artwork-screen matrix-screen-1 ${className}`}>
+          <div className="art-window-bar">
+            <span className="art-dot art-red" />
+            <span className="art-dot art-yellow" />
+            <span className="art-dot art-green" />
+            <span className="art-bar-title">🗂️ Drift Tab Matrix — חלוקה וקיבוץ טאבים חכם</span>
+          </div>
+          <div className="art-screen-content matrix-hud">
+            <div className="matrix-groups-col">
+              <div className="matrix-group work">
+                <span className="mg-dot" />
+                <span className="mg-title">עבודה ופיתוח (4 טאבים)</span>
+              </div>
+              <div className="matrix-group research">
+                <span className="mg-dot" />
+                <span className="mg-title">מחקר ואבטחת מידע (6 טאבים)</span>
+              </div>
+              <div className="matrix-group media">
+                <span className="mg-dot" />
+                <span className="mg-title">מוזיקה ופודקאסטים (2 טאבים)</span>
+              </div>
+            </div>
+            <div className="matrix-stats-col">
+              <div className="mstat-item">
+                <span className="mstat-val">12</span>
+                <span className="mstat-lbl">טאבים פעילים</span>
+              </div>
+              <div className="mstat-item sleep">
+                <span className="mstat-val">8 💤</span>
+                <span className="mstat-lbl">בהשהיה חסכונית</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Tab Matrix - Screenshot 2: Auto Tab Sleeping Dashboard */
+        <div className={`store-artwork-screen matrix-screen-2 ${className}`}>
+          <div className="art-window-bar">
+            <span className="art-dot art-red" />
+            <span className="art-dot art-yellow" />
+            <span className="art-dot art-green" />
+            <span className="art-bar-title">💤 השהיית טאבים אוטומטית לחיסכון במשאבים</span>
+          </div>
+          <div className="art-screen-content matrix-sleep-hud">
+            <div className="sleep-banner">
+              <span className="sleep-icon">🌙</span>
+              <span>טאבים שלא בשימוש 15 דקות מועברים למצב שינה אוטומטית</span>
+            </div>
+            <div className="sleep-tabs-list">
+              <div className="sleep-tab-row">
+                <span>📑 youtube.com/watch...</span>
+                <span className="st-badge">ישן · 280MB נחסכו</span>
+              </div>
+              <div className="sleep-tab-row">
+                <span>📑 github.com/dor2500...</span>
+                <span className="st-badge">ישן · 190MB נחסכו</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
     default:
       return (
         <div className={`store-artwork-screen default-screen ${className}`}>

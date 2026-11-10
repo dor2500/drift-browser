@@ -392,6 +392,136 @@ const STORE_CATALOG: StoreItem[] = [
       { author: 'גיא ר.', stars: 5, date: 'לפני 4 ימים', comment: 'חוסך לי לפתוח אתרים חיצוניים מעצבנים לעיצוב JSON ובדיקת Regex. מעולה!' },
     ],
   },
+  {
+    id: 'drift-speed-booster',
+    name: 'Drift Turbo Speed & RAM Saver',
+    nameHe: 'Drift Speed Booster — מאיץ טעינת אתרים וחיסכון בזיכרון RAM',
+    category: 'productivity',
+    version: '2.2.0',
+    author: 'Drift Core Performance',
+    icon: 'bolt',
+    rating: 4.96,
+    ratingCount: 26800,
+    users: '210,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #f59e0b 100%)',
+    bannerBadge: '⚡ 3.4x FASTER BROWSING',
+    accentColor: '#f59e0b',
+    description:
+      'Turbocharges web browsing with speculative prerendering, DNS prefetching, Brotli decompression, and automatic background tab memory saver.',
+    descriptionHe:
+      'האצת גלישה וטעינת עמודים ב-3.4x, טעינה מוקדמת חכמה, ושחרור אוטומטי של עד 65% מצריכת זיכרון ה-RAM בטאבים לא פעילים.',
+    tags: ['מהירות', 'RAM', 'ביצועים', 'זיכרון', 'טורבו'],
+    featuresHe: [
+      'שחרור אוטומטי של עד 65% זיכרון RAM בטאבים ברקע',
+      'מנוע טעינה מוקדמת וחיזוי ניווט (Speculative Prerender)',
+      'ביטול תקיעות וגלישה מהירה וחלקה ב-60fps',
+      'דחיסת נכסים סטטיים מקומית מואצת',
+    ],
+    screenshots: [
+      {
+        title: 'מד חיסכון RAM ומנוע טורבו פעיל',
+        subtitle: 'שחרור אוטומטי של טאבים שאינם בשימוש להקלת עומס המעבד',
+        icon: 'bolt',
+        features: ['שחרור 1.8GB זיכרון RAM אוטומטית', 'הפחתת עומס סוללה במחשבים ניידים', 'טעינת דפים מואצת פי 3.4'],
+      },
+      {
+        title: 'מנוע חיזוי ניווט וטעינה מוקדמת (Prerender)',
+        subtitle: 'הורדת זמני תגובת שרתי אינטרנט ל-180ms',
+        icon: 'bolt',
+        features: ['DNS Prefetching אוטומטי', 'TCP Preconnect מהיר', 'פתיחת עמודים מיידית בלחיצה'],
+      },
+    ],
+    reviews: [
+      { author: 'מתן א.', stars: 5, date: 'לפני יומיים', comment: 'המחשב שלי כבר לא נחנק כשיש לי 40 טאבים פתוחים. שיפור מטורף!' },
+      { author: 'Eitan B.', stars: 5, date: 'אתמול', comment: 'Pages open instantly now. RAM consumption dropped significantly.' },
+    ],
+  },
+  {
+    id: 'drift-translator',
+    name: 'Drift Local Translator',
+    nameHe: 'Drift Local Translator — מתרגם עמודים וטקסט מקומי ללא ענן',
+    category: 'productivity',
+    version: '1.9.0',
+    author: 'Drift AI Team',
+    icon: 'globe',
+    rating: 4.94,
+    ratingCount: 18900,
+    users: '175,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #3b82f6 100%)',
+    bannerBadge: '🌐 OFFLINE PRIVACY TRANSLATOR',
+    accentColor: '#60a5fa',
+    description:
+      'Instant, offline on-device translation between Hebrew, English and 20+ languages with zero cloud tracking and hovering word popup.',
+    descriptionHe:
+      'תרגום מיידי ומובנה של עמודי אינטרנט ופסקאות: פועל 100% מקומית ללא שליחת טקסטים או מידע אישי לשום שרת ענן חיצוני.',
+    tags: ['תרגום', 'שפות', 'פרטיות', 'עברית', 'אנגלית'],
+    featuresHe: [
+      'תרגום מקומי דו-כיווני עברית/אנגלית ללא צורך בענן',
+      'בועת תרגום מיידית בריחוף סמן מעל מילים',
+      'אפס דליפות פרטיות — כל התרגומים נשארים במחשב שלך',
+      'זיהוי שפה אוטומטי ותרגום עמוד מלא בלחיצה',
+    ],
+    screenshots: [
+      {
+        title: 'תרגום טקסט מקומי דו-כיווני ללא ענן',
+        subtitle: 'עיבוד מהיר מבוסס מודל שפה מקומי השומר על סודיות מוחלטת',
+        icon: 'globe',
+        features: ['תרגום מיידי מעברית לאנגלית ומאנגלית לעברית', 'שמירה מלאה על פרטיות הטקסט הנקרא', 'עבודה מלאה גם ללא חיבור לאינטרנט'],
+      },
+      {
+        title: 'בועת תרגום צפה בריחוף מעל מילים',
+        subtitle: 'הסבר פונטי ותרגום מהיר ללא צורך בהעתקה והדבקה',
+        icon: 'book',
+        features: ['הגיית מילים וסימני ניקוד', 'הצעות למילים נרדפות והקשרים', 'שילוב חלק בכל דף אינטרנט'],
+      },
+    ],
+    reviews: [
+      { author: 'קרן ש.', stars: 5, date: 'לפני יומיים', comment: 'מושלם! לא שולח את המסמכים החסויים שלי לענן של גוגל ומתרגם מעולה.' },
+    ],
+  },
+  {
+    id: 'drift-tab-matrix',
+    name: 'Drift Tab Matrix & Tree',
+    nameHe: 'Drift Tab Matrix — עץ טאבים, קבוצות חכמות והשהיה אוטומטית',
+    category: 'productivity',
+    version: '2.3.0',
+    author: 'Drift Workspace Studio',
+    icon: 'tab',
+    rating: 4.92,
+    ratingCount: 14200,
+    users: '130,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #14532d 0%, #166534 50%, #22c55e 100%)',
+    bannerBadge: '🗂️ SMART TAB STACKS',
+    accentColor: '#4ade80',
+    description:
+      'Visual tab organization with automatic domain grouping, vertical tree hierarchy, sleeping tab hibernation, and search.',
+    descriptionHe:
+      'ארגון ויזואלי של טאבים לפי נושאים וקבוצות צבעוניות, השהיית טאבים חסכונית במצב שינה וחיפוש מהיר בכל הטאבים הפתוחים.',
+    tags: ['טאבים', 'ניהול טאבים', 'קבוצות', 'חיסכון בזיכרון'],
+    featuresHe: [
+      'קיבוץ טאבים אוטומטי לפי מתחמים ופרויקטים',
+      'השהיה חכמה של טאבים לא פעילים לחיסכון במשאבים',
+      'חיפוש מיידי וסינון בין עשרות טאבים פתוחים',
+      'סנכרון מלא עם סרגל הצד של Drift',
+    ],
+    screenshots: [
+      {
+        title: 'חלוקה וקיבוץ טאבים לפי נושאים צבעוניים',
+        subtitle: 'הפרדה נוחה בין עבודה, לימודים, מדיה ופרויקטים',
+        icon: 'tab',
+        features: ['קבוצות עם שמות וצבעים מותאמים אישית', 'קיפול והרחבת קבוצות טאבים בלחיצה', 'העברת טאבים בין חלונות בקלות'],
+      },
+      {
+        title: 'לוח השהיית טאבים במצב שינה (Sleeping Tabs)',
+        subtitle: 'צפייה בחיסכון במשאבים והחזרת טאבים לפעילות ברגע',
+        icon: 'moon',
+        features: ['מעקב אחר זיכרון שנחסך לכל טאב', 'התעוררות מהירה בלחיצה ללא איבוד מידע', 'החרגת אתרי מוזיקה ווידאו מהשהיה'],
+      },
+    ],
+    reviews: [
+      { author: 'ברק פ.', stars: 5, date: 'לפני 3 ימים', comment: 'הסדר והניקיון בדפדפן עלו רמה. קיבוץ הטאבים פשוט גאוני.' },
+    ],
+  },
 ];
 
 export function StorePage({ state }: { state: BrowserState }) {
@@ -409,6 +539,14 @@ export function StorePage({ state }: { state: BrowserState }) {
 
   // Featured carousel index
   const [featuredIdx, setFeaturedIdx] = useState(0);
+
+  // Auto-advance hero carousel every 7 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFeaturedIdx((prev) => (prev + 1) % STORE_CATALOG.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Zen Aura sound preview state
   const [audioPlaying, setAudioPlaying] = useState(storeSettings?.ambientSound?.playing ?? false);
@@ -652,16 +790,32 @@ export function StorePage({ state }: { state: BrowserState }) {
               <div className="artwork-overlay-pill">🔍 לחץ לצפייה בגלריית צילומי מסך מלאה</div>
             </div>
 
-            {/* Carousel navigation buttons */}
-            <div className="hero-carousel-dots" onClick={(e) => e.stopPropagation()}>
-              {STORE_CATALOG.slice(0, 4).map((_, idx) => (
-                <button
-                  key={idx}
-                  className={cx('carousel-dot', (featuredIdx % 4) === idx && 'active')}
-                  onClick={() => setFeaturedIdx(idx)}
-                  title={`הצג תוסף מומלץ ${idx + 1}`}
-                />
-              ))}
+            {/* Carousel navigation buttons and arrows */}
+            <div className="hero-carousel-nav" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="hero-arrow-btn"
+                onClick={() => setFeaturedIdx((prev) => (prev > 0 ? prev - 1 : STORE_CATALOG.length - 1))}
+                title="התוסף המומלץ הקודם"
+              >
+                ‹
+              </button>
+              <div className="hero-carousel-dots">
+                {STORE_CATALOG.slice(0, 6).map((_, idx) => (
+                  <button
+                    key={idx}
+                    className={cx('carousel-dot', (featuredIdx % 6) === idx && 'active')}
+                    onClick={() => setFeaturedIdx(idx)}
+                    title={`הצג תוסף מומלץ ${idx + 1}`}
+                  />
+                ))}
+              </div>
+              <button
+                className="hero-arrow-btn"
+                onClick={() => setFeaturedIdx((prev) => (prev + 1) % STORE_CATALOG.length)}
+                title="התוסף המומלץ הבא"
+              >
+                ›
+              </button>
             </div>
           </div>
         </section>
@@ -1012,24 +1166,79 @@ export function StorePage({ state }: { state: BrowserState }) {
                   <div
                     key={theme.id}
                     className={cx('theme-card', isCurrent && 'active')}
-                    style={{ background: theme.bg }}
+                    onClick={() => applyTheme(theme.id)}
                   >
-                    <div className="theme-card-surface" style={{ background: theme.surface }}>
-                      <div className="theme-accent-strip" style={{ background: theme.accent }} />
+                    {/* Realistic Mini Browser Mockup Frame */}
+                    <div className="theme-browser-mockup" style={{ background: theme.bg }}>
+                      {/* Mini Window Header */}
+                      <div className="theme-mini-titlebar">
+                        <div className="theme-mini-dots">
+                          <span className="mini-dot red" />
+                          <span className="mini-dot yellow" />
+                          <span className="mini-dot green" />
+                        </div>
+                        <div className="theme-mini-tabs">
+                          <div
+                            className="theme-mini-tab active"
+                            style={{ background: theme.surface, borderBottom: `2px solid ${theme.accent}` }}
+                          >
+                            <span className="mini-tab-dot" style={{ background: theme.accent }} />
+                            <span className="mini-tab-title">{theme.name}</span>
+                          </div>
+                          <div className="theme-mini-tab inactive">
+                            <span className="mini-tab-title">+</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mini Address Bar */}
+                      <div className="theme-mini-nav" style={{ background: theme.surface }}>
+                        <div className="theme-mini-url" style={{ border: `1px solid ${theme.accent}44` }}>
+                          <span className="mini-lock" style={{ color: theme.accent }}>🔒</span>
+                          <span className="mini-url-text">drift://newtab · {theme.id}</span>
+                        </div>
+                      </div>
+
+                      {/* Mini Page View Canvas */}
+                      <div className="theme-mini-canvas" style={{ background: theme.bg }}>
+                        <div
+                          className="theme-mini-hero-card"
+                          style={{ background: theme.surface, borderTop: `2px solid ${theme.accent}` }}
+                        >
+                          <div className="mini-preview-headline" style={{ color: theme.accent }}>
+                            ● Drift Pro Experience
+                          </div>
+                          <div className="mini-preview-bar w-80" />
+                          <div className="mini-preview-bar w-50" />
+                          <div
+                            className="mini-preview-action-btn"
+                            style={{ background: theme.accent, color: theme.bg }}
+                          >
+                            {isCurrent ? 'מופעל כעת' : 'נסה ערכה'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Theme Card Footer */}
+                    <div className="theme-card-footer">
                       <div className="theme-card-info">
                         <span className="theme-name">{theme.name}</span>
                         <div className="theme-chips">
-                          <span className="theme-chip" style={{ background: theme.accent }} title="Accent" />
-                          <span className="theme-chip" style={{ background: theme.surface }} title="Surface" />
-                          <span className="theme-chip" style={{ background: theme.bg }} title="Background" />
+                          <span className="theme-chip" style={{ background: theme.accent }} title="Accent: צבע הדגשה" />
+                          <span className="theme-chip" style={{ background: theme.surface }} title="Surface: סרגלים ופאנלים" />
+                          <span className="theme-chip" style={{ background: theme.bg }} title="Background: רקע ראשי" />
                         </div>
                       </div>
                       <button
                         className={cx('btn small', isCurrent ? 'ghost' : 'primary')}
-                        style={!isCurrent ? { background: theme.accent, color: '#111' } : undefined}
-                        onClick={() => applyTheme(theme.id)}
+                        style={!isCurrent ? { background: theme.accent, color: '#090d16', fontWeight: 600 } : undefined}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          applyTheme(theme.id);
+                        }}
                       >
-                        {isCurrent ? '✓ מופעל כעת' : 'החל ערכה זו'}
+                        {isCurrent ? '✓ מופעל' : 'החל ערכה זו'}
                       </button>
                     </div>
                   </div>
