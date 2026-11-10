@@ -40,6 +40,13 @@ export function HistoryPage({ state: _state }: Props) {
     void loadHistory();
   }, []);
 
+  useEffect(() => {
+    const activeTab = _state.tabs.find((t) => t.id === _state.activeTabId);
+    if (activeTab?.url.includes('clear=true')) {
+      setShowClearModal(true);
+    }
+  }, [_state.tabs, _state.activeTabId]);
+
   const handleDeleteOne = async (url: string) => {
     await window.drift.deleteHistory(url);
     setHistory((prev) => prev.filter((item) => item.url !== url));

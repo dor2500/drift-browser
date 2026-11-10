@@ -112,6 +112,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'newspace', label: t('menu.newSpace'), en: translate({}, 'menu.newSpace'), run: () => cmd({ type: 'space:new' }) },
       { id: 'settings', label: t('menu.settings'), en: translate({}, 'menu.settings'), run: () => cmd({ type: 'settings:open' }) },
       { id: 'history', label: 'היסטוריית גלישה (Browsing History · Ctrl+H)', en: 'browsing history recent visits clear cache cookies delete', run: () => cmd({ type: 'history:open' }) },
+      { id: 'clear-browsing-data', label: 'מחיקת נתוני גלישה ומטמון (Clear Browsing Data · Ctrl+Shift+Delete)', en: 'clear browsing data history cache cookies delete wipe remove', run: () => cmd({ type: 'tab:new', url: 'drift://history?clear=true' }) },
       { id: 'downloads-page', label: 'מנהל ההורדות (Downloads Hub · Ctrl+J)', en: 'downloads manager files torrent progress list open folder', run: () => cmd({ type: 'downloads:open' }) },
       { id: 'passwords', label: 'מנהל הסיסמאות והאימות (Password Manager)', en: 'password manager credentials autofill generate encrypt', run: () => cmd({ type: 'passwords:open' }) },
       { id: 'autofill', label: 'מילוי אוטומטי, כרטיסי אשראי וכתובות (Autofill & Payment Cards)', en: 'autofill payments credit cards addresses checkout', run: () => cmd({ type: 'autofill:open' }) },

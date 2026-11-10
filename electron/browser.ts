@@ -357,10 +357,16 @@ export class Browser {
     else this.createTab({ url: SESSIONS_URL });
   }
 
-  private openHistory() {
+  private openHistory(query: string = '') {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(HISTORY_URL));
-    if (existing) this.activate(existing.id);
-    else this.createTab({ url: HISTORY_URL });
+    if (existing) {
+      if (query && !existing.url.includes(query)) {
+        existing.url = HISTORY_URL + query;
+      }
+      this.activate(existing.id);
+    } else {
+      this.createTab({ url: HISTORY_URL + query });
+    }
   }
 
   private openDownloads() {
@@ -1915,7 +1921,10 @@ export class Browser {
     if (ctrl && i.shift && !i.alt && k === 'o') return run({ type: 'bookmarks:open' });
     if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'sessions:open' });
     if ((ctrl && k === '/') || (!ctrl && !i.alt && !i.shift && k === 'f1')) return run({ type: 'shortcuts:open' });
-    if (ctrl && i.shift && !i.alt && k === 'delete') return run({ type: 'settings:open' });
+    if (ctrl && i.shift && !i.alt && k === 'delete') {
+      this.openHistory('?clear=true');
+      return true;
+    }
     if (!ctrl && !i.alt && !i.shift && k === 'f7') {
       return run({ type: 'settings:set', patch: { caretBrowsing: !this.settings.caretBrowsing } });
     }

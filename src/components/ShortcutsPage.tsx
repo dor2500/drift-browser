@@ -61,6 +61,15 @@ const BASE_SHORTCUTS: ShortcutDef[] = [
     action: () => cmd({ type: 'win:incognito' }),
   },
   {
+    id: 'clear-browsing-data',
+    category: 'security',
+    titleHe: 'מחיקת נתוני גלישה ומטמון (Clear Browsing Data)',
+    descHe: 'דיאלוג מחיקת היסטוריה, עוגיות, נתוני אתרים ומטמון לפי טווחי זמן',
+    defaultKeys: ['Ctrl', 'Shift', 'Del'],
+    icon: 'trash',
+    action: () => cmd({ type: 'tab:new', url: 'drift://history?clear=true' }),
+  },
+  {
     id: 'sidepanel',
     category: 'tools',
     titleHe: 'חלונית הצד של כרום (Chrome Side Panel)',
