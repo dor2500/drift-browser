@@ -48,7 +48,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, VPN_URL, APPS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, VPN_URL, APPS_URL, SECURITY_URL, SAFETY_CHECK_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -432,6 +432,12 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(APPS_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: APPS_URL });
+  }
+
+  openSecurity() {
+    const existing = this.tabs.find((t) => !t.glanceOf && (t.url.startsWith(SECURITY_URL) || t.url.startsWith(SAFETY_CHECK_URL)));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: SECURITY_URL });
   }
 
   async launchWebApp(id: string) {
@@ -1157,6 +1163,9 @@ export class Browser {
         break;
       case 'apps:open':
         this.openApps();
+        break;
+      case 'security:open':
+        this.openSecurity();
         break;
       case 'app:install':
         store.saveWebApp(c.app);

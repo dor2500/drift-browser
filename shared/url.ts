@@ -30,6 +30,8 @@ export const TASK_MANAGER_URL = 'drift://task-manager';
 export const SITE_SETTINGS_URL = 'drift://site-settings';
 export const VPN_URL = 'drift://vpn';
 export const APPS_URL = 'drift://apps';
+export const SECURITY_URL = 'drift://security';
+export const SAFETY_CHECK_URL = 'drift://safety-check';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -50,6 +52,7 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(SITE_SETTINGS_URL)) return 'הגדרות אתרים והרשאות תוכן · Site Settings';
   if (url.startsWith(VPN_URL)) return 'שירותי VPN ופרוקסי מאובטח · Drift VPN & Secure Proxy';
   if (url.startsWith(APPS_URL)) return 'יישומי אינטרנט · Web Apps Hub';
+  if (url.startsWith(SECURITY_URL) || url.startsWith(SAFETY_CHECK_URL)) return 'בדיקת בטיחות ומרכז אבטחה · Safety Check';
   return 'Drift';
 };
 
@@ -63,9 +66,24 @@ export function looksLikeUrl(input: string): boolean {
   return SCHEME.test(s) || HOST_LIKE.test(s) || DOMAIN.test(s);
 }
 
-/** Turns omnibox input into a URL: keeps real URLs, adds a scheme, or builds a search. */
+/** Turns omnibox input into a URL: keeps real URLs, maps Chrome shortcuts, adds a scheme, or builds a search. */
 export function normalizeInput(input: string, searchUrl = SEARCH_URL): string {
   const s = input.trim();
+  if (s.startsWith('chrome://') || s.startsWith('about:')) {
+    const p = s.replace(/^(chrome:\/\/|about:)/i, '').replace(/\/$/, '').toLowerCase();
+    if (p === 'settings' || p === 'flags') return SETTINGS_URL;
+    if (p === 'extensions') return EXTENSIONS_URL;
+    if (p === 'downloads') return DOWNLOADS_URL;
+    if (p === 'history') return HISTORY_URL;
+    if (p === 'bookmarks') return BOOKMARKS_URL;
+    if (p === 'passwords' || p === 'settings/passwords') return PASSWORDS_URL;
+    if (p === 'settings/content' || p === 'site-settings') return SITE_SETTINGS_URL;
+    if (p === 'safety-check' || p === 'settings/safetycheck' || p === 'security' || p === 'safetycheck') return SECURITY_URL;
+    if (p === 'vpn') return VPN_URL;
+    if (p === 'apps') return APPS_URL;
+    if (p === 'performance') return PERFORMANCE_URL;
+    if (p === 'newtab' || p === 'blank') return NEWTAB_URL;
+  }
   if (!looksLikeUrl(s)) return searchUrl + encodeURIComponent(s);
   if (SCHEME.test(s)) return s;
   return (HOST_LIKE.test(s) ? 'http://' : 'https://') + s;

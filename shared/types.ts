@@ -422,6 +422,7 @@ export type Command =
   | { type: 'vpn:open' }
   | { type: 'vpn:toggle' }
   | { type: 'apps:open' }
+  | { type: 'security:open' }
   | { type: 'app:install'; app: { name: string; url: string; icon?: string; openAsWindow?: boolean } }
   | { type: 'app:uninstall'; id: string }
   | { type: 'app:launch'; id: string }

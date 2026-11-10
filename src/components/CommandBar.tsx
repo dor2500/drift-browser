@@ -139,6 +139,12 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
         en: 'open vpn proxy private custom server socks5 wireguard leak protect bypass',
         run: () => cmd({ type: 'vpn:open' }),
       },
+      {
+        id: 'safety-check',
+        label: 'מרכז אבטחה ובדיקת בטיחות (Chrome Safety Check · drift://security)',
+        en: 'safety check security audit passwords leak protection https first doh shield scan',
+        run: () => cmd({ type: 'security:open' }),
+      },
       { id: 'incognito', label: 'חלון גלישה בסתר חדש (New Incognito Window · Ctrl+Shift+N)', en: 'incognito private window secret anonymous', run: () => cmd({ type: 'win:incognito' }) },
       { id: 'google', label: t('act.google'), en: translate({}, 'act.google'), run: () => cmd({ type: 'google:signin' }) },
       ...COLOR_THEMES.map((c) => ({
