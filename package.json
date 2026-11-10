@@ -54,8 +54,10 @@
         "nsis"
       ],
       "icon": "assets/icon.ico",
-      "certificateSubjectName": "Dorp",
-      "certificateSha1": "4AC4CE79C43B8042AA99997CEBFC13380090F606"
+      "signtoolOptions": {
+        "certificateSubjectName": "Dorp",
+        "certificateSha1": "4AC4CE79C43B8042AA99997CEBFC13380090F606"
+      }
     },
     "nsis": {
       "oneClick": false,
