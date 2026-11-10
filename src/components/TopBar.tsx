@@ -226,6 +226,13 @@ export function TopBar({ state, onOpenBar }: Props) {
         >
           <Icon name="puzzle" size={16} />
         </button>
+        <button
+          className="tb-btn sidepanel-btn"
+          title="חלונית הצד של כרום: רשימת קריאה, סימניות, חיפוש ופתקים (Chrome Side Panel · Ctrl+Shift+P)"
+          onClick={() => openShellPopover('sidepanel')}
+        >
+          <Icon name="sidebar" size={16} />
+        </button>
         {state.settings.theme === 'chrome' && (
           <button
             className="tb-btn chrome-profile-btn"

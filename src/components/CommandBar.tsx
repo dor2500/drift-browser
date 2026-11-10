@@ -103,6 +103,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'source', label: t('act.source'), en: translate({}, 'act.source'), run: () => cmd({ type: 'page:source' }) },
       { id: 'pip', label: t('act.pip'), en: translate({}, 'act.pip'), run: () => cmd({ type: 'page:pip' }) },
       { id: 'media-hub', label: 'בקרת מדיה וסאונד גלובלית (Global Media Controls & 300% Booster · Ctrl+Alt+M)', en: 'media controls volume boost 300 pip picture in picture audio music speed', run: () => setTimeout(() => openShellPopover('media'), 40) },
+      { id: 'sidepanel', label: 'חלונית הצד של כרום: רשימת קריאה, סימניות ופתקים (Chrome Side Panel · Ctrl+Shift+P)', en: 'chrome side panel reading list bookmarks side search notes', run: () => setTimeout(() => openShellPopover('sidepanel'), 40) },
       { id: 'split', label: t('act.split'), en: translate({}, 'act.split'), run: () => cmd({ type: 'split:toggle' }) },
       { id: 'compact', label: t('act.compact'), en: translate({}, 'act.compact'), run: () => cmd({ type: 'ui:compact' }) },
       { id: 'vertical', label: t('act.vertical'), en: translate({}, 'act.vertical'), run: () => cmd({ type: 'settings:set', patch: { verticalTabs: !state.settings.verticalTabs } }) },

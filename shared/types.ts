@@ -361,7 +361,7 @@ export type Command =
   | { type: 'extensions:open' }
   | { type: 'autofill:open' }
   | { type: 'taskManager:open' }
-  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' }
+  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' | 'sidepanel' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'tabGroup:create'; tabIds: string[]; name?: string; color?: TabGroupColor }
