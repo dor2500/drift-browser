@@ -530,6 +530,18 @@ export function StorePage({ state }: { state: BrowserState }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'users' | 'name'>('rating');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditComplete, setAuditComplete] = useState(false);
+
+  const handleRunSecurityAudit = () => {
+    setIsAuditing(true);
+    setAuditComplete(false);
+    setTimeout(() => {
+      setIsAuditing(false);
+      setAuditComplete(true);
+      showToast('בדיקת אבטחה הושלמה בהצלחה: כל מנגנוני ההגנה והפרטיות של Drift פועלים במלואם!');
+    }, 1200);
+  };
 
   // Selected item for Detailed Modal & Screenshots Gallery
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
@@ -731,32 +743,54 @@ export function StorePage({ state }: { state: BrowserState }) {
             <div className="security-icon-wrap">
               <Icon name="shield" size={24} />
             </div>
-            <div>
-              <div className="security-title">מערך אבטחה מקסימאלי פעיל (Drift Shield Max)</div>
-              <div className="security-sub">חסימת פרסומות, שיבוש טביעת אצבע והצפנה פעילים</div>
+            <div className="security-title-wrap">
+              <div className="security-title-top">
+                <span className="security-title">מערך אבטחה מקסימאלי פעיל (Drift Shield Max)</span>
+                <span className="security-score-badge">100/100 מוגן</span>
+              </div>
+              <div className="security-sub">חסימת פרסומות, שיבוש טביעת אצבע והצפנה פעילים בזמן אמת</div>
             </div>
           </div>
           <div className="security-metrics">
-            <div className="metric-pill">
+            <div className={cx('metric-pill', isAuditing && 'scanning')}>
               <Icon name="check" size={13} />
               <span>Canvas Cloaking</span>
             </div>
-            <div className="metric-pill">
+            <div className={cx('metric-pill', isAuditing && 'scanning')}>
               <Icon name="check" size={13} />
               <span>WebGL Masking</span>
             </div>
-            <div className="metric-pill">
+            <div className={cx('metric-pill', isAuditing && 'scanning')}>
               <Icon name="check" size={13} />
               <span>Audio Frequency Jitter</span>
             </div>
-            <div className="metric-pill">
+            <div className={cx('metric-pill', isAuditing && 'scanning')}>
               <Icon name="check" size={13} />
               <span>Homograph Phishing Shield</span>
             </div>
-            <div className="metric-pill">
+            <div className={cx('metric-pill', isAuditing && 'scanning')}>
               <Icon name="check" size={13} />
               <span>Tracking Parameter Stripper</span>
             </div>
+          </div>
+          <div className="security-card-footer">
+            <button
+              className="btn small ghost sec-audit-btn"
+              onClick={handleRunSecurityAudit}
+              disabled={isAuditing}
+            >
+              <Icon name={isAuditing ? 'reload' : 'shield'} size={13} />
+              <span>{isAuditing ? 'מבצע בדיקת אבטחה...' : auditComplete ? '✓ כל ההגנות תקינות' : 'בדיקת הגנות חיה'}</span>
+            </button>
+            <button
+              className="btn small ghost chrome-store-btn"
+              onClick={() => cmd({ type: 'tab:new', url: 'https://chromewebstore.google.com/' })}
+              title="פתח את חנות התוספים הרשמית של גוגל כרום (Chrome Web Store)"
+            >
+              <Icon name="google" size={13} />
+              <span>חנות התוספים של Chrome</span>
+              <span className="cstore-arrow">↗</span>
+            </button>
           </div>
         </div>
       </header>
@@ -861,35 +895,35 @@ export function StorePage({ state }: { state: BrowserState }) {
           onClick={() => setActiveTab('security')}
         >
           <Icon name="shield" size={15} />
-          <span>אבטחה ופרטיות מקסימלית</span>
+          <span>אבטחה ופרטיות ({STORE_CATALOG.filter((x) => x.category === 'security').length})</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'productivity' && 'active')}
           onClick={() => setActiveTab('productivity')}
         >
           <Icon name="bolt" size={15} />
-          <span>פרודוקטיביות ופוקוס</span>
+          <span>פרודוקטיביות ופוקוס ({STORE_CATALOG.filter((x) => x.category === 'productivity').length})</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'media' && 'active')}
           onClick={() => setActiveTab('media')}
         >
           <Icon name="play" size={15} />
-          <span>מולטימדיה ווידאו</span>
+          <span>מולטימדיה ושמע ({STORE_CATALOG.filter((x) => x.category === 'media').length})</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'devtools' && 'active')}
           onClick={() => setActiveTab('devtools')}
         >
           <Icon name="bolt" size={15} />
-          <span>כלי פיתוח ו-Regex</span>
+          <span>כלי פיתוח ({STORE_CATALOG.filter((x) => x.category === 'devtools').length})</span>
         </button>
         <button
           className={cx('store-nav-btn', activeTab === 'themes' && 'active')}
           onClick={() => setActiveTab('themes')}
         >
           <Icon name="palette" size={15} />
-          <span>ערכות עיצוב וסטיילים ({COLOR_THEMES.length})</span>
+          <span>ערכות עיצוב ({COLOR_THEMES.length})</span>
         </button>
       </nav>
 

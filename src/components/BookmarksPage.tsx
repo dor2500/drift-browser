@@ -133,6 +133,38 @@ export function BookmarksPage({ state }: { state: BrowserState }) {
     showToast('קובץ הסימניות יוצא בהצלחה!');
   };
 
+  const handleImportHtml = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const linkRegex = /<A\s+[^>]*HREF=["']([^"']+)["'][^>]*>([^<]*)<\/A>/gi;
+        let match;
+        const newBms: BookmarkItem[] = [];
+        while ((match = linkRegex.exec(text)) !== null) {
+          const url = match[1];
+          const title = match[2]?.trim() || url;
+          if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            newBms.push({ url, title, addedAt: Date.now() });
+            cmd({ type: 'bookmark:toggle', url, title });
+          }
+        }
+        if (newBms.length > 0) {
+          setBookmarks((prev) => [...newBms, ...prev]);
+          showToast(`יובאו בהצלחה ${newBms.length} סימניות מקובץ ה-HTML!`);
+        } else {
+          showToast('לא נמצאו סימניות תקינות בקובץ ה-HTML');
+        }
+      } catch {
+        showToast('שגיאה בקריאת קובץ ה-HTML');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const getDomain = (rawUrl: string) => {
     try {
       return new URL(rawUrl).hostname;
@@ -161,10 +193,15 @@ export function BookmarksPage({ state }: { state: BrowserState }) {
               <Icon name="plus" size={15} />
               <span>הוסף סימנייה</span>
             </button>
-            <button className="btn ghost" onClick={handleExportHtml} title="ייצוא סימניות לקובץ HTML סטנדרטי">
+            <button className="btn ghost" onClick={handleExportHtml} title="ייצוא סימניות לקובץ HTML סטנדרטי (Netscape Format)">
               <Icon name="download" size={15} />
               <span>ייצוא HTML</span>
             </button>
+            <label className="btn ghost" title="ייבוא סימניות מקובץ HTML (Chrome/Edge/Firefox)">
+              <Icon name="import" size={15} />
+              <span>ייבוא HTML</span>
+              <input type="file" accept=".html,.htm" onChange={handleImportHtml} style={{ display: 'none' }} />
+            </label>
           </div>
         </div>
 

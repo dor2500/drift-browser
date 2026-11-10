@@ -173,6 +173,30 @@
   gap: 8px;
 }
 
+.security-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.security-title-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.security-score-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
 .metric-pill {
   display: inline-flex;
   align-items: center;
@@ -183,6 +207,57 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 11px;
   color: #a6da95;
+  transition: all 0.2s ease;
+}
+
+.metric-pill.scanning {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  animation: pulseScan 0.8s infinite alternate;
+}
+
+@keyframes pulseScan {
+  0% { transform: scale(0.96); opacity: 0.8; }
+  100% { transform: scale(1.04); opacity: 1; }
+}
+
+.security-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.sec-audit-btn {
+  font-size: 11.5px;
+  color: #a6da95;
+  border-color: rgba(166, 218, 149, 0.35);
+}
+
+.sec-audit-btn:hover {
+  background: rgba(166, 218, 149, 0.15);
+  color: #fff;
+}
+
+.chrome-store-btn {
+  font-size: 11.5px;
+  color: #93c5fd;
+  border-color: rgba(147, 197, 253, 0.35);
+  margin-right: auto;
+}
+
+.chrome-store-btn:hover {
+  background: rgba(147, 197, 253, 0.15);
+  color: #fff;
+}
+
+.cstore-arrow {
+  font-size: 11px;
+  opacity: 0.7;
 }
 
 /* Featured Spotlight Hero Carousel */
