@@ -146,3 +146,4 @@ export function TranslatePanel({ activeTab, state: _state, onClose }: Props) {
     </div>
   );
 }
+
