@@ -725,6 +725,18 @@ export class Browser {
         else this.permissions.clearSite(c.origin);
         this.emit();
         break;
+      case 'permission:set':
+        this.permissions.setDecision(c.origin, c.kind, c.decision);
+        this.emit();
+        break;
+      case 'site:clearData': {
+        const ses = session.fromPartition(PARTITION);
+        void ses.clearStorageData({
+          origin: c.origin,
+          storages: ['cookies', 'localstorage', 'indexdb', 'cachestorage'],
+        });
+        break;
+      }
       case 'settings:set':
         this.setSettings(c.patch);
         break;

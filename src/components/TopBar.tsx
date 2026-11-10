@@ -6,7 +6,7 @@ import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { DownloadsButton } from './DownloadsButton';
-import { PageActions } from './PageActions';
+import { PageActions, openShellPopover } from './PageActions';
 import { SpaceIcon } from './SpaceIcon';
 import { iconForPermission } from './PermissionCard';
 import { hasUpdateBadge } from './UpdatePanels';
@@ -140,11 +140,11 @@ export function TopBar({ state, onOpenBar }: Props) {
         <div className="omnibox">
           <button
             className="omnibox-site"
-            title={t('url.sitePermissions')}
-            disabled={!focus || !/^https?:/.test(focus.url)}
-            onClick={() => window.drift.siteMenu()}
+            title="פרטי אתר, אבטחה והרשאות · Site Info & Security"
+            disabled={!focus}
+            onClick={() => openShellPopover('siteinfo')}
           >
-            <Icon name={focus?.url.startsWith('https:') ? 'lock' : 'search'} size={14} />
+            <Icon name={focus?.url.startsWith('https:') ? 'lock' : isInternalUrl(focus?.url || '') ? 'shield' : 'search'} size={14} />
           </button>
           <button ref={omnibox} className="omnibox-text" title="Ctrl+L" onClick={() => onOpenBar('current', anchor())}>
             {focus ? (focus.url.startsWith('drift://newtab') ? t('url.placeholder') : isInternalUrl(focus.url) ? t('set.title') : displayUrl(focus.url)) : t('url.placeholder')}

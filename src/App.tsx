@@ -8,6 +8,7 @@ import { CommandBar } from './components/CommandBar';
 import { ContentArea } from './components/ContentArea';
 import { DarkModePanel } from './components/DarkModePanel';
 import { HandoffPanel } from './components/HandoffPanel';
+import { SiteInfoPanel } from './components/SiteInfoPanel';
 import { Icon } from './components/Icon';
 import { Onboarding } from './components/Onboarding';
 import { type PopoverKind } from './components/PageActions';
@@ -250,6 +251,13 @@ export function App() {
               <HandoffPanel
                 sync={state.sync}
                 activeTab={activeTab}
+                onClose={closePopover}
+              />
+            )}
+            {popover === 'siteinfo' && (
+              <SiteInfoPanel
+                activeTab={activeTab}
+                state={state}
                 onClose={closePopover}
               />
             )}

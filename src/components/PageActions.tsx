@@ -5,7 +5,7 @@ import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { t } from '../i18n';
 
-export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff';
+export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo';
 
 export const openShellPopover = (kind: PopoverKind) =>
   window.dispatchEvent(new CustomEvent<PopoverKind>('drift:popover', { detail: kind }));
@@ -122,7 +122,7 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       <button
         className={cx('page-action', 'shield', on && !paused && 'active')}
         title={!on ? t('shield.off') : paused ? t('shield.paused') : t('shield.count', { count })}
-        onClick={() => window.drift.shieldMenu()}
+        onClick={() => openShellPopover('siteinfo')}
       >
         <Icon name="shield" size={14} />
         {on && !paused && count > 0 && <span className="shield-count">{count > 99 ? '99+' : count}</span>}

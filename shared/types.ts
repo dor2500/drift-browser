@@ -313,6 +313,8 @@ export type Command =
   | { type: 'glance:close' | 'glance:expand' | 'glance:split' }
   | { type: 'permission:respond'; id: string; allow: boolean; remember: boolean }
   | { type: 'permission:reset'; origin: string; kind?: string }
+  | { type: 'permission:set'; origin: string; kind: string; decision?: 'allow' | 'block' }
+  | { type: 'site:clearData'; origin: string }
   | { type: 'settings:set'; patch: SettingsPatch }
   | { type: 'settings:open' }
   | { type: 'settings:reset' }
