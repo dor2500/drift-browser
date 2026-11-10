@@ -38,11 +38,13 @@ import {
   type SplitState,
   type TabState,
   type UiEvent,
+  type SavedSession,
+  type SavedSessionTab,
 } from '../shared/types';
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -342,6 +344,58 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(BOOKMARKS_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: BOOKMARKS_URL });
+  }
+
+  private openSessions() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(SESSIONS_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: SESSIONS_URL });
+  }
+
+  getSavedSessions(): SavedSession[] {
+    return store.loadSavedSessions();
+  }
+
+  saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): SavedSession {
+    const list = store.loadSavedSessions();
+    const session: SavedSession = {
+      id: `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: name.trim() || `סשן שמור · ${new Date().toLocaleDateString('he-IL')}`,
+      createdAt: Date.now(),
+      spaceName,
+      tabs,
+    };
+    list.unshift(session);
+    store.saveSavedSessions(list);
+    return session;
+  }
+
+  deleteSavedSession(id: string): void {
+    const list = store.loadSavedSessions().filter((s) => s.id !== id);
+    store.saveSavedSessions(list);
+  }
+
+  restoreSavedSession(id: string, newSpace: boolean = false): void {
+    const session = store.loadSavedSessions().find((s) => s.id === id);
+    if (!session || session.tabs.length === 0) return;
+
+    let targetSpaceId = this.activeSpaceId;
+    if (newSpace) {
+      const n = this.spaces.length;
+      const s: SpaceState = { id: newId(), name: `סשן: ${session.name}`, icon: ICONS[n % ICONS.length], accent: ACCENTS[n % ACCENTS.length] };
+      this.spaces.push(s);
+      this.activeSpaceId = s.id;
+      targetSpaceId = s.id;
+    }
+
+    for (const t of session.tabs) {
+      const created = this.createTab({
+        url: t.url,
+        spaceId: targetSpaceId,
+      });
+      if (t.pinned) created.pinned = true;
+    }
+    this.emit();
   }
 
   // ---------------------------------------------------------------- model
@@ -688,6 +742,9 @@ export class Browser {
         break;
       case 'bookmarks:open':
         this.openBookmarks();
+        break;
+      case 'sessions:open':
+        this.openSessions();
         break;
       case 'tab:sleep':
         if (c.id) {
@@ -1420,6 +1477,7 @@ export class Browser {
     if (!ctrl && !i.alt && i.shift && k === 'escape') return run({ type: 'win:taskManager' });
     if (ctrl && i.shift && !i.alt && k === 'e') return run({ type: 'store:open' });
     if (ctrl && i.shift && !i.alt && k === 'o') return run({ type: 'bookmarks:open' });
+    if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'sessions:open' });
     if ((ctrl && k === '/') || (!ctrl && !i.alt && !i.shift && k === 'f1')) return run({ type: 'shortcuts:open' });
     if (ctrl && i.shift && !i.alt && k === 'delete') return run({ type: 'settings:open' });
     if (!ctrl && !i.alt && !i.shift && k === 'f7') {

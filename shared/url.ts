@@ -19,6 +19,7 @@ export const STORE_URL = 'drift://store';
 export const SHORTCUTS_URL = 'drift://shortcuts';
 export const PERFORMANCE_URL = 'drift://performance';
 export const BOOKMARKS_URL = 'drift://bookmarks';
+export const SESSIONS_URL = 'drift://sessions';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -28,6 +29,7 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(SHORTCUTS_URL)) return 'קיצורי מקלדת · Shortcuts';
   if (url.startsWith(PERFORMANCE_URL)) return 'ביצועים וזיכרון · Performance';
   if (url.startsWith(BOOKMARKS_URL)) return 'מנהל הסימניות · Bookmarks';
+  if (url.startsWith(SESSIONS_URL)) return 'סשנים שמורים · Tab Stash & Sessions';
   return 'Drift';
 };
 

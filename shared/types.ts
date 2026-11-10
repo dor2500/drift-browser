@@ -153,6 +153,21 @@ export interface Suggestion {
   source?: string;
 }
 
+export interface SavedSessionTab {
+  url: string;
+  title: string;
+  favicon?: string;
+  pinned?: boolean;
+}
+
+export interface SavedSession {
+  id: string;
+  name: string;
+  createdAt: number;
+  spaceName?: string;
+  tabs: SavedSessionTab[];
+}
+
 /** Firebase Web & OAuth Client Configuration for Cloud Firestore Sync. */
 export interface FirebaseClientConfig {
   apiKey: string;
@@ -305,6 +320,7 @@ export type Command =
   | { type: 'shortcuts:open' }
   | { type: 'performance:open' }
   | { type: 'bookmarks:open' }
+  | { type: 'sessions:open' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'privacy:newIdentity' }
@@ -407,6 +423,10 @@ export interface DriftApi {
   installLanguage(code: string): Promise<boolean>;
   suggest(query: string): Promise<Suggestion[]>;
   getBookmarks(): Promise<{ url: string; title: string; source?: string }[]>;
+  getSavedSessions(): Promise<SavedSession[]>;
+  saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
+  deleteSavedSession(id: string): Promise<void>;
+  restoreSavedSession(id: string, newSpace?: boolean): Promise<void>;
   importSources(): Promise<ImportSource[]>;
   runImport(source: ImportBrowser, options: ImportOptions): Promise<ImportResult>;
   onState(cb: (s: BrowserState) => void): () => void;

@@ -1939,6 +1939,503 @@ select.field-input option { background: var(--panel); }
   background: var(--element-bg);
 }
 
+/* ==========================================================
+   Sessions & Tab Stash Hub (drift://sessions)
+   ========================================================== */
+
+.sessions-page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  background: var(--panel);
+  color: var(--text);
+  padding: 32px 48px;
+  user-select: text;
+}
+
+.sessions-header {
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sessions-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.sessions-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.sessions-title-row h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.sessions-sub {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 650px;
+}
+
+.sessions-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.import-btn {
+  cursor: pointer;
+  position: relative;
+}
+
+/* Live Stash Status Card */
+.live-stash-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, #161c28), #111620);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.live-stash-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stash-dot-pulse {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  flex-shrink: 0;
+  animation: stashPulse 2s infinite;
+}
+
+@keyframes stashPulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.stash-live-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stash-live-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.live-stash-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Sessions Search Bar */
+.sessions-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.sessions-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 520px;
+}
+
+.sessions-search-wrap svg {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.sessions-search-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 42px 0 16px;
+  border-radius: var(--button-radius);
+  border: 1px solid var(--border-contrast);
+  background: var(--urlbar-bg);
+  color: var(--text);
+  outline: none;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sessions-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.sessions-count-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--element-bg);
+  border: 1px solid var(--border-contrast);
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.sessions-content {
+  margin-top: 16px;
+}
+
+.sessions-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+.sessions-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--element-bg);
+  border: 1px dashed var(--border-contrast);
+  border-radius: 16px;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.sessions-empty h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sessions-empty p {
+  margin: 0 0 20px 0;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-width: 440px;
+}
+
+/* Sessions Cards List */
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.session-card {
+  background: var(--element-bg);
+  border: 1px solid var(--border-contrast);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.session-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.session-card.expanded {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.session-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.session-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.session-expand-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.session-card:hover .session-expand-toggle {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.session-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.session-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.session-space-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.session-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-icon-subtle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon-subtle:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-icon-subtle.delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Expanded Tabs Tray */
+.session-tabs-tray {
+  border-top: 1px solid var(--border-contrast);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tabs-tray-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.tray-hint {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.session-tabs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.tray-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tray-tab-item:hover {
+  background: var(--hover);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  transform: translateY(-1px);
+}
+
+.tray-tab-fav {
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tray-tab-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tray-tab-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tray-tab-url {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tray-tab-arrow {
+  color: var(--text-faint);
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.tray-tab-item:hover .tray-tab-arrow {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Stash Modal */
+.sessions-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.sessions-modal-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border-contrast);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: scaleInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scope-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+
+.radio-label input:checked + span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stash-option-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.checkbox-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+
 
 
 

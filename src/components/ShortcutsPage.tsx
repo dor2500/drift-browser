@@ -89,6 +89,15 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
         action: () => cmd({ type: 'bookmarks:open' }),
       },
       {
+        id: 'sessions',
+        category: 'tools',
+        titleHe: 'סשנים שמורים ושמירת כרטיסיות (Tab Stash)',
+        descHe: 'פתיחת מנהל הסשנים לשמירת כרטיסיות פתוחות, פינוי זיכרון ושחזור סשנים',
+        keys: ['Ctrl', 'Shift', 'S'],
+        icon: 'inbox',
+        action: () => cmd({ type: 'sessions:open' }),
+      },
+      {
         id: 'shortcuts',
         category: 'tools',
         titleHe: 'לוח קיצורי מקלדת זה',

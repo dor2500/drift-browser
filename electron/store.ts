@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { SpaceState, SplitState, TabState } from '../shared/types';
+import type { SavedSession, SpaceState, SplitState, TabState } from '../shared/types';
 
 export type PersistedTab = Pick<TabState, 'id' | 'url' | 'title' | 'favicon' | 'spaceId' | 'pinned' | 'essential' | 'muted'>;
 
@@ -16,6 +16,25 @@ export interface Persisted {
 }
 
 const file = () => path.join(app.getPath('userData'), 'session.json');
+const savedSessionsFile = () => path.join(app.getPath('userData'), 'saved-sessions.json');
+
+export function loadSavedSessions(): SavedSession[] {
+  try {
+    const raw = fs.readFileSync(savedSessionsFile(), 'utf8');
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSavedSessions(list: SavedSession[]): void {
+  try {
+    fs.writeFileSync(savedSessionsFile(), JSON.stringify(list, null, 2));
+  } catch (err) {
+    console.error('[drift] failed to save sessions', err);
+  }
+}
 
 export function load(): Persisted | null {
   try {

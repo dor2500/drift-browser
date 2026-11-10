@@ -109,6 +109,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'newspace', label: t('menu.newSpace'), en: translate({}, 'menu.newSpace'), run: () => cmd({ type: 'space:new' }) },
       { id: 'settings', label: t('menu.settings'), en: translate({}, 'menu.settings'), run: () => cmd({ type: 'settings:open' }) },
       { id: 'bookmarks', label: 'מנהל הסימניות (Bookmarks Manager · Ctrl+Shift+O)', en: 'bookmarks manager favorites links html export', run: () => cmd({ type: 'bookmarks:open' }) },
+      { id: 'sessions', label: 'סשנים שמורים ושמירת כרטיסיות (Tab Stash · Ctrl+Shift+S)', en: 'sessions tab stash snapshots restore tabs save session', run: () => cmd({ type: 'sessions:open' }) },
       { id: 'performance', label: 'לוח ביצועים וחיסכון בזיכרון (Memory Saver & Performance)', en: 'performance memory saver dashboard tabs ram sleep wake', run: () => cmd({ type: 'performance:open' }) },
       { id: 'shortcuts', label: 'לוח קיצורי מקלדת (Keyboard Shortcuts Hub · Ctrl+/)', en: 'keyboard shortcuts hotkeys command quick', run: () => cmd({ type: 'shortcuts:open' }) },
       { id: 'store', label: 'חנות התוספים וההרחבות (Drift Store · Ctrl+Shift+E)', en: 'drift store extensions addons themes plugins', run: () => cmd({ type: 'store:open' }) },
