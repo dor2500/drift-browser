@@ -3023,11 +3023,34 @@ export class Browser {
           };
           rightTools.append(sizeMinus, sizePlus);
 
-          // Text to Speech (TTS) Read Aloud Button
+          // Text to Speech (TTS) Read Aloud Button & Speed
           const ttsBtn = document.createElement('button');
           ttsBtn.textContent = '🔊 הקרא בקול';
           ttsBtn.style.cssText = 'padding:5px 12px;border-radius:14px;border:1px solid #8aa4ff;background:rgba(138,164,255,0.15);color:#8aa4ff;font-size:12px;font-weight:600;cursor:pointer;';
           let isSpeaking = false;
+          let ttsRate = 1.0;
+
+          const ttsSpeedSelect = document.createElement('select');
+          ttsSpeedSelect.style.cssText = 'padding:3px 6px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:inherit;font-size:11px;cursor:pointer;outline:none;';
+          [
+            { label: '1.0x מהירות', val: '1.0' },
+            { label: '0.8x איטי', val: '0.8' },
+            { label: '1.25x מהיר', val: '1.25' },
+            { label: '1.5x כפול', val: '1.5' },
+          ].forEach(sp => {
+            const opt = document.createElement('option');
+            opt.value = sp.val;
+            opt.textContent = sp.label;
+            ttsSpeedSelect.appendChild(opt);
+          });
+          ttsSpeedSelect.onchange = (e) => {
+            ttsRate = parseFloat(e.target.value);
+            if (isSpeaking && window.__drift_tts_utterance) {
+              window.speechSynthesis.cancel();
+              ttsBtn.click();
+            }
+          };
+
           ttsBtn.onclick = () => {
             if (isSpeaking) {
               window.speechSynthesis.cancel();
@@ -3036,7 +3059,8 @@ export class Browser {
               ttsBtn.style.background = 'rgba(138,164,255,0.15)';
             } else {
               const fullSpeechText = title + '. ' + Array.from(contentWrap.querySelectorAll('p, h2, h3')).map(p => p.innerText).join(' ');
-              const utter = new SpeechSynthesisUtterance(fullSpeechText.slice(0, 5000));
+              const utter = new SpeechSynthesisUtterance(fullSpeechText.slice(0, 8000));
+              utter.rate = ttsRate;
               window.__drift_tts_utterance = utter;
               utter.onend = () => {
                 isSpeaking = false;
@@ -3055,7 +3079,54 @@ export class Browser {
               ttsBtn.style.color = '#111';
             }
           };
-          rightTools.appendChild(ttsBtn);
+          rightTools.append(ttsBtn, ttsSpeedSelect);
+
+          // Width Mode Switcher (Narrow / Normal / Wide)
+          const widthBtn = document.createElement('button');
+          widthBtn.textContent = '↔️ רוחב';
+          widthBtn.title = 'שנה רוחב שולי קריאה (Narrow / Normal / Wide)';
+          widthBtn.style.cssText = 'padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:inherit;font-size:12px;font-weight:600;cursor:pointer;';
+          let widthModeIdx = 1;
+          const widths = ['620px', '760px', '940px'];
+          widthBtn.onclick = () => {
+            widthModeIdx = (widthModeIdx + 1) % widths.length;
+            contentWrap.style.maxWidth = widths[widthModeIdx];
+          };
+          rightTools.appendChild(widthBtn);
+
+          // Save as Markdown (.md)
+          const mdBtn = document.createElement('button');
+          mdBtn.textContent = '💾 שמור MD';
+          mdBtn.title = 'שמור את המאמר הנקי כקובץ Markdown';
+          mdBtn.style.cssText = 'padding:4px 10px;border-radius:8px;border:1px solid rgba(52,211,153,0.4);background:rgba(52,211,153,0.12);color:#34d399;font-size:12px;font-weight:600;cursor:pointer;';
+          mdBtn.onclick = () => {
+            let mdText = '# ' + title + '\\n\\n';
+            mdText += '> מקור: ' + window.location.href + ' · זמן קריאה: ' + readTimeMin + ' דק׳\\n\\n';
+            elements.forEach(node => {
+              if (node.tagName === 'H2') mdText += '## ' + node.innerText.trim() + '\\n\\n';
+              else if (node.tagName === 'H3') mdText += '### ' + node.innerText.trim() + '\\n\\n';
+              else if (node.tagName === 'BLOCKQUOTE') mdText += '> ' + node.innerText.trim() + '\\n\\n';
+              else if (node.tagName === 'IMG') mdText += '![' + (node.alt || 'image') + '](' + node.src + ')\\n\\n';
+              else mdText += node.innerText.trim() + '\\n\\n';
+            });
+            const blob = new Blob([mdText], { type: 'text/markdown;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = (title.replace(/[^a-zA-Z0-9א-ת\\s_-]/g, '').trim().slice(0, 40) || 'article') + '.md';
+            a.click();
+            URL.revokeObjectURL(a.href);
+          };
+          rightTools.appendChild(mdBtn);
+
+          // Print / Clean PDF
+          const printBtn = document.createElement('button');
+          printBtn.textContent = '🖨️ הדפס / PDF';
+          printBtn.title = 'הדפס או שמור את המאמר הנקי כקובץ PDF ללא פרסומות';
+          printBtn.style.cssText = 'padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:inherit;font-size:12px;font-weight:600;cursor:pointer;';
+          printBtn.onclick = () => {
+            window.print();
+          };
+          rightTools.appendChild(printBtn);
 
           toolbar.append(leftTools, rightTools);
           overlay.appendChild(toolbar);
