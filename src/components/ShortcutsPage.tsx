@@ -108,6 +108,15 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
         action: () => cmd({ type: 'downloads:open' }),
       },
       {
+        id: 'passwords',
+        category: 'tools',
+        titleHe: 'מנהל הסיסמאות והאימות (Password Manager)',
+        descHe: 'פתיחת מנהל הסיסמאות המוצפן, בדיקת דליפות ויצירת סיסמאות מורכבות',
+        keys: ['drift://passwords'],
+        icon: 'lock',
+        action: () => cmd({ type: 'passwords:open' }),
+      },
+      {
         id: 'sessions',
         category: 'tools',
         titleHe: 'סשנים שמורים ושמירת כרטיסיות (Tab Stash)',

@@ -133,6 +133,16 @@ export interface HistoryItem {
   bookmark?: boolean;
 }
 
+export interface CredentialEntry {
+  id: string;
+  url: string;
+  username: string;
+  password: string;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface FindState {
   tabId: string;
   active: number;
@@ -346,6 +356,7 @@ export type Command =
   | { type: 'sessions:open' }
   | { type: 'history:open' }
   | { type: 'downloads:open' }
+  | { type: 'passwords:open' }
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
@@ -462,6 +473,9 @@ export interface DriftApi {
   getHistory(limit?: number): Promise<HistoryItem[]>;
   deleteHistory(url: string): Promise<boolean>;
   clearHistory(sinceMs?: number): Promise<boolean>;
+  getSavedPasswords(): Promise<CredentialEntry[]>;
+  savePassword(entry: Omit<CredentialEntry, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<CredentialEntry>;
+  deletePassword(id: string): Promise<boolean>;
   getSavedSessions(): Promise<SavedSession[]>;
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;

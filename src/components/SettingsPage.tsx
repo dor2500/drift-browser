@@ -230,7 +230,10 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label="כניסה אוטומטית לאתרים (Auto sign-in)"
             hint="מאפשר כניסה אוטומטית לאתרים באמצעות פרטי כניסה שנשמרו בחשבונך"
           />
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button className="btn small primary" onClick={() => cmd({ type: 'passwords:open' })}>
+              <Icon name="lock" size={14} /> פתח את מנהל הסיסמאות המלא (drift://passwords)
+            </button>
             <button className="btn small" onClick={handlePasswordSafetyCheck}>
               <Icon name="shield" size={14} /> בדיקת אבטחת סיסמאות מול מאגרי דליפות
             </button>

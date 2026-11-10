@@ -22,6 +22,7 @@ export const BOOKMARKS_URL = 'drift://bookmarks';
 export const SESSIONS_URL = 'drift://sessions';
 export const HISTORY_URL = 'drift://history';
 export const DOWNLOADS_URL = 'drift://downloads';
+export const PASSWORDS_URL = 'drift://passwords';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -34,6 +35,7 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(SESSIONS_URL)) return 'סשנים שמורים · Tab Stash & Sessions';
   if (url.startsWith(HISTORY_URL)) return 'היסטוריית גלישה · History';
   if (url.startsWith(DOWNLOADS_URL)) return 'מנהל ההורדות · Downloads';
+  if (url.startsWith(PASSWORDS_URL)) return 'מנהל הסיסמאות · Passwords';
   return 'Drift';
 };
 

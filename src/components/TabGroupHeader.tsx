@@ -203,3 +203,4 @@ export function TabGroupHeader({ group, tabCount, layout = 'horizontal' }: Props
     </div>
   );
 }
+

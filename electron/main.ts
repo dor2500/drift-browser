@@ -147,6 +147,9 @@ ipcMain.handle('drift:sessions-delete', (e, id: string) => (fromShell(e) ? brows
 ipcMain.handle('drift:sessions-restore', (e, id: string, newSpace?: boolean) =>
   fromShell(e) ? browser?.restoreSavedSession(id, newSpace) : undefined
 );
+ipcMain.handle('drift:passwords-list', (e) => (fromShell(e) ? store.loadPasswords() : []));
+ipcMain.handle('drift:passwords-save', (e, entry) => (fromShell(e) ? store.savePasswordEntry(entry) : undefined));
+ipcMain.handle('drift:passwords-delete', (e, id: string) => (fromShell(e) ? store.deletePasswordEntry(id) : false));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,
