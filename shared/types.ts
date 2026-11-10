@@ -409,6 +409,7 @@ export type Command =
   | { type: 'split:create'; ids: [string, string] }
   | { type: 'split:ratio'; ratio: number }
   | { type: 'split:close' }
+  | { type: 'split:withNew'; id?: string }
   | { type: 'glance:close' | 'glance:expand' | 'glance:split' }
   | { type: 'permission:respond'; id: string; allow: boolean; remember: boolean }
   | { type: 'permission:reset'; origin: string; kind?: string }

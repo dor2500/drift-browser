@@ -1107,6 +1107,15 @@ export class Browser {
         this.split = undefined;
         this.emit();
         break;
+      case 'split:withNew': {
+        const activeId = c.id ?? this.activeTabId;
+        const active = this.tab(activeId);
+        if (!active) break;
+        const newTab = this.createTab({ url: NEWTAB_URL, spaceId: active.spaceId });
+        this.split = { tabIds: [active.id, newTab.id], ratio: 0.5 };
+        this.emit();
+        break;
+      }
       case 'permission:reset':
         if (c.origin === '*') this.permissions.clearAll();
         else if (c.kind) this.permissions.setDecision(c.origin, c.kind, undefined);
@@ -2091,7 +2100,35 @@ export class Browser {
       { label: t.pinned ? this.i18n.t('menu.unpin') : this.i18n.t('menu.pin'), enabled: !t.essential, click: () => this.run({ type: 'tab:set', id, pinned: !t.pinned }) },
       inSplit
         ? { label: this.i18n.t('menu.closeSplit'), click: () => this.run({ type: 'split:close' }) }
-        : { label: this.i18n.t('menu.splitWithCurrent'), enabled: !!active && active !== id, click: () => active && this.run({ type: 'split:create', ids: [active, id] }) },
+        : {
+            label: 'תצוגה מפוצלת · Split View',
+            submenu: [
+              {
+                label: 'פיצול עם כרטיסייה חדשה לצד הנוכחית · Split with new tab',
+                click: () => this.run({ type: 'split:withNew', id }),
+              },
+              ...(active && active !== id
+                ? [
+                    {
+                      label: `פיצול לצד הכרטיסייה הפעילה (${this.tab(active)?.title || 'Tab'})`,
+                      click: () => this.run({ type: 'split:create', ids: [active, id] }),
+                    },
+                  ]
+                : []),
+              ...(this.tabs.filter((other) => other.id !== id && !other.glanceOf).length > 0
+                ? [
+                    { type: 'separator' as const },
+                    ...this.tabs
+                      .filter((other) => other.id !== id && !other.glanceOf)
+                      .slice(0, 6)
+                      .map((other) => ({
+                        label: `לצד: ${other.title || other.url}`,
+                        click: () => this.run({ type: 'split:create', ids: [id, other.id] }),
+                      })),
+                  ]
+                : []),
+            ],
+          },
       { type: 'separator' },
       { label: t.muted ? this.i18n.t('menu.unmute') : this.i18n.t('menu.mute'), click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
       { label: 'השתקת כרטיסיות אחרות · Mute other tabs', click: () => this.run({ type: 'tab:muteOthers', id }) },
