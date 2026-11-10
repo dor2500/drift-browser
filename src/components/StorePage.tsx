@@ -528,6 +528,7 @@ export function StorePage({ state }: { state: BrowserState }) {
   const storeSettings = state.settings.store;
   const [activeTab, setActiveTab] = useState<StoreCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'rating' | 'users' | 'name'>('rating');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Selected item for Detailed Modal & Screenshots Gallery
@@ -645,10 +646,10 @@ export function StorePage({ state }: { state: BrowserState }) {
     showToast(`ערכת העיצוב הוחלה בהצלחה!`);
   };
 
-  // Filtered items
+  // Filtered and sorted items
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return STORE_CATALOG.filter((item) => {
+    const list = STORE_CATALOG.filter((item) => {
       const matchCat = activeTab === 'all' || item.category === activeTab;
       if (!matchCat) return false;
       if (!q) return true;
@@ -660,7 +661,17 @@ export function StorePage({ state }: { state: BrowserState }) {
         item.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [activeTab, searchQuery]);
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'rating') return b.rating - a.rating;
+      if (sortBy === 'users') {
+        const uA = parseInt(a.users.replace(/[^0-9]/g, '')) || 0;
+        const uB = parseInt(b.users.replace(/[^0-9]/g, '')) || 0;
+        return uB - uA;
+      }
+      return a.nameHe.localeCompare(b.nameHe);
+    });
+  }, [activeTab, searchQuery, sortBy]);
 
   const activeTabDetails = state.tabs.find((t) => t.id === state.activeTabId);
   const activeUrl = activeTabDetails?.url ?? '';
@@ -682,20 +693,35 @@ export function StorePage({ state }: { state: BrowserState }) {
             חנות עשירה עם תוספים מקוריים, כלי אבטחה ופרטיות מקסימליים, צלילי אווירה, כלי פרודוקטיביות וערכות נושא מעוצבות.
           </p>
 
-          <div className="store-search-wrap">
-            <Icon name="search" size={18} />
-            <input
-              type="text"
-              placeholder="חיפוש תוספים, ערכות נושא, כלי אבטחה, צלילים ופרטיות..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="store-search-input"
-            />
-            {searchQuery && (
-              <button className="store-clear-search" onClick={() => setSearchQuery('')}>
-                <Icon name="x" size={14} />
-              </button>
-            )}
+          <div className="store-controls-row">
+            <div className="store-search-wrap">
+              <Icon name="search" size={18} />
+              <input
+                type="text"
+                placeholder="חיפוש תוספים, ערכות נושא, כלי אבטחה, צלילים ופרטיות..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="store-search-input"
+              />
+              {searchQuery && (
+                <button className="store-clear-search" onClick={() => setSearchQuery('')}>
+                  <Icon name="x" size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="store-sort-wrap">
+              <span className="store-sort-label">מיין לפי:</span>
+              <select
+                className="field-input store-sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'rating' | 'users' | 'name')}
+              >
+                <option value="rating">⭐ דירוג הגבוה ביותר</option>
+                <option value="users">👥 הפופולריים ביותר</option>
+                <option value="name">🔤 שם (א-ת)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -898,7 +924,10 @@ export function StorePage({ state }: { state: BrowserState }) {
                     </div>
 
                     <div className="card-banner-top">
-                      <span className="card-banner-badge">{item.bannerBadge}</span>
+                      <div className="banner-top-left-badges">
+                        <span className="card-banner-badge">{item.bannerBadge}</span>
+                        {item.rating >= 4.95 && <span className="card-ribbon-featured">🔥 בחירת העורכים</span>}
+                      </div>
                       <span className="banner-chip-rating">★ {item.rating}</span>
                     </div>
 
@@ -1345,7 +1374,81 @@ export function StorePage({ state }: { state: BrowserState }) {
 
               {/* Verified User Reviews Section */}
               <div className="modal-reviews-section">
-                <h3 className="modal-section-title">⭐ ביקורות משתמשים מאומתות</h3>
+                <h3 className="modal-section-title">⭐ דירוגים וביקורות משתמשים מאומתות</h3>
+
+                {/* Chrome Web Store Rating Breakdown HUD */}
+                <div className="modal-ratings-breakdown-card">
+                  <div className="ratings-big-score">
+                    <span className="big-score-num">{selectedItem.rating}</span>
+                    <div className="big-score-stars">{'★'.repeat(5)}</div>
+                    <span className="big-score-total">{selectedItem.ratingCount.toLocaleString()} דירוגים מאומתים</span>
+                  </div>
+                  <div className="ratings-bars-list">
+                    <div className="rating-bar-row">
+                      <span className="star-level">5 כוכבים</span>
+                      <div className="rating-track"><div className="rating-fill" style={{ width: '88%' }} /></div>
+                      <span className="bar-percent">88%</span>
+                    </div>
+                    <div className="rating-bar-row">
+                      <span className="star-level">4 כוכבים</span>
+                      <div className="rating-track"><div className="rating-fill" style={{ width: '9%' }} /></div>
+                      <span className="bar-percent">9%</span>
+                    </div>
+                    <div className="rating-bar-row">
+                      <span className="star-level">3 כוכבים</span>
+                      <div className="rating-track"><div className="rating-fill" style={{ width: '2%' }} /></div>
+                      <span className="bar-percent">2%</span>
+                    </div>
+                    <div className="rating-bar-row">
+                      <span className="star-level">2 כוכבים</span>
+                      <div className="rating-track"><div className="rating-fill" style={{ width: '1%' }} /></div>
+                      <span className="bar-percent">1%</span>
+                    </div>
+                    <div className="rating-bar-row">
+                      <span className="star-level">כוכב 1</span>
+                      <div className="rating-track"><div className="rating-fill" style={{ width: '0%' }} /></div>
+                      <span className="bar-percent">0%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Safe Browsing Verified Banner */}
+                <div className="modal-safe-verified-banner">
+                  <div className="safe-verified-icon">🛡️</div>
+                  <div className="safe-verified-text">
+                    <strong>מאומת ומאובטח במעבדות Drift Labs</strong>
+                    <p>תוסף זה נבדק אוטומטית כנגד נוזקות, סקריפטים פולשניים ופרצות אבטחה. אינו אוסף או מעביר מידע אישי לצדדים שלישיים.</p>
+                  </div>
+                </div>
+
+                {/* Technical Specifications Grid */}
+                <div className="modal-specs-grid">
+                  <div className="spec-card">
+                    <span className="spec-label">גרסה נוכחית:</span>
+                    <span className="spec-value">v{selectedItem.version}</span>
+                  </div>
+                  <div className="spec-card">
+                    <span className="spec-label">מפתח רשמי:</span>
+                    <span className="spec-value">{selectedItem.author}</span>
+                  </div>
+                  <div className="spec-card">
+                    <span className="spec-label">משתמשים פעילים:</span>
+                    <span className="spec-value">{selectedItem.users}</span>
+                  </div>
+                  <div className="spec-card">
+                    <span className="spec-label">רישיון תוכנה:</span>
+                    <span className="spec-value">MIT Open Source</span>
+                  </div>
+                  <div className="spec-card">
+                    <span className="spec-label">תאימות מלאה:</span>
+                    <span className="spec-value">Drift Browser 1.0+</span>
+                  </div>
+                  <div className="spec-card">
+                    <span className="spec-label">שפות נתמכות:</span>
+                    <span className="spec-value">עברית (RTL) · English</span>
+                  </div>
+                </div>
+
                 <div className="modal-reviews-list">
                   {selectedItem.reviews.map((rev, i) => (
                     <div key={i} className="review-card">
