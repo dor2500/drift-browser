@@ -357,7 +357,7 @@ export type Command =
   | { type: 'history:open' }
   | { type: 'downloads:open' }
   | { type: 'passwords:open' }
-  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' }
+  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'tabGroup:create'; tabIds: string[]; name?: string; color?: TabGroupColor }
@@ -417,7 +417,9 @@ export type Command =
   | { type: 'zoom'; dir: 1 | -1 | 0 }
   | { type: 'download:open' | 'download:show' | 'download:cancel' | 'download:remove'; id: string }
   | { type: 'downloads:clear' }
-  | { type: 'page:print' | 'page:source' | 'page:screenshot' | 'page:translate' | 'page:pip' }
+  | { type: 'page:print' | 'page:source' | 'page:screenshot' | 'page:pip' }
+  | { type: 'page:translate'; targetLang?: string; mode?: 'inpage' | 'tab' }
+  | { type: 'page:revertTranslate' }
   | { type: 'split:toggle' }
   | { type: 'app:restart' }
   | { type: 'engine:switch'; engine: 'chromium' | 'gecko' }

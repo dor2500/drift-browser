@@ -10,6 +10,7 @@ import { DarkModePanel } from './components/DarkModePanel';
 import { HandoffPanel } from './components/HandoffPanel';
 import { SiteInfoPanel } from './components/SiteInfoPanel';
 import { GlobalMediaPanel } from './components/GlobalMediaPanel';
+import { TranslatePanel } from './components/TranslatePanel';
 import { Icon } from './components/Icon';
 import { Onboarding } from './components/Onboarding';
 import { type PopoverKind } from './components/PageActions';
@@ -264,6 +265,13 @@ export function App() {
             )}
             {popover === 'media' && (
               <GlobalMediaPanel
+                state={state}
+                onClose={closePopover}
+              />
+            )}
+            {popover === 'translate' && (
+              <TranslatePanel
+                activeTab={activeTab}
                 state={state}
                 onClose={closePopover}
               />

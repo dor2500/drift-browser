@@ -5,7 +5,7 @@ import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { t } from '../i18n';
 
-export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'media';
+export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'media' | 'translate';
 
 export const openShellPopover = (kind: PopoverKind) =>
   window.dispatchEvent(new CustomEvent<PopoverKind>('drift:popover', { detail: kind }));
@@ -73,8 +73,8 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       {web && (
         <button
           className="page-action"
-          title="תרגם דף זה באמצעות Google Translate"
-          onClick={() => cmd({ type: 'page:translate' })}
+          title="תרגום דף זה עם Google Translate"
+          onClick={() => openShellPopover('translate')}
         >
           <Icon name="globe" size={14} />
         </button>

@@ -1048,9 +1048,45 @@ export class Browser {
       case 'page:translate': {
         const t = this.tab(this.activeTabId);
         if (t && /^https?:/.test(t.url)) {
-          const lang = this.i18n.bundle().code;
-          this.createTab({ url: `https://translate.google.com/translate?sl=auto&tl=${lang}&u=${encodeURIComponent(t.url)}`, afterId: t.id });
+          const lang = c.targetLang || this.i18n.bundle().code || 'he';
+          if (c.mode === 'tab') {
+            this.createTab({
+              url: `https://translate.google.com/translate?sl=auto&tl=${lang}&u=${encodeURIComponent(t.url)}`,
+              afterId: t.id,
+            });
+          } else {
+            const wc = this.wc(t.id);
+            if (wc) {
+              const script = `(() => {
+                const el = document.getElementById('google-translate-script');
+                if (el) {
+                  const sel = document.querySelector('.goog-te-combo');
+                  if (sel) { sel.value = '${lang}'; sel.dispatchEvent(new Event('change')); return; }
+                }
+                const div = document.createElement('div');
+                div.id = 'google_translate_element';
+                div.style.position = 'fixed';
+                div.style.bottom = '12px';
+                div.style.left = '12px';
+                div.style.zIndex = '9999999';
+                document.body.appendChild(div);
+                window.googleTranslateElementInit = function() {
+                  new window.google.translate.TranslateElement({ pageLanguage: 'auto', includedLanguages: '${lang}', autoDisplay: true }, 'google_translate_element');
+                };
+                const s = document.createElement('script');
+                s.id = 'google-translate-script';
+                s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+                document.head.appendChild(s);
+              })()`;
+              void wc.executeJavaScript(script).catch(() => {});
+            }
+          }
         }
+        break;
+      }
+      case 'page:revertTranslate': {
+        const wc = this.wc(this.activeTabId);
+        if (wc) wc.reload();
         break;
       }
       case 'page:qr': {
