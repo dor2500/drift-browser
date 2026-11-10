@@ -2950,10 +2950,11 @@ export class Browser {
   private openIncognitoWindow(initialUrl?: string) {
     const incogPartition = `incognito-${newId()}`;
     const incogSes = session.fromPartition(incogPartition, { cache: false });
+
     const incogWin = new BrowserWindow({
       width: 1220,
       height: 820,
-      title: 'Drift — מצב גלישה בסתר (Incognito)',
+      title: 'Drift — מצב גלישה בסתר מאובטח (Incognito · Shield Pro)',
       autoHideMenuBar: true,
       backgroundColor: '#121316',
       webPreferences: {
@@ -2961,8 +2962,10 @@ export class Browser {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        preload: path.join(__dirname, 'tab-preload.js'),
       },
     });
+    incogWin.webContents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
     incogWin.on('closed', () => {
       void incogSes.clearStorageData().catch(() => {});
       void incogSes.clearCache().catch(() => {});
