@@ -1194,6 +1194,227 @@ select.field-input option { background: var(--panel); }
   gap: 12px;
 }
 
+.shortcuts-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* Shortcuts Live Tester Sandbox */
+.shortcut-tester-card {
+  background: color-mix(in srgb, var(--element-bg) 80%, var(--panel));
+  border: 1px solid var(--border-contrast);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: border-color 0.2s;
+}
+
+.shortcut-tester-card:focus-within {
+  border-color: var(--accent);
+}
+
+.tester-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.tester-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tester-title-wrap h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tester-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: pulseDot 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+.tester-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tester-display-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--urlbar-bg);
+  border: 1px dashed var(--border-contrast);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.tester-instruction {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.tester-empty-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-faint);
+  font-size: 13px;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.detected-keys-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tester-key-badge {
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #0b0f19;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent);
+  animation: popKey 0.15s ease-out;
+}
+
+@keyframes popKey {
+  0% { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+
+.matched-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: color-mix(in srgb, #a6da95 12%, transparent);
+  border: 1px solid color-mix(in srgb, #a6da95 30%, transparent);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.matched-label {
+  font-weight: 700;
+  color: #a6da95;
+  white-space: nowrap;
+}
+
+.matched-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.matched-category {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  margin-right: auto;
+}
+
+.unmatched-label {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 4px 0;
+}
+
+/* Custom Hotkey pill & In-card Editor */
+.custom-badge-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.footer-left-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.customize-btn, .reset-btn {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.customize-btn:hover {
+  color: var(--text);
+}
+
+.reset-btn:hover {
+  color: #ed8796;
+}
+
+.shortcut-editor-box {
+  background: var(--urlbar-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeInToast 0.15s ease-out;
+}
+
+.editor-prompt {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.editor-keys-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.editor-waiting {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .shortcuts-toast {
   position: fixed;
   bottom: 28px;
