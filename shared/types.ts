@@ -358,6 +358,7 @@ export type Command =
   | { type: 'downloads:open' }
   | { type: 'passwords:open' }
   | { type: 'cookies:open' }
+  | { type: 'extensions:open' }
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
@@ -458,6 +459,23 @@ export interface CookieRecord {
   sameSite?: 'unspecified' | 'no_restriction' | 'lax' | 'strict';
 }
 
+export interface InstalledExtension {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  enabled: boolean;
+  isBuiltIn?: boolean;
+  path?: string;
+  icon?: string;
+  permissions?: string[];
+  allowIncognito?: boolean;
+  allowFileAccess?: boolean;
+  siteAccess?: 'all' | 'onclick' | 'specific';
+  specificSites?: string[];
+  inspectViews?: string[];
+}
+
 export interface DriftApi {
   /** process.platform: 'win32' | 'darwin' | 'linux'. */
   platform: string;
@@ -506,6 +524,11 @@ export interface DriftApi {
     httpOnly?: boolean;
     expirationDate?: number;
   }): Promise<boolean>;
+  getExtensions(): Promise<InstalledExtension[]>;
+  loadUnpackedExtension(): Promise<InstalledExtension | null>;
+  removeExtension(id: string): Promise<boolean>;
+  toggleExtension(id: string, enabled: boolean): Promise<boolean>;
+  updateExtensionSettings(id: string, patch: Partial<InstalledExtension>): Promise<boolean>;
   getSavedSessions(): Promise<SavedSession[]>;
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;

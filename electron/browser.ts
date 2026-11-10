@@ -42,11 +42,12 @@ import {
   type UiEvent,
   type SavedSession,
   type SavedSessionTab,
+  type InstalledExtension,
 } from '../shared/types';
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -377,6 +378,203 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(COOKIES_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: COOKIES_URL });
+  }
+
+  private openExtensions() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(EXTENSIONS_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: EXTENSIONS_URL });
+  }
+
+  async getInstalledExtensions(): Promise<InstalledExtension[]> {
+    const ses = session.fromPartition(PARTITION);
+    const nativeExts = ses.getAllExtensions ? ses.getAllExtensions() : [];
+    const stored = store.loadStoredExtensions();
+
+    const externalList: InstalledExtension[] = nativeExts.map((e) => {
+      const match = stored.find((s) => s.id === e.id || s.path === (e as any).path);
+      return {
+        id: e.id,
+        name: e.name || 'Unnamed Extension',
+        version: e.version || '1.0.0',
+        description: match?.description || 'תוסף Chromium טעון מקומית במצב מפתח',
+        enabled: match ? match.enabled : true,
+        isBuiltIn: false,
+        path: (e as any).path || match?.path,
+        permissions: match?.permissions || ['storage', 'tabs'],
+        allowIncognito: match?.allowIncognito ?? false,
+        allowFileAccess: match?.allowFileAccess ?? true,
+        siteAccess: match?.siteAccess || 'all',
+        specificSites: match?.specificSites || [],
+      };
+    });
+
+    const builtIns: InstalledExtension[] = [
+      {
+        id: 'drift-shield-pro',
+        name: 'Drift Shield Pro — חבילת אבטחה מקסימאלית וטביעת אצבע',
+        version: '2.4.0',
+        description: 'מיסוך Canvas Fingerprint, הסוואת WebGL GPU, שיבוש AudioContext, חסימת דליפות סוללה והגנת פישינג IDN.',
+        enabled: !this.settings.adblockPaused.includes('shield-pro-disabled'),
+        isBuiltIn: true,
+        permissions: ['declarativeNetRequest', 'webRequest', 'privacy', 'scripting'],
+        allowIncognito: true,
+        allowFileAccess: true,
+        siteAccess: 'all',
+      },
+      {
+        id: 'drift-zen-aura',
+        name: 'Drift Zen Aura — מחולל צלילי רקע ומוזיקת ריכוז',
+        version: '1.8.2',
+        description: 'סינתזת שמע במנוע Web Audio ללא חיבור לאינטרנט: גשם מרגיע (Pink Rain), גלי אוקיינוס וגלי אלפא 10Hz.',
+        enabled: true,
+        isBuiltIn: true,
+        permissions: ['audioCapture', 'storage'],
+        allowIncognito: true,
+        allowFileAccess: false,
+        siteAccess: 'all',
+      },
+      {
+        id: 'drift-scratchpad',
+        name: 'Drift Quick Scratchpad — פנקס רשימות מהיר ומובנה',
+        version: '1.5.0',
+        description: 'שמירת פתקים וקוד מקומית ללא שרתים חיצוניים, העתקה בלחיצה אחת וספירת מילים ותווים בזמן אמת.',
+        enabled: true,
+        isBuiltIn: true,
+        permissions: ['storage', 'clipboardWrite'],
+        allowIncognito: false,
+        allowFileAccess: false,
+        siteAccess: 'all',
+      },
+      {
+        id: 'drift-focus-timer',
+        name: 'Drift Pomodoro — טיימר פוקוס 25/5 מובנה',
+        version: '1.2.0',
+        description: 'ניהול מחזורי ריכוז והפסקות לפי מתודולוגיית Pomodoro, התראות קוליות וטיימר ויזואלי בסרגל.',
+        enabled: true,
+        isBuiltIn: true,
+        permissions: ['notifications', 'alarms'],
+        allowIncognito: true,
+        allowFileAccess: false,
+        siteAccess: 'all',
+      },
+      {
+        id: 'drift-security-auditor',
+        name: 'Drift Site Auditor & TLS Inspector',
+        version: '2.1.0',
+        description: 'בדיקת הצפנת TLS 1.3, זיהוי תעודות EV / DV, ניתוח חסימת עוגיות צד שלישי וציון אבטחה A+.',
+        enabled: true,
+        isBuiltIn: true,
+        permissions: ['webRequest', 'securityInfo'],
+        allowIncognito: true,
+        allowFileAccess: true,
+        siteAccess: 'all',
+      },
+      {
+        id: 'drift-video-booster',
+        name: 'Drift Media PiP & 300% Audio Booster',
+        version: '1.4.0',
+        description: 'הגברת שמע עד 300% באמצעות GainNode, צפייה ב-Picture-in-Picture עם ניגון מהיר 0.5x–2.0x ולופ.',
+        enabled: true,
+        isBuiltIn: true,
+        permissions: ['audio', 'video', 'pictureInPicture'],
+        allowIncognito: true,
+        allowFileAccess: true,
+        siteAccess: 'all',
+      },
+    ];
+
+    return [...externalList, ...builtIns];
+  }
+
+  async loadUnpackedExtension(): Promise<InstalledExtension | null> {
+    const res = await dialog.showOpenDialog(this.win, {
+      title: 'בחר תיקיית תוסף לא ארוז (Select Unpacked Extension Folder)',
+      properties: ['openDirectory'],
+    });
+
+    if (res.canceled || !res.filePaths[0]) return null;
+    const dirPath = res.filePaths[0];
+
+    try {
+      const ses = session.fromPartition(PARTITION);
+      const ext = await ses.loadExtension(dirPath, { allowFileAccess: true });
+      const stored = store.loadStoredExtensions();
+      const newStored: store.StoredExtension = {
+        id: ext.id,
+        name: ext.name,
+        version: ext.version,
+        path: dirPath,
+        enabled: true,
+        allowFileAccess: true,
+        allowIncognito: false,
+        siteAccess: 'all',
+      };
+      store.saveStoredExtensions([...stored.filter((s) => s.id !== ext.id), newStored]);
+
+      return {
+        id: ext.id,
+        name: ext.name,
+        version: ext.version,
+        description: 'תוסף Chrome לא ארוז נטען בהצלחה',
+        enabled: true,
+        isBuiltIn: false,
+        path: dirPath,
+        allowFileAccess: true,
+        allowIncognito: false,
+        siteAccess: 'all',
+      };
+    } catch (err) {
+      console.error('[drift] failed to load unpacked extension:', err);
+      dialog.showErrorBox('שגיאה בטעינת תוסף', `נכשל בטעינת התוסף מ: ${dirPath}\nודא שבתיקייה קיים קובץ manifest.json תקין.`);
+      return null;
+    }
+  }
+
+  async removeExtension(id: string): Promise<boolean> {
+    try {
+      const ses = session.fromPartition(PARTITION);
+      ses.removeExtension(id);
+      const stored = store.loadStoredExtensions();
+      store.saveStoredExtensions(stored.filter((s) => s.id !== id));
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+
+  async toggleExtension(id: string, enabled: boolean): Promise<boolean> {
+    const stored = store.loadStoredExtensions();
+    const target = stored.find((s) => s.id === id);
+    if (target) {
+      target.enabled = enabled;
+      store.saveStoredExtensions(stored);
+      const ses = session.fromPartition(PARTITION);
+      if (enabled) {
+        try {
+          await ses.loadExtension(target.path, { allowFileAccess: target.allowFileAccess ?? true });
+        } catch {}
+      } else {
+        try {
+          ses.removeExtension(id);
+        } catch {}
+      }
+    }
+    return true;
+  }
+
+  async updateExtensionSettings(id: string, patch: Partial<InstalledExtension>): Promise<boolean> {
+    const stored = store.loadStoredExtensions();
+    const target = stored.find((s) => s.id === id);
+    if (target) {
+      if (typeof patch.allowIncognito === 'boolean') target.allowIncognito = patch.allowIncognito;
+      if (typeof patch.allowFileAccess === 'boolean') target.allowFileAccess = patch.allowFileAccess;
+      if (patch.siteAccess) target.siteAccess = patch.siteAccess;
+      if (patch.specificSites) target.specificSites = patch.specificSites;
+      store.saveStoredExtensions(stored);
+    }
+    return true;
   }
 
   getSavedSessions(): SavedSession[] {
@@ -799,6 +997,9 @@ export class Browser {
         break;
       case 'cookies:open':
         this.openCookies();
+        break;
+      case 'extensions:open':
+        this.openExtensions();
         break;
       case 'popover:toggle':
         this.win.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('drift:popover', { detail: '${c.kind}' }))`).catch(() => {});

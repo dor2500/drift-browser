@@ -37,6 +37,40 @@ export function saveSavedSessions(list: SavedSession[]): void {
   }
 }
 
+const extensionsFile = () => path.join(app.getPath('userData'), 'extensions.json');
+
+export interface StoredExtension {
+  id: string;
+  name: string;
+  version: string;
+  path: string;
+  enabled: boolean;
+  description?: string;
+  allowIncognito?: boolean;
+  allowFileAccess?: boolean;
+  siteAccess?: 'all' | 'onclick' | 'specific';
+  specificSites?: string[];
+  permissions?: string[];
+}
+
+export function loadStoredExtensions(): StoredExtension[] {
+  try {
+    const raw = fs.readFileSync(extensionsFile(), 'utf8');
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredExtensions(list: StoredExtension[]): void {
+  try {
+    fs.writeFileSync(extensionsFile(), JSON.stringify(list, null, 2));
+  } catch (err) {
+    console.error('[drift] failed to save extensions', err);
+  }
+}
+
 const passwordsFile = () => path.join(app.getPath('userData'), 'passwords.json');
 
 interface StoredCredential {

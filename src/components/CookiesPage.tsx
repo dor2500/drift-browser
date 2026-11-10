@@ -722,3 +722,4 @@ export function CookiesPage({ state: _state }: { state: BrowserState }) {
     </div>
   );
 }
+

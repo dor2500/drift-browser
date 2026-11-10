@@ -24,12 +24,14 @@ export const HISTORY_URL = 'drift://history';
 export const DOWNLOADS_URL = 'drift://downloads';
 export const PASSWORDS_URL = 'drift://passwords';
 export const COOKIES_URL = 'drift://cookies';
+export const EXTENSIONS_URL = 'drift://extensions';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
   if (url.startsWith(SETTINGS_URL)) return 'Settings';
   if (url.startsWith(NEWTAB_URL)) return 'New Tab';
   if (url.startsWith(STORE_URL)) return 'Drift Store';
+  if (url.startsWith(EXTENSIONS_URL)) return 'תוספים והרחבות · Extensions';
   if (url.startsWith(SHORTCUTS_URL)) return 'קיצורי מקלדת · Shortcuts';
   if (url.startsWith(PERFORMANCE_URL)) return 'ביצועים וזיכרון · Performance';
   if (url.startsWith(BOOKMARKS_URL)) return 'מנהל הסימניות · Bookmarks';

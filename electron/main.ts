@@ -186,6 +186,11 @@ ipcMain.handle('drift:cookies-set', async (e, details: { url: string; name: stri
   await ses.cookies.set(details);
   return true;
 });
+ipcMain.handle('drift:extensions-list', (e) => (fromShell(e) ? browser?.getInstalledExtensions() : []));
+ipcMain.handle('drift:extensions-load-unpacked', (e) => (fromShell(e) ? browser?.loadUnpackedExtension() : null));
+ipcMain.handle('drift:extensions-remove', (e, id: string) => (fromShell(e) ? browser?.removeExtension(id) : false));
+ipcMain.handle('drift:extensions-toggle', (e, id: string, enabled: boolean) => (fromShell(e) ? browser?.toggleExtension(id, enabled) : false));
+ipcMain.handle('drift:extensions-update-settings', (e, id: string, patch: any) => (fromShell(e) ? browser?.updateExtensionSettings(id, patch) : false));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

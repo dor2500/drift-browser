@@ -217,8 +217,12 @@ export function TopBar({ state, onOpenBar }: Props) {
         )}
         <button
           className="tb-btn"
-          title="חנות תוספים והרחבות · Drift Store (Ctrl+Shift+E)"
+          title="תוספים והרחבות (לחיצה: חנות התוספים · קליק ימני: ניהול תוספים)"
           onClick={() => cmd({ type: 'store:open' })}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            cmd({ type: 'extensions:open' });
+          }}
         >
           <Icon name="puzzle" size={16} />
         </button>
