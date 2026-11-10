@@ -591,3 +591,56 @@
   user-select: none;
 }
 
+/* In-Browser Security Warning Bar */
+.security-warning-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  animation: slideInDown 0.15s ease-out;
+  direction: rtl;
+}
+
+.security-warning-bar.warning {
+  background: rgba(234, 179, 8, 0.14);
+  color: #fef08a;
+  border-bottom-color: rgba(234, 179, 8, 0.35);
+}
+
+.security-warning-bar.warning .ic {
+  color: #eab308;
+}
+
+.security-warning-bar.danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+  border-bottom-color: rgba(239, 68, 68, 0.4);
+}
+
+.security-warning-bar.danger .ic {
+  color: #ef4444;
+}
+
+.sw-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.sw-text code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.sw-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+

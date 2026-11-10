@@ -341,6 +341,7 @@ export function TopBar({ state, onOpenBar }: Props) {
       )}
 
       {prompt && <PermissionBar key={prompt.id} prompt={prompt} />}
+      {focus && <SecurityWarningBar tab={focus} />}
     </header>
   );
 }
@@ -464,6 +465,74 @@ function PermissionBar({ prompt }: { prompt: PermissionPrompt }) {
       <button className="btn small primary" onClick={() => respond(true)}>
         {t('perm.allow')}
       </button>
+    </div>
+  );
+}
+
+/** In-browser security warning bar for unencrypted HTTP or phishing/homograph domains. */
+function SecurityWarningBar({ tab }: { tab: TabState }) {
+  const [dismissedTabId, setDismissedTabId] = useState<string | null>(null);
+  const url = tab.url;
+  let isHttpInsecure = false;
+  let isHomograph = false;
+  let host = '';
+
+  try {
+    if (url.startsWith('http://')) {
+      const u = new URL(url);
+      host = u.hostname;
+      if (host !== 'localhost' && host !== '127.0.0.1' && !host.endsWith('.local')) {
+        isHttpInsecure = true;
+      }
+    } else if (url.startsWith('https://')) {
+      const u = new URL(url);
+      host = u.hostname;
+      if (host.startsWith('xn--') || host.includes('.xn--')) {
+        isHomograph = true;
+      }
+    }
+  } catch {}
+
+  if (dismissedTabId === tab.id || (!isHttpInsecure && !isHomograph)) return null;
+
+  return (
+    <div className={cx('security-warning-bar', isHomograph ? 'danger' : 'warning')} role="alert">
+      <Icon name="shield" size={15} />
+      <span className="sw-text">
+        {isHomograph ? (
+          <>
+            <strong>אזהרת פישינג (IDN Spoofing):</strong> הכתובת <code>{host}</code> משתמשת בקידוד Punycode (אותיות זרות) ועלולה להתחזות לאתר מוכר.
+          </>
+        ) : (
+          <>
+            <strong>חיבור לא מאובטח (HTTP):</strong> חיבור זה אינו מוצפן. מידע שיוזן בעמוד עלול להיחשף ברשת.
+          </>
+        )}
+      </span>
+      <div className="sw-actions">
+        {isHttpInsecure && (
+          <button
+            className="btn small primary"
+            onClick={() => {
+              const secureUrl = url.replace(/^http:\/\//i, 'https://');
+              cmd({ type: 'tab:navigate', input: secureUrl, id: tab.id });
+            }}
+          >
+            שדרג ל-HTTPS
+          </button>
+        )}
+        {isHomograph && (
+          <button
+            className="btn small danger"
+            onClick={() => cmd({ type: 'tab:close', id: tab.id })}
+          >
+            סגור כרטיסייה
+          </button>
+        )}
+        <button className="btn small" onClick={() => setDismissedTabId(tab.id)}>
+          התעלם והמשך
+        </button>
+      </div>
     </div>
   );
 }
