@@ -1268,6 +1268,350 @@ select.field-input option { background: var(--panel); }
   max-width: 640px;
 }
 
+/* System Live Memory HUD Card */
+.perf-system-hud-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, #141b26), #10151f);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.hud-header-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hud-main-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+}
+
+.hud-main-title svg {
+  color: var(--accent);
+}
+
+.hud-total-stat {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.hud-total-stat strong {
+  color: #fff;
+}
+
+.ram-segmented-bar {
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.ram-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.ram-seg.active-tabs { background: #38bdf8; }
+.ram-seg.core { background: #c084fc; }
+.ram-seg.gpu { background: #f59e0b; }
+.ram-seg.services { background: #34d399; }
+
+.ram-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-item.saved {
+  margin-right: auto;
+  font-weight: 600;
+  color: #34d399;
+}
+
+.legend-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot-blue { background: #38bdf8; }
+.dot-purple { background: #c084fc; }
+.dot-amber { background: #f59e0b; }
+.dot-green { background: #34d399; }
+.dot-teal { background: #2dd4bf; }
+
+/* Memory Saver Profiles Grid */
+.perf-modes-section {
+  margin-bottom: 32px;
+}
+
+.perf-profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.profile-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: var(--element-bg);
+  border: 1px solid var(--border-contrast);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.profile-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--element-bg));
+}
+
+.profile-radio input {
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.profile-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.profile-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Common Settings Box */
+.perf-settings-box {
+  background: var(--element-bg);
+  border: 1px solid var(--border-contrast);
+  border-radius: 12px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-box-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.settings-box-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.settings-box-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  display: block;
+}
+
+/* Energy Options Group */
+.perf-energy-section,
+.perf-gpu-section {
+  margin-bottom: 32px;
+}
+
+.energy-options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.energy-group-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.energy-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 8px;
+}
+
+/* GPU Diagnostics Box */
+.gpu-diagnostic-box {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-top: 4px;
+}
+
+.diag-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.diag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.diag-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diag-lbl {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.diag-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.diag-val.ok {
+  color: #34d399;
+}
+
+/* Table Header Actions & Filter */
+.table-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tabs-filter-input {
+  position: relative;
+  min-width: 260px;
+}
+
+.tabs-filter-input svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.tabs-filter-input input {
+  width: 100%;
+  height: 34px;
+  padding: 0 34px 0 28px;
+  border-radius: var(--button-radius);
+  border: 1px solid var(--border-contrast);
+  background: var(--urlbar-bg);
+  color: var(--text);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.tabs-filter-input .clear-btn {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.perf-tabs-sub {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.close-tab-btn:hover {
+  color: #fb7185;
+}
+
+/* Exceptions additions */
+.add-protected-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.quick-suggestions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.sugg-lbl {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.sugg-pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-contrast);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.sugg-pill:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
 .perf-metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
