@@ -314,6 +314,39 @@ export interface BrowserState {
   tabGroups?: TabGroup[];
 }
 
+export interface VpnLocationInfo {
+  id: string;
+  name: string;
+  nameHe: string;
+  city: string;
+  cityHe: string;
+  country: string;
+  countryHe: string;
+  countryCode: string;
+  flag: string;
+  ping: number;
+  loadPercent: number;
+  features: string[];
+}
+
+export interface VpnStatus {
+  connected: boolean;
+  connecting: boolean;
+  ip: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  isp: string;
+  serverName: string;
+  protocol: string;
+  pingMs: number;
+  uptimeSeconds: number;
+  bytesReceived: number;
+  bytesSent: number;
+  dnsLeakSafe: boolean;
+  webrtcSafe: boolean;
+}
+
 /** A placeholder rectangle in the shell where a tab's native web view goes. */
 export interface Pane {
   tabId: string;
@@ -361,7 +394,9 @@ export type Command =
   | { type: 'extensions:open' }
   | { type: 'autofill:open' }
   | { type: 'taskManager:open' }
-  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' | 'sidepanel' }
+  | { type: 'vpn:open' }
+  | { type: 'vpn:toggle' }
+  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' | 'sidepanel' | 'vpn' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'tabGroup:create'; tabIds: string[]; name?: string; color?: TabGroupColor }
@@ -586,6 +621,9 @@ export interface DriftApi {
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;
   restoreSavedSession(id: string, newSpace?: boolean): Promise<void>;
+  getVpnStatus(): Promise<VpnStatus>;
+  testVpnConnection(customConfig?: Partial<any>): Promise<{ success: boolean; ip?: string; pingMs?: number; error?: string }>;
+  lookupPublicIp(): Promise<{ ip: string; country?: string; city?: string; isp?: string }>;
   importSources(): Promise<ImportSource[]>;
   runImport(source: ImportBrowser, options: ImportOptions): Promise<ImportResult>;
   onState(cb: (s: BrowserState) => void): () => void;

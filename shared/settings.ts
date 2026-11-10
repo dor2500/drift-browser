@@ -9,6 +9,54 @@ export type SafeBrowsingMode = 'enhanced' | 'standard' | 'off';
 export type DnsOverHttpsMode = 'auto' | 'cloudflare' | 'google' | 'quad9' | 'off';
 export type PreloadPagesMode = 'standard' | 'extended' | 'off';
 
+export type VpnMode = 'builtin' | 'custom' | 'pac';
+export type VpnLocationId = 'ch-zurich' | 'de-frankfurt' | 'nl-amsterdam' | 'us-ny' | 'jp-tokyo' | 'sg-singapore' | 'gb-london';
+export type VpnProtocol = 'socks5' | 'http' | 'https';
+
+export interface VpnCustomServer {
+  protocol: VpnProtocol;
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+}
+
+export interface VpnSettings {
+  /** Master toggle for Drift VPN & Secure Proxy */
+  enabled: boolean;
+  /** Connection mode: built-in Drift Secure Tunnel, custom private server, or PAC URL */
+  mode: VpnMode;
+  /** Preset location ID when mode === 'builtin' */
+  builtinLocation: VpnLocationId;
+  /** Custom / Private VPN connection details */
+  customServer: VpnCustomServer;
+  /** PAC script URL when mode === 'pac' */
+  pacUrl: string;
+  /** WebRTC IP leak protection: prevents LAN/WAN IP exposure via WebRTC STUN/TURN */
+  webrtcProtect: boolean;
+  /** Emergency kill switch: blocks outgoing requests if proxy drops */
+  killSwitch: boolean;
+  /** Bypass list / Split tunneling: hosts or IP patterns that bypass VPN */
+  bypassList: string[];
+}
+
+export const DEFAULT_VPN_SETTINGS: VpnSettings = {
+  enabled: false,
+  mode: 'builtin',
+  builtinLocation: 'ch-zurich',
+  customServer: {
+    protocol: 'socks5',
+    host: '',
+    port: 1080,
+    username: '',
+    password: '',
+  },
+  pacUrl: '',
+  webrtcProtect: true,
+  killSwitch: false,
+  bypassList: ['localhost', '127.0.0.1', '*.local'],
+};
+
 export interface AutofillSettings {
   /** Offer to save passwords when logging into websites. */
   offerToSavePasswords: boolean;
@@ -244,9 +292,10 @@ export interface Settings {
   privacy: PrivacySettings;
   updates: UpdateSettings;
   store: StoreSettings;
+  vpn: VpnSettings;
 }
 
-export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync' | 'store' | 'autofill'>> & {
+export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'darkMode' | 'ai' | 'clipboardSync' | 'store' | 'autofill' | 'vpn'>> & {
   updates?: Partial<UpdateSettings>;
   privacy?: Partial<PrivacySettings>;
   darkMode?: Partial<DarkModeSettings>;
@@ -254,6 +303,7 @@ export type SettingsPatch = Partial<Omit<Settings, 'updates' | 'privacy' | 'dark
   clipboardSync?: Partial<ClipboardSyncSettings>;
   store?: Partial<StoreSettings>;
   autofill?: Partial<AutofillSettings>;
+  vpn?: Partial<VpnSettings>;
 };
 
 export const SEARCH_ENGINES: Record<SearchEngineId, { name: string; url: string; home: string }> = {
@@ -361,6 +411,7 @@ export const DEFAULT_SETTINGS: Settings = {
     engineAlerts: true,
   },
   store: { ...DEFAULT_STORE_SETTINGS },
+  vpn: { ...DEFAULT_VPN_SETTINGS },
 };
 
 export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
@@ -374,6 +425,15 @@ export function mergeSettings(base: Settings, patch: SettingsPatch): Settings {
     clipboardSync: { ...(base.clipboardSync ?? DEFAULT_CLIPBOARD_SYNC), ...(patch.clipboardSync ?? {}) },
     store: { ...(base.store ?? DEFAULT_STORE_SETTINGS), ...(patch.store ?? {}) },
     autofill: { ...(base.autofill ?? DEFAULT_AUTOFILL_SETTINGS), ...(patch.autofill ?? {}) },
+    vpn: {
+      ...(base.vpn ?? DEFAULT_VPN_SETTINGS),
+      ...(patch.vpn ?? {}),
+      customServer: {
+        ...(base.vpn?.customServer ?? DEFAULT_VPN_SETTINGS.customServer),
+        ...(patch.vpn?.customServer ?? {}),
+      },
+      bypassList: patch.vpn?.bypassList ? [...patch.vpn.bypassList] : (base.vpn?.bypassList ?? DEFAULT_VPN_SETTINGS.bypassList),
+    },
   };
   if (patch.theme && patch.theme !== base.theme && patch.verticalTabs === undefined) {
     if (patch.theme === 'chrome' || patch.theme === 'firefox' || patch.theme === 'brave') {

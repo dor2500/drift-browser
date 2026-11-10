@@ -8,6 +8,7 @@ import {
   DEFAULT_DARK_MODE,
   DEFAULT_SETTINGS,
   DEFAULT_STORE_SETTINGS,
+  DEFAULT_VPN_SETTINGS,
   SEARCH_ENGINES,
   mergeSettings,
   type Settings,
@@ -157,6 +158,28 @@ function sanitize(s: Settings): Settings {
       },
       scratchpadNotes: typeof s.store?.scratchpadNotes === 'string' ? s.store.scratchpadNotes.slice(0, 100000) : '',
     },
+    vpn: {
+      enabled: typeof s.vpn?.enabled === 'boolean' ? s.vpn.enabled : DEFAULT_VPN_SETTINGS.enabled,
+      mode: ['builtin', 'custom', 'pac'].includes(s.vpn?.mode as string) ? s.vpn.mode : DEFAULT_VPN_SETTINGS.mode,
+      builtinLocation: ['ch-zurich', 'de-frankfurt', 'nl-amsterdam', 'us-ny', 'jp-tokyo', 'sg-singapore', 'gb-london'].includes(s.vpn?.builtinLocation as string)
+        ? s.vpn.builtinLocation
+        : DEFAULT_VPN_SETTINGS.builtinLocation,
+      customServer: {
+        protocol: ['socks5', 'http', 'https'].includes(s.vpn?.customServer?.protocol as string)
+          ? s.vpn.customServer.protocol
+          : DEFAULT_VPN_SETTINGS.customServer.protocol,
+        host: typeof s.vpn?.customServer?.host === 'string' ? s.vpn.customServer.host.trim().slice(0, 256) : '',
+        port: clampNum(s.vpn?.customServer?.port, 1080, 1, 65535),
+        username: typeof s.vpn?.customServer?.username === 'string' ? s.vpn.customServer.username.trim().slice(0, 128) : '',
+        password: typeof s.vpn?.customServer?.password === 'string' ? s.vpn.customServer.password.slice(0, 256) : '',
+      },
+      pacUrl: typeof s.vpn?.pacUrl === 'string' ? s.vpn.pacUrl.trim().slice(0, 500) : '',
+      webrtcProtect: typeof s.vpn?.webrtcProtect === 'boolean' ? s.vpn.webrtcProtect : DEFAULT_VPN_SETTINGS.webrtcProtect,
+      killSwitch: typeof s.vpn?.killSwitch === 'boolean' ? s.vpn.killSwitch : DEFAULT_VPN_SETTINGS.killSwitch,
+      bypassList: Array.isArray(s.vpn?.bypassList)
+        ? [...new Set(s.vpn.bypassList.filter((b) => typeof b === 'string' && b.length < 256))].slice(0, 100)
+        : [...DEFAULT_VPN_SETTINGS.bypassList],
+    },
   };
 }
 
@@ -173,6 +196,7 @@ export function loadSettings(): Settings {
       clipboardSync: { ...DEFAULT_CLIPBOARD_SYNC },
       store: { ...DEFAULT_STORE_SETTINGS },
       autofill: { ...DEFAULT_AUTOFILL_SETTINGS },
+      vpn: { ...DEFAULT_VPN_SETTINGS },
     };
   }
 }

@@ -48,7 +48,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, VPN_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -66,6 +66,7 @@ import { StateManager, type SyncDomain } from './state-manager';
 import { DarkModeEngine } from './dark-mode-engine';
 import { OllamaService } from './ollama-service';
 import { ClipboardMonitor } from './clipboard-sync';
+import { VpnManager } from './vpn';
 
 export const PARTITION = 'persist:drift';
 
@@ -118,6 +119,7 @@ export class Browser {
   readonly darkEngine: DarkModeEngine;
   readonly ollama: OllamaService;
   readonly clipboardMonitor: ClipboardMonitor;
+  readonly vpn: VpnManager;
   private sync!: FirebaseSyncManager;
   private settings: Settings = loadSettings();
   /** Hosts whose https upgrade failed; they load over http. */
@@ -148,6 +150,8 @@ export class Browser {
     this.stateMgr.on('domain:changed', (domain: SyncDomain) => this.sync?.notifyLocalChange(domain));
 
     this.updater = new Updater(() => this.settings, () => this.emit(), (k) => this.i18n.t(k));
+    this.vpn = new VpnManager(() => this.settings);
+    void this.vpn.applyToSession(session.fromPartition(PARTITION));
     this.permissions = new Permissions({
       tabIdFor: (wc) => [...this.views].find(([, v]) => v.webContents === wc)?.[0],
       changed: () => this.emit(),
@@ -236,6 +240,17 @@ export class Browser {
       for (const v of this.views.values()) (v as unknown as { setBorderRadius?: (r: number) => void }).setBorderRadius?.(this.contentRadius);
     }
     if (patch.updates || patch.onboarded !== undefined) this.updater.schedule();
+    if (patch.vpn !== undefined) {
+      void this.vpn.applyToSession(session.fromPartition(PARTITION));
+      const webrtcPolicy = (this.settings.vpn.enabled && this.settings.vpn.webrtcProtect)
+        ? 'disable_non_proxied_udp'
+        : (this.settings.privacy.webrtcProtect ? 'default_public_interface_only' : 'default');
+      for (const v of this.views.values()) {
+        if (!v.webContents.isDestroyed()) {
+          v.webContents.setWebRTCIPHandlingPolicy(webrtcPolicy);
+        }
+      }
+    }
     if (patch.adblock !== undefined) this.adblock.apply();
     if (patch.hideAnnoyances !== undefined) void this.adblock.setAnnoyances(this.settings.hideAnnoyances);
     if (patch.privacy?.webrtcProtect !== undefined) {
@@ -403,6 +418,12 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(TASK_MANAGER_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: TASK_MANAGER_URL });
+  }
+
+  openVpn() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(VPN_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: VPN_URL });
   }
 
   getTaskManagerMetrics(): TaskManagerProcess[] {
@@ -1093,6 +1114,12 @@ export class Browser {
         break;
       case 'taskManager:open':
         this.openTaskManager();
+        break;
+      case 'vpn:open':
+        this.openVpn();
+        break;
+      case 'vpn:toggle':
+        this.setSettings({ vpn: { enabled: !this.settings.vpn.enabled } });
         break;
       case 'popover:toggle':
         this.win.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('drift:popover', { detail: '${c.kind}' }))`).catch(() => {});

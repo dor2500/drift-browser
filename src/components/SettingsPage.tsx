@@ -283,6 +283,35 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             </button>
           </div>
 
+          {/* Dedicated VPN & Secure Proxy Hub link */}
+          <div className="site-row" style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: s.vpn?.enabled ? 'rgba(16, 185, 129, 0.08)' : 'transparent', border: s.vpn?.enabled ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid var(--border)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className={cx('vpn-dot', s.vpn?.enabled ? 'online' : 'offline')} style={{ width: 8, height: 8, borderRadius: '50%', background: s.vpn?.enabled ? '#10b981' : '#64748b', display: 'inline-block' }} />
+                <strong>רשת VPN ופרוקסי פרטי (Drift VPN & Private Proxy)</strong>
+                {s.vpn?.enabled && <span className="shield-tag ok" style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'rgba(16, 185, 129, 0.2)', color: '#34d399' }}>פעיל ומאובטח</span>}
+              </div>
+              <div className="field-label">
+                {s.vpn?.enabled
+                  ? s.vpn.mode === 'custom'
+                    ? `מחובר לשרת פרטי: ${s.vpn.customServer?.host || 'לא הוגדר'}`
+                    : `מחובר לרשת המובנית: שרת ${s.vpn.builtinLocation}`
+                  : 'הצפנת תעבורה מלאה, הסוואת כתובת IP, מניעת מעקב של ספק האינטרנט וחיבור שרתי SOCKS5/HTTPS פרטיים'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                className={cx('btn small', s.vpn?.enabled && 'primary')}
+                onClick={() => cmd({ type: 'settings:set', patch: { vpn: { enabled: !s.vpn?.enabled } } })}
+              >
+                {s.vpn?.enabled ? 'השבת VPN' : 'הפעל VPN'}
+              </button>
+              <button className="btn small" onClick={() => cmd({ type: 'vpn:open' })}>
+                <Icon name="shield" size={14} /> נהל שרתים וחיבור פרטי
+              </button>
+            </div>
+          </div>
+
           <h3>ניקוי נתוני גלישה (Clear Browsing Data · Ctrl+Shift+Del)</h3>
           <div className="site-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>

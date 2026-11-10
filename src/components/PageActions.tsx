@@ -5,7 +5,7 @@ import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { t } from '../i18n';
 
-export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'media' | 'translate' | 'sidepanel';
+export type PopoverKind = 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'media' | 'translate' | 'sidepanel' | 'vpn';
 
 export const openShellPopover = (kind: PopoverKind) =>
   window.dispatchEvent(new CustomEvent<PopoverKind>('drift:popover', { detail: kind }));

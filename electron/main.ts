@@ -198,6 +198,9 @@ ipcMain.handle('drift:autofill-save-address', (e, addr) => (fromShell(e) ? store
 ipcMain.handle('drift:autofill-delete-address', (e, id: string) => (fromShell(e) ? store.deleteAddress(id) : false));
 ipcMain.handle('drift:task-manager-metrics', (e) => (fromShell(e) ? browser?.getTaskManagerMetrics() : []));
 ipcMain.handle('drift:task-manager-kill', (e, pid: number, tabId?: string) => (fromShell(e) ? browser?.killTaskManagerProcess(pid, tabId) : false));
+ipcMain.handle('drift:vpn-status', (e) => (fromShell(e) ? browser?.vpn.getStatus() : undefined));
+ipcMain.handle('drift:vpn-test', (e, config) => (fromShell(e) ? browser?.vpn.testConnection(config) : { success: false, error: 'Unavailable' }));
+ipcMain.handle('drift:vpn-lookup-ip', (e) => (fromShell(e) ? browser?.vpn.lookupPublicIp() : { ip: '' }));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

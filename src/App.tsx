@@ -12,6 +12,7 @@ import { SiteInfoPanel } from './components/SiteInfoPanel';
 import { GlobalMediaPanel } from './components/GlobalMediaPanel';
 import { TranslatePanel } from './components/TranslatePanel';
 import { SidePanel } from './components/SidePanel';
+import { VpnPanel } from './components/VpnPanel';
 import { Icon } from './components/Icon';
 import { Onboarding } from './components/Onboarding';
 import { type PopoverKind } from './components/PageActions';
@@ -280,6 +281,12 @@ export function App() {
             {popover === 'sidepanel' && (
               <SidePanel
                 activeTab={activeTab}
+                state={state}
+                onClose={closePopover}
+              />
+            )}
+            {popover === 'vpn' && (
+              <VpnPanel
                 state={state}
                 onClose={closePopover}
               />

@@ -5,6 +5,7 @@
 @import './ntp.css';
 @import './modes.css';
 @import './store.css';
+@import './vpn.css';
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }

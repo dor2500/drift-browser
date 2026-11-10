@@ -125,6 +125,18 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'store', label: 'חנות התוספים וההרחבות (Drift Store · Ctrl+Shift+E)', en: 'drift store extensions addons themes plugins', run: () => cmd({ type: 'store:open' }) },
       { id: 'extensions-manager', label: 'ניהול תוספים והרחבות כרום (Chrome Extensions Manager · chrome://extensions)', en: 'extensions manager unpacked load developer mode chrome addons plugins', run: () => cmd({ type: 'extensions:open' }) },
       { id: 'site-settings', label: 'הגדרות אתרים והרשאות תוכן (Chrome Content Settings · chrome://settings/content)', en: 'site settings permissions camera microphone location notifications popups content cookies allow block', run: () => cmd({ type: 'tab:new', url: 'drift://site-settings' }) },
+      {
+        id: 'vpn-toggle',
+        label: state.settings.vpn.enabled ? 'השבת חיבור VPN ופרוקסי (Drift VPN)' : 'הפעל חיבור VPN ופרוקסי מאובטח (Drift VPN)',
+        en: 'toggle vpn secure proxy private tunnel socks5',
+        run: () => cmd({ type: 'settings:set', patch: { vpn: { enabled: !state.settings.vpn.enabled } } }),
+      },
+      {
+        id: 'vpn-page',
+        label: 'מרכז VPN וחיבור פרטי (Drift VPN & Private Proxy Hub · drift://vpn)',
+        en: 'open vpn proxy private custom server socks5 wireguard leak protect bypass',
+        run: () => cmd({ type: 'vpn:open' }),
+      },
       { id: 'incognito', label: 'חלון גלישה בסתר חדש (New Incognito Window · Ctrl+Shift+N)', en: 'incognito private window secret anonymous', run: () => cmd({ type: 'win:incognito' }) },
       { id: 'google', label: t('act.google'), en: translate({}, 'act.google'), run: () => cmd({ type: 'google:signin' }) },
       ...COLOR_THEMES.map((c) => ({

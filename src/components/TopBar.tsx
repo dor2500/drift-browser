@@ -216,6 +216,20 @@ export function TopBar({ state, onOpenBar }: Props) {
           </button>
         )}
         <button
+          className={cx('tb-btn vpn-toolbar-btn', state.settings.vpn.enabled && 'active')}
+          title={
+            state.settings.vpn.enabled
+              ? state.settings.vpn.mode === 'custom'
+                ? `Drift VPN פעיל ומאובטח (שרת פרטי: ${state.settings.vpn.customServer.host || 'מוגדר'})`
+                : `Drift VPN פעיל ומאובטח (${state.settings.vpn.builtinLocation})`
+              : 'Drift VPN & Secure Proxy (לחץ להפעלה או לחיבור שרת פרטי)'
+          }
+          onClick={() => openShellPopover('vpn')}
+        >
+          <Icon name="shield" size={16} />
+          {state.settings.vpn.enabled && <span className="vpn-indicator-dot" />}
+        </button>
+        <button
           className="tb-btn"
           title="תוספים והרחבות (לחיצה: חנות התוספים · קליק ימני: ניהול תוספים)"
           onClick={() => cmd({ type: 'store:open' })}
