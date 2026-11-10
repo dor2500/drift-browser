@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { hostOf, permissionLabel } from '../../shared/permissions';
-import type { BrowserState, DropPosition, PermissionPrompt, Suggestion, TabState } from '../../shared/types';
+import type { BrowserState, DropPosition, PermissionPrompt, Suggestion, TabGroup, TabState } from '../../shared/types';
 import { displayUrl, isInternalUrl } from '../../shared/url';
 import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
@@ -12,6 +12,7 @@ import { iconForPermission } from './PermissionCard';
 import { hasUpdateBadge } from './UpdatePanels';
 import { t } from '../i18n';
 import { useTabSwipe } from './useTabSwipe';
+import { TabGroupHeader, TAB_GROUP_COLORS } from './TabGroupHeader';
 
 export interface Anchor {
   left: number;
@@ -87,19 +88,50 @@ export function TopBar({ state, onOpenBar }: Props) {
             setDrop(null);
           }}
         >
-          {strip.map((t) => (
-            <HTab
-              key={t.id}
-              tab={t}
-              selected={t.id === state.activeTabId}
-              compact={t.essential || t.pinned}
-              attention={waiting.has(t.id) && t.id !== state.activeTabId}
-              showHoverCard={state.settings.tabHoverCard}
-              swipeEnabled={state.settings.swipeToCloseTabs}
-              dropPos={drop?.id === t.id ? drop.pos : undefined}
-              onDragOverTab={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
-            />
-          ))}
+          {(() => {
+            const renderedGroups = new Set<string>();
+            return strip.map((t) => {
+              const group =
+                !t.essential && !t.pinned && t.groupId
+                  ? state.tabGroups?.find((g) => g.id === t.groupId)
+                  : undefined;
+
+              let groupHeaderNode: React.ReactNode = null;
+              if (group && !renderedGroups.has(group.id)) {
+                renderedGroups.add(group.id);
+                const count = strip.filter((x) => x.groupId === group.id).length;
+                groupHeaderNode = (
+                  <TabGroupHeader
+                    key={`htab-grp-${group.id}`}
+                    group={group}
+                    tabCount={count}
+                    layout="horizontal"
+                  />
+                );
+              }
+
+              if (group?.collapsed) {
+                return groupHeaderNode;
+              }
+
+              return (
+                <Fragment key={t.id}>
+                  {groupHeaderNode}
+                  <HTab
+                    tab={t}
+                    group={group}
+                    selected={t.id === state.activeTabId}
+                    compact={t.essential || t.pinned}
+                    attention={waiting.has(t.id) && t.id !== state.activeTabId}
+                    showHoverCard={state.settings.tabHoverCard}
+                    swipeEnabled={state.settings.swipeToCloseTabs}
+                    dropPos={drop?.id === t.id ? drop.pos : undefined}
+                    onDragOverTab={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
+                  />
+                </Fragment>
+              );
+            });
+          })()}
           <button className="strip-btn newtab-btn" title={`${t('menu.newTab')} (Ctrl+T)`} onClick={() => void newTab()}>
             <Icon name="plus" size={16} />
           </button>
@@ -278,6 +310,7 @@ export function TopBar({ state, onOpenBar }: Props) {
 
 function HTab({
   tab,
+  group,
   selected,
   compact,
   attention,
@@ -287,6 +320,7 @@ function HTab({
   onDragOverTab,
 }: {
   tab: TabState;
+  group?: TabGroup;
   selected: boolean;
   compact: boolean;
   attention: boolean;
@@ -300,17 +334,23 @@ function HTab({
     onClose: () => cmd({ type: 'tab:close', id: tab.id }),
   });
 
+  const groupStyle = group ? TAB_GROUP_COLORS[group.color] : undefined;
+
   return (
     <div
       className={cx(
         'htab',
         selected && 'selected',
         compact && 'compact',
+        group && 'in-tab-group',
         tab.asleep && !selected && 'asleep',
         dropPos && `drop-${dropPos}`,
         swipe.closing && 'closing',
       )}
-      style={swipe.style}
+      style={{
+        ...swipe.style,
+        ...(groupStyle ? ({ '--group-tint': groupStyle.border } as React.CSSProperties) : {}),
+      }}
       title={showHoverCard ? `${tab.title}\n${tab.url}${tab.asleep ? '\n💤 כרטיסייה במצב חיסכון בזיכרון (Memory Saver)' : ''}` : tab.title}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}

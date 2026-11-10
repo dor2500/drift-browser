@@ -339,3 +339,4 @@ export function GlobalMediaPanel({ state, onClose }: Props) {
     </div>
   );
 }
+

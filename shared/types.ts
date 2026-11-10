@@ -31,6 +31,17 @@ export interface TabState {
   zoom?: number;
   /** Unloaded to save memory (sleeping or not opened yet); loads when shown. */
   asleep?: boolean;
+  /** Optional Chrome Tab Group identifier. */
+  groupId?: string;
+}
+
+export type TabGroupColor = 'grey' | 'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'purple' | 'cyan';
+
+export interface TabGroup {
+  id: string;
+  name: string;
+  color: TabGroupColor;
+  collapsed?: boolean;
 }
 
 export interface SpaceState {
@@ -290,6 +301,7 @@ export interface BrowserState {
   sync: SyncState;
   clipboard: ClipboardItemEntry[];
   ai: AiState;
+  tabGroups?: TabGroup[];
 }
 
 /** A placeholder rectangle in the shell where a tab's native web view goes. */
@@ -337,6 +349,11 @@ export type Command =
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
+  | { type: 'tabGroup:create'; tabIds: string[]; name?: string; color?: TabGroupColor }
+  | { type: 'tabGroup:set'; id: string; name?: string; color?: TabGroupColor; collapsed?: boolean }
+  | { type: 'tabGroup:delete'; id: string; closeTabs?: boolean }
+  | { type: 'tabGroup:addTab'; groupId: string; tabId: string }
+  | { type: 'tabGroup:removeTab'; tabId: string }
   | { type: 'privacy:newIdentity' }
   | {
       type: 'privacy:clearData';

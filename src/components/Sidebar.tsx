@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent as RPointerEvent, type WheelEvent } from 'react';
-import { SIDEBAR_MAX, SIDEBAR_MIN, type BrowserState, type DropPosition, type DropZone, type SpaceState, type TabState } from '../../shared/types';
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent as RPointerEvent, type WheelEvent } from 'react';
+import { SIDEBAR_MAX, SIDEBAR_MIN, type BrowserState, type DropPosition, type DropZone, type SpaceState, type TabGroup, type TabState } from '../../shared/types';
 import { displayUrl, isInternalUrl } from '../../shared/url';
 import { TAB_MIME, cmd, cx, endTabDrag, isTabDrag, startTabDrag } from '../lib';
 import { Favicon } from './Favicon';
@@ -9,6 +9,7 @@ import { MediaBar, PageActions } from './PageActions';
 import { PermissionCard } from './PermissionCard';
 import { SpaceIcon } from './SpaceIcon';
 import { TabItem } from './TabItem';
+import { TabGroupHeader } from './TabGroupHeader';
 import { hasUpdateBadge } from './UpdatePanels';
 import { t } from '../i18n';
 
@@ -143,7 +144,7 @@ export function Sidebar({ state, onOpenBar, renamingSpace, onRenameDone, onMouse
             <Icon name="plus" />
             <span className="tab-label">{t('tabs.new')}</span>
           </button>
-          <TabSection zone="tabs" tabs={regular} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} swipeEnabled={state.settings.swipeToCloseTabs} />
+          <TabSection zone="tabs" tabs={regular} groups={state.tabGroups} activeId={state.activeTabId} splitIds={splitIds} waiting={waiting} swipeEnabled={state.settings.swipeToCloseTabs} />
         </div>
       </div>
 
@@ -210,8 +211,26 @@ function Essentials({ tabs, activeId }: { tabs: TabState[]; activeId?: string })
   );
 }
 
-function TabSection({ zone, tabs, activeId, splitIds, waiting, swipeEnabled }: { zone: DropZone; tabs: TabState[]; activeId?: string; splitIds: string[]; waiting: Set<string>; swipeEnabled?: boolean }) {
+function TabSection({
+  zone,
+  tabs,
+  groups,
+  activeId,
+  splitIds,
+  waiting,
+  swipeEnabled,
+}: {
+  zone: DropZone;
+  tabs: TabState[];
+  groups?: TabGroup[];
+  activeId?: string;
+  splitIds: string[];
+  waiting: Set<string>;
+  swipeEnabled?: boolean;
+}) {
   const [drop, setDrop] = useState<{ id: string; pos: DropPosition } | null>(null);
+  const renderedGroups = new Set<string>();
+
   return (
     <div
       className={cx('tab-section', zone)}
@@ -225,18 +244,42 @@ function TabSection({ zone, tabs, activeId, splitIds, waiting, swipeEnabled }: {
         setDrop(null);
       }}
     >
-      {tabs.map((t) => (
-        <TabItem
-          key={t.id}
-          tab={t}
-          selected={t.id === activeId}
-          inSplit={splitIds.includes(t.id)}
-          attention={waiting.has(t.id) && t.id !== activeId}
-          dropPos={drop?.id === t.id ? drop.pos : undefined}
-          swipeEnabled={swipeEnabled}
-          onDragOverItem={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
-        />
-      ))}
+      {tabs.map((t) => {
+        const group = zone === 'tabs' && t.groupId ? groups?.find((g) => g.id === t.groupId) : undefined;
+        let groupHeaderNode: React.ReactNode = null;
+        if (group && !renderedGroups.has(group.id)) {
+          renderedGroups.add(group.id);
+          const count = tabs.filter((x) => x.groupId === group.id).length;
+          groupHeaderNode = (
+            <TabGroupHeader
+              key={`grp-hdr-${group.id}`}
+              group={group}
+              tabCount={count}
+              layout="vertical"
+            />
+          );
+        }
+
+        if (group?.collapsed) {
+          return groupHeaderNode;
+        }
+
+        return (
+          <Fragment key={t.id}>
+            {groupHeaderNode}
+            <TabItem
+              tab={t}
+              group={group}
+              selected={t.id === activeId}
+              inSplit={splitIds.includes(t.id)}
+              attention={waiting.has(t.id) && t.id !== activeId}
+              dropPos={drop?.id === t.id ? drop.pos : undefined}
+              swipeEnabled={swipeEnabled}
+              onDragOverItem={(pos) => (drop?.id !== t.id || drop.pos !== pos) && setDrop({ id: t.id, pos })}
+            />
+          </Fragment>
+        );
+      })}
     </div>
   );
 }

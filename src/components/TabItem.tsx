@@ -1,10 +1,11 @@
 import type { SyntheticEvent } from 'react';
-import type { DropPosition, TabState } from '../../shared/types';
+import type { DropPosition, TabGroup, TabState } from '../../shared/types';
 import { cmd, cx, endTabDrag, isTabDrag, startTabDrag, tabTitle } from '../lib';
 import { Favicon } from './Favicon';
 import { Icon } from './Icon';
 import { t } from '../i18n';
 import { useTabSwipe } from './useTabSwipe';
+import { TAB_GROUP_COLORS } from './TabGroupHeader';
 
 interface Props {
   tab: TabState;
@@ -14,16 +15,19 @@ interface Props {
   attention?: boolean;
   dropPos?: DropPosition;
   swipeEnabled?: boolean;
+  group?: TabGroup;
   onDragOverItem: (pos: DropPosition) => void;
 }
 
 const stop = (e: SyntheticEvent) => e.stopPropagation();
 
-export function TabItem({ tab, selected, inSplit, attention, dropPos, swipeEnabled = true, onDragOverItem }: Props) {
+export function TabItem({ tab, selected, inSplit, attention, dropPos, swipeEnabled = true, group, onDragOverItem }: Props) {
   const swipe = useTabSwipe({
     enabled: swipeEnabled && !tab.essential,
     onClose: () => cmd({ type: 'tab:close', id: tab.id }),
   });
+
+  const groupStyle = group ? TAB_GROUP_COLORS[group.color] : undefined;
 
   return (
     <div
@@ -32,10 +36,14 @@ export function TabItem({ tab, selected, inSplit, attention, dropPos, swipeEnabl
         selected && 'selected',
         inSplit && 'in-split',
         tab.asleep && !selected && 'asleep',
+        group && 'in-tab-group',
         dropPos && `drop-${dropPos}`,
         swipe.closing && 'closing',
       )}
-      style={swipe.style}
+      style={{
+        ...swipe.style,
+        ...(groupStyle ? ({ '--group-tint': groupStyle.border } as React.CSSProperties) : {}),
+      }}
       title={`${tab.title}\n${tab.url}`}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}

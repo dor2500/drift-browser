@@ -1,9 +1,9 @@
 import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { SavedSession, SpaceState, SplitState, TabState } from '../shared/types';
+import type { SavedSession, SpaceState, SplitState, TabGroup, TabState } from '../shared/types';
 
-export type PersistedTab = Pick<TabState, 'id' | 'url' | 'title' | 'favicon' | 'spaceId' | 'pinned' | 'essential' | 'muted'>;
+export type PersistedTab = Pick<TabState, 'id' | 'url' | 'title' | 'favicon' | 'spaceId' | 'pinned' | 'essential' | 'muted' | 'groupId'>;
 
 export interface Persisted {
   version: 1;
@@ -13,6 +13,7 @@ export interface Persisted {
   compact: boolean;
   sidebarWidth: number;
   split?: SplitState;
+  tabGroups?: TabGroup[];
 }
 
 const file = () => path.join(app.getPath('userData'), 'session.json');

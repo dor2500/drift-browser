@@ -36,6 +36,8 @@ import {
   type Snapshot,
   type SpaceState,
   type SplitState,
+  type TabGroup,
+  type TabGroupColor,
   type TabState,
   type UiEvent,
   type SavedSession,
@@ -128,6 +130,7 @@ export class Browser {
   private find?: FindState;
   /** When each tab was last in front, for sleeping tabs. */
   private lastActive = new Map<string, number>();
+  private tabGroups: TabGroup[] = [];
 
   constructor(private win: BrowserWindow) {
     this.stateMgr.settings = this.settings;
@@ -425,6 +428,7 @@ export class Browser {
         .map((t) => ({ ...t, muted: !!t.muted, loading: false, canGoBack: false, canGoForward: false, audible: false }));
       this.compact = !!d.compact;
       this.sidebarWidth = clamp(d.sidebarWidth ?? 260, SIDEBAR_MIN, SIDEBAR_MAX);
+      if (d.tabGroups && Array.isArray(d.tabGroups)) this.tabGroups = d.tabGroups;
       if (d.split?.tabIds.every((id) => this.tab(id))) this.split = d.split;
       for (const s of this.spaces) if (s.activeTabId && !this.tab(s.activeTabId)) s.activeTabId = undefined;
       if (!continueSession) {
@@ -481,20 +485,22 @@ export class Browser {
       sync: this.sync.state(),
       clipboard: this.stateMgr.clipboard,
       ai: this.stateMgr.ai,
+      tabGroups: this.tabGroups,
     };
   }
 
   persisted(): store.Persisted {
     return {
       version: 1,
-      tabs: this.tabs.filter((t) => !t.glanceOf).map(({ id, url, title, favicon, spaceId, pinned, essential, muted }) => ({
-        id, url, title, favicon, spaceId, pinned, essential, muted,
+      tabs: this.tabs.filter((t) => !t.glanceOf).map(({ id, url, title, favicon, spaceId, pinned, essential, muted, groupId }) => ({
+        id, url, title, favicon, spaceId, pinned, essential, muted, groupId,
       })),
       spaces: this.spaces,
       activeSpaceId: this.activeSpaceId,
       compact: this.compact,
       sidebarWidth: this.sidebarWidth,
       split: this.split,
+      tabGroups: this.tabGroups,
     };
   }
 
@@ -800,6 +806,57 @@ export class Browser {
           }
         }
         break;
+      case 'tabGroup:create': {
+        const id = `group-${newId()}`;
+        const color = c.color || 'blue';
+        const name = c.name || `קבוצה ${this.tabGroups.length + 1}`;
+        this.tabGroups.push({ id, name, color, collapsed: false });
+        for (const tabId of c.tabIds) {
+          const t = this.tab(tabId);
+          if (t && !t.essential && !t.pinned) t.groupId = id;
+        }
+        this.emit();
+        break;
+      }
+      case 'tabGroup:set': {
+        const g = this.tabGroups.find((x) => x.id === c.id);
+        if (g) {
+          if (c.name !== undefined) g.name = c.name;
+          if (c.color !== undefined) g.color = c.color;
+          if (c.collapsed !== undefined) g.collapsed = c.collapsed;
+          this.emit();
+        }
+        break;
+      }
+      case 'tabGroup:delete': {
+        this.tabGroups = this.tabGroups.filter((x) => x.id !== c.id);
+        if (c.closeTabs) {
+          const toClose = this.tabs.filter((t) => t.groupId === c.id);
+          for (const t of toClose) this.closeTab(t.id, false);
+        } else {
+          for (const t of this.tabs) {
+            if (t.groupId === c.id) delete t.groupId;
+          }
+        }
+        this.emit();
+        break;
+      }
+      case 'tabGroup:addTab': {
+        const t = this.tab(c.tabId);
+        if (t && !t.essential && !t.pinned) {
+          t.groupId = c.groupId;
+          this.emit();
+        }
+        break;
+      }
+      case 'tabGroup:removeTab': {
+        const t = this.tab(c.tabId);
+        if (t && t.groupId) {
+          delete t.groupId;
+          this.emit();
+        }
+        break;
+      }
       case 'settings:reset':
         this.setSettings({ ...DEFAULT_SETTINGS, onboarded: true });
         break;
@@ -1616,6 +1673,41 @@ export class Browser {
         submenu: this.spaces
           .filter((s) => s.id !== t.spaceId || t.essential)
           .map((s) => ({ label: s.name, click: () => this.run({ type: 'tab:set', id, spaceId: s.id }) })),
+      },
+      {
+        label: t.groupId ? 'קבוצת כרטיסיות (Tab Group)' : 'הוספה לקבוצת כרטיסיות · Add to group',
+        enabled: !t.essential && !t.pinned,
+        submenu: [
+          {
+            label: 'קבוצה חדשה... · New group',
+            click: () => this.run({ type: 'tabGroup:create', tabIds: [id] }),
+          },
+          ...(this.tabGroups.length > 0
+            ? [
+                { type: 'separator' as const },
+                ...this.tabGroups.map((g) => ({
+                  label: g.name || 'קבוצה ללא שם',
+                  type: 'checkbox' as const,
+                  checked: t.groupId === g.id,
+                  click: () =>
+                    this.run(
+                      t.groupId === g.id
+                        ? { type: 'tabGroup:removeTab', tabId: id }
+                        : { type: 'tabGroup:addTab', groupId: g.id, tabId: id },
+                    ),
+                })),
+              ]
+            : []),
+          ...(t.groupId
+            ? [
+                { type: 'separator' as const },
+                {
+                  label: 'הסרה מהקבוצה · Remove from group',
+                  click: () => this.run({ type: 'tabGroup:removeTab', tabId: id }),
+                },
+              ]
+            : []),
+        ],
       },
       { type: 'separator' },
       { label: 'סגירת כרטיסיות מימין · Close tabs to the right', click: () => this.run({ type: 'tab:closeRight', id }) },
