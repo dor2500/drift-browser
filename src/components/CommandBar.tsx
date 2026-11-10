@@ -117,6 +117,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'bookmarks', label: 'מנהל הסימניות (Bookmarks Manager · Ctrl+Shift+O)', en: 'bookmarks manager favorites links html export', run: () => cmd({ type: 'bookmarks:open' }) },
       { id: 'sessions', label: 'סשנים שמורים ושמירת כרטיסיות (Tab Stash · Ctrl+Shift+S)', en: 'sessions tab stash snapshots restore tabs save session', run: () => cmd({ type: 'sessions:open' }) },
       { id: 'performance', label: 'לוח ביצועים וחיסכון בזיכרון (Memory Saver & Performance)', en: 'performance memory saver dashboard tabs ram sleep wake', run: () => cmd({ type: 'performance:open' }) },
+      { id: 'task-manager', label: 'מנהל משימות של הדפדפן (Task Manager · Shift+Esc)', en: 'task manager processes cpu memory ram kill end process tabs', run: () => cmd({ type: 'taskManager:open' }) },
       { id: 'shortcuts', label: 'לוח קיצורי מקלדת (Keyboard Shortcuts Hub · Ctrl+/)', en: 'keyboard shortcuts hotkeys command quick', run: () => cmd({ type: 'shortcuts:open' }) },
       { id: 'store', label: 'חנות התוספים וההרחבות (Drift Store · Ctrl+Shift+E)', en: 'drift store extensions addons themes plugins', run: () => cmd({ type: 'store:open' }) },
       { id: 'extensions-manager', label: 'ניהול תוספים והרחבות כרום (Chrome Extensions Manager · chrome://extensions)', en: 'extensions manager unpacked load developer mode chrome addons plugins', run: () => cmd({ type: 'extensions:open' }) },

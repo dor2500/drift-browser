@@ -746,3 +746,4 @@ export function AutofillPage({ state }: { state: BrowserState }) {
     </div>
   );
 }
+

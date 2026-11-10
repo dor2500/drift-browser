@@ -26,6 +26,7 @@ export const PASSWORDS_URL = 'drift://passwords';
 export const COOKIES_URL = 'drift://cookies';
 export const EXTENSIONS_URL = 'drift://extensions';
 export const AUTOFILL_URL = 'drift://autofill';
+export const TASK_MANAGER_URL = 'drift://task-manager';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -42,6 +43,7 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(PASSWORDS_URL)) return 'מנהל הסיסמאות · Passwords';
   if (url.startsWith(COOKIES_URL)) return 'נתוני אתרים וקובצי עוגיות · Site Data & Cookies';
   if (url.startsWith(AUTOFILL_URL)) return 'מילוי אוטומטי, כרטיסים וכתובות · Autofill & Payments';
+  if (url.startsWith(TASK_MANAGER_URL)) return 'מנהל משימות הדפדפן · Task Manager';
   return 'Drift';
 };
 

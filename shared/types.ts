@@ -360,6 +360,7 @@ export type Command =
   | { type: 'cookies:open' }
   | { type: 'extensions:open' }
   | { type: 'autofill:open' }
+  | { type: 'taskManager:open' }
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
@@ -508,6 +509,19 @@ export interface AutofillData {
   addresses: SavedAddress[];
 }
 
+export interface TaskManagerProcess {
+  pid: number;
+  type: string;
+  name: string;
+  tabId?: string;
+  url?: string;
+  favicon?: string;
+  cpuPercent: number;
+  memoryWorkingSetMB: number;
+  memoryPeakMB: number;
+  isMainProcess: boolean;
+}
+
 export interface DriftApi {
   /** process.platform: 'win32' | 'darwin' | 'linux'. */
   platform: string;
@@ -566,6 +580,8 @@ export interface DriftApi {
   deleteCreditCard(id: string): Promise<boolean>;
   saveAddress(addr: Omit<SavedAddress, 'id' | 'createdAt'> & { id?: string }): Promise<SavedAddress>;
   deleteAddress(id: string): Promise<boolean>;
+  getTaskManagerMetrics(): Promise<TaskManagerProcess[]>;
+  killTaskManagerProcess(pid: number, tabId?: string): Promise<boolean>;
   getSavedSessions(): Promise<SavedSession[]>;
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;

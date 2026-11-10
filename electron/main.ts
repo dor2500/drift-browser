@@ -196,6 +196,8 @@ ipcMain.handle('drift:autofill-save-card', (e, card) => (fromShell(e) ? store.sa
 ipcMain.handle('drift:autofill-delete-card', (e, id: string) => (fromShell(e) ? store.deleteCreditCard(id) : false));
 ipcMain.handle('drift:autofill-save-address', (e, addr) => (fromShell(e) ? store.saveAddress(addr) : undefined));
 ipcMain.handle('drift:autofill-delete-address', (e, id: string) => (fromShell(e) ? store.deleteAddress(id) : false));
+ipcMain.handle('drift:task-manager-metrics', (e) => (fromShell(e) ? browser?.getTaskManagerMetrics() : []));
+ipcMain.handle('drift:task-manager-kill', (e, pid: number, tabId?: string) => (fromShell(e) ? browser?.killTaskManagerProcess(pid, tabId) : false));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

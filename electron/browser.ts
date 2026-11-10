@@ -43,11 +43,12 @@ import {
   type SavedSession,
   type SavedSessionTab,
   type InstalledExtension,
+  type TaskManagerProcess,
 } from '../shared/types';
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -390,6 +391,79 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(AUTOFILL_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: AUTOFILL_URL });
+  }
+
+  private openTaskManager() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(TASK_MANAGER_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: TASK_MANAGER_URL });
+  }
+
+  getTaskManagerMetrics(): TaskManagerProcess[] {
+    const metrics = app.getAppMetrics();
+    const pidToTab = new Map<number, TabState>();
+
+    for (const tab of this.tabs) {
+      const v = this.views.get(tab.id);
+      if (v && !v.webContents.isDestroyed()) {
+        const pid = v.webContents.getOSProcessId();
+        if (pid) pidToTab.set(pid, tab);
+      }
+    }
+
+    return metrics.map((m) => {
+      const matchedTab = pidToTab.get(m.pid);
+      let name = m.name || m.type;
+      let tabId: string | undefined;
+      let url: string | undefined;
+      let favicon: string | undefined;
+
+      if (matchedTab) {
+        name = `כרטיסייה: ${matchedTab.title || matchedTab.url || 'דף ריק'}`;
+        tabId = matchedTab.id;
+        url = matchedTab.url;
+        favicon = matchedTab.favicon;
+      } else if (m.type === 'Browser') {
+        name = 'דפדפן (תהליך ראשי · Browser Core)';
+      } else if (m.type === 'GPU') {
+        name = 'מעבד גרפי (GPU Acceleration Process)';
+      } else if (m.type === 'Utility') {
+        name = m.name ? `שירות מערכת: ${m.name}` : 'שירות רשת ומערכת (Network Service)';
+      } else if (m.type === 'Zygote') {
+        name = 'תהליך Zygote (Linux Sandbox)';
+      } else if (m.type === 'Tab') {
+        name = 'כרטיסיית רקע / תוסף (Background Tab / Service Worker)';
+      }
+
+      return {
+        pid: m.pid,
+        type: m.type,
+        name,
+        tabId,
+        url,
+        favicon,
+        cpuPercent: Math.max(0, m.cpu.percentCPUUsage),
+        memoryWorkingSetMB: Math.round((m.memory.workingSetSize / 1024) * 10) / 10,
+        memoryPeakMB: Math.round((m.memory.peakWorkingSetSize / 1024) * 10) / 10,
+        isMainProcess: m.type === 'Browser' || m.pid === process.pid,
+      };
+    });
+  }
+
+  killTaskManagerProcess(pid: number, tabId?: string): boolean {
+    if (tabId) {
+      this.closeTab(tabId);
+      return true;
+    }
+    if (pid && pid !== process.pid) {
+      try {
+        process.kill(pid);
+        return true;
+      } catch (e) {
+        console.error('[drift] failed to kill process:', pid, e);
+      }
+    }
+    return false;
   }
 
   async getInstalledExtensions(): Promise<InstalledExtension[]> {
@@ -1010,6 +1084,9 @@ export class Browser {
       case 'autofill:open':
         this.openAutofill();
         break;
+      case 'taskManager:open':
+        this.openTaskManager();
+        break;
       case 'popover:toggle':
         this.win.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('drift:popover', { detail: '${c.kind}' }))`).catch(() => {});
         break;
@@ -1110,7 +1187,7 @@ export class Browser {
         this.openIncognitoWindow(c.url);
         break;
       case 'win:taskManager':
-        this.openTaskManagerWindow();
+        this.openTaskManager();
         break;
       case 'bookmark:toggle': {
         const t = this.tab(this.activeTabId);
