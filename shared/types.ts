@@ -357,6 +357,7 @@ export type Command =
   | { type: 'history:open' }
   | { type: 'downloads:open' }
   | { type: 'passwords:open' }
+  | { type: 'cookies:open' }
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
@@ -444,6 +445,19 @@ export type UiEvent =
   | { type: 'find' }
   | { type: 'handoff:received'; item: HandoffItem };
 
+/** Stored cookie record in Drift session. */
+export interface CookieRecord {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+  session: boolean;
+  expirationDate?: number;
+  sameSite?: 'unspecified' | 'no_restriction' | 'lax' | 'strict';
+}
+
 export interface DriftApi {
   /** process.platform: 'win32' | 'darwin' | 'linux'. */
   platform: string;
@@ -478,6 +492,20 @@ export interface DriftApi {
   getSavedPasswords(): Promise<CredentialEntry[]>;
   savePassword(entry: Omit<CredentialEntry, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<CredentialEntry>;
   deletePassword(id: string): Promise<boolean>;
+  getCookies(filter?: { domain?: string }): Promise<CookieRecord[]>;
+  removeCookie(url: string, name: string): Promise<boolean>;
+  removeCookiesForDomain(domain: string): Promise<boolean>;
+  clearAllCookies(): Promise<boolean>;
+  setCookie(details: {
+    url: string;
+    name: string;
+    value: string;
+    domain?: string;
+    path?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    expirationDate?: number;
+  }): Promise<boolean>;
   getSavedSessions(): Promise<SavedSession[]>;
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;

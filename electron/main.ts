@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, session, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import path from 'node:path';
 import type { Command, ImportBrowser, ImportOptions, Pane } from '../shared/types';
-import { Browser, detectRtl } from './browser';
+import { Browser, detectRtl, PARTITION } from './browser';
 import { otherBrowsers, readEnv } from './env';
 import { downloadGecko, geckoStatus } from './gecko';
 import { detectSources } from './importer';
@@ -150,6 +150,42 @@ ipcMain.handle('drift:sessions-restore', (e, id: string, newSpace?: boolean) =>
 ipcMain.handle('drift:passwords-list', (e) => (fromShell(e) ? store.loadPasswords() : []));
 ipcMain.handle('drift:passwords-save', (e, entry) => (fromShell(e) ? store.savePasswordEntry(entry) : undefined));
 ipcMain.handle('drift:passwords-delete', (e, id: string) => (fromShell(e) ? store.deletePasswordEntry(id) : false));
+ipcMain.handle('drift:cookies-list', async (e, filter?: { domain?: string }) => {
+  if (!fromShell(e)) return [];
+  const ses = session.fromPartition(PARTITION);
+  return await ses.cookies.get(filter || {});
+});
+ipcMain.handle('drift:cookies-remove', async (e, url: string, name: string) => {
+  if (!fromShell(e)) return false;
+  const ses = session.fromPartition(PARTITION);
+  await ses.cookies.remove(url, name);
+  return true;
+});
+ipcMain.handle('drift:cookies-remove-domain', async (e, domain: string) => {
+  if (!fromShell(e)) return false;
+  const ses = session.fromPartition(PARTITION);
+  const cookies = await ses.cookies.get({ domain });
+  for (const c of cookies) {
+    const protocol = c.secure ? 'https://' : 'http://';
+    const rawDom = c.domain || domain;
+    const dom = rawDom.startsWith('.') ? rawDom.slice(1) : rawDom;
+    const url = `${protocol}${dom}${c.path || '/'}`;
+    await ses.cookies.remove(url, c.name).catch(() => {});
+  }
+  return true;
+});
+ipcMain.handle('drift:cookies-clear-all', async (e) => {
+  if (!fromShell(e)) return false;
+  const ses = session.fromPartition(PARTITION);
+  await ses.clearStorageData({ storages: ['cookies', 'localstorage', 'indexdb', 'cachestorage'] });
+  return true;
+});
+ipcMain.handle('drift:cookies-set', async (e, details: { url: string; name: string; value: string; domain?: string; path?: string; secure?: boolean; httpOnly?: boolean; expirationDate?: number }) => {
+  if (!fromShell(e)) return false;
+  const ses = session.fromPartition(PARTITION);
+  await ses.cookies.set(details);
+  return true;
+});
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

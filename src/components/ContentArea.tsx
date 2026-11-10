@@ -15,6 +15,7 @@ import { SessionsPage } from './SessionsPage';
 import { HistoryPage } from './HistoryPage';
 import { DownloadsPage } from './DownloadsPage';
 import { PasswordsPage } from './PasswordsPage';
+import { CookiesPage } from './CookiesPage';
 import { t } from '../i18n';
 
 interface Props {
@@ -138,6 +139,8 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                       <DownloadsPage state={state} />
                     ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://passwords') ? (
                       <PasswordsPage state={state} />
+                    ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://cookies') ? (
+                      <CookiesPage state={state} />
                     ) : (
                       <SettingsPage state={state} />
                     )

@@ -390,6 +390,16 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label={t('priv.cookies')}
             hint={t('priv.cookiesHint')}
           />
+          <div className="site-row" style={{ marginTop: '8px', marginBottom: '8px' }}>
+            <div className="site-host" style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>נתוני אתרים וקובצי עוגיות שמורים (Site Data & Cookies)</div>
+              <div className="settings-hint">צפייה וניהול של כל קובצי העוגיות השמורים לפי דומיין, בדיקת מאפייני אבטחה ומחיקה סלקטיבית</div>
+            </div>
+            <button className="btn ghost small" onClick={() => cmd({ type: 'cookies:open' })}>
+              <Icon name="sliders" size={13} />
+              <span>נהל קובצי Cookie באתרים</span>
+            </button>
+          </div>
           <Toggle
             checked={s.clearOnExit}
             onChange={(clearOnExit) => cmd({ type: 'settings:set', patch: { clearOnExit } })}
