@@ -446,6 +446,65 @@ select.field-input option { background: var(--panel); }
   text-align: center;
 }
 .zoom-bubble-reset:hover { background: rgba(56, 189, 248, 0.22); }
+
+/* Custom Zoom Levels Per Site */
+.site-zoom-manager {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: var(--element-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-contrast, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+}
+.site-zoom-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 12px;
+}
+.site-zoom-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-normal, #f1f5f9);
+}
+.site-zoom-hint {
+  font-size: 12px;
+  color: var(--text-dim, #94a3b8);
+  margin-top: 2px;
+}
+.site-zoom-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.site-zoom-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.03));
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+.site-zoom-host {
+  font-family: monospace;
+  color: var(--text-normal, #f1f5f9);
+}
+.site-zoom-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.site-zoom-badge {
+  padding: 2px 8px;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent, #38bdf8);
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 11px;
+}
 .downloads-btn { position: relative; }
 .dl-ring { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); transform: rotate(-90deg); pointer-events: none; }
 .dl-ring circle { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dasharray 0.3s; }

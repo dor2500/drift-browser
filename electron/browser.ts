@@ -272,7 +272,7 @@ export class Browser {
     if (patch.spellCheck !== undefined) {
       session.fromPartition(PARTITION).setSpellCheckerEnabled(this.settings.spellCheck);
     }
-    if (patch.defaultZoom !== undefined) {
+    if (patch.defaultZoom !== undefined || patch.siteZoom !== undefined) {
       for (const id of this.views.keys()) this.applySiteZoom(id);
     }
     if (patch.fontSize !== undefined) {

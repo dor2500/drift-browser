@@ -590,6 +590,46 @@ export function SettingsPage({ state }: { state: BrowserState }) {
               ))}
             </select>
           </div>
+          {Object.keys(s.siteZoom || {}).length > 0 && (
+            <div className="site-zoom-manager">
+              <div className="site-zoom-header">
+                <div>
+                  <div className="site-zoom-title">רמות מרחק מתצוגה מותאמות אישית לאתרים ({Object.keys(s.siteZoom).length})</div>
+                  <div className="site-zoom-hint">אתרים שהוגדר עבורם מרחק מתצוגה ספציפי (Zoom levels)</div>
+                </div>
+                <button
+                  className="btn ghost small"
+                  onClick={() => cmd({ type: 'settings:set', patch: { siteZoom: {} } })}
+                >
+                  אפס את כל האתרים ל-100%
+                </button>
+              </div>
+              <div className="site-zoom-list">
+                {Object.entries(s.siteZoom).map(([host, level]) => {
+                  const pct = Math.round(Math.pow(1.2, level) * 100);
+                  return (
+                    <div key={host} className="site-zoom-item">
+                      <span className="site-zoom-host">🌐 {host}</span>
+                      <div className="site-zoom-actions">
+                        <span className="site-zoom-badge">{pct}%</span>
+                        <button
+                          className="btn ghost icon small"
+                          title={`אפס מרחק מתצוגה עבור ${host}`}
+                          onClick={() => {
+                            const next = { ...s.siteZoom };
+                            delete next[host];
+                            cmd({ type: 'settings:set', patch: { siteZoom: next } });
+                          }}
+                        >
+                          <Icon name="x" size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <Toggle
             checked={s.verticalTabs}
             onChange={(verticalTabs) => cmd({ type: 'settings:set', patch: { verticalTabs } })}
