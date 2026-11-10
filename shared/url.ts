@@ -29,6 +29,7 @@ export const AUTOFILL_URL = 'drift://autofill';
 export const TASK_MANAGER_URL = 'drift://task-manager';
 export const SITE_SETTINGS_URL = 'drift://site-settings';
 export const VPN_URL = 'drift://vpn';
+export const APPS_URL = 'drift://apps';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -48,6 +49,7 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(TASK_MANAGER_URL)) return 'מנהל משימות הדפדפן · Task Manager';
   if (url.startsWith(SITE_SETTINGS_URL)) return 'הגדרות אתרים והרשאות תוכן · Site Settings';
   if (url.startsWith(VPN_URL)) return 'שירותי VPN ופרוקסי מאובטח · Drift VPN & Secure Proxy';
+  if (url.startsWith(APPS_URL)) return 'יישומי אינטרנט · Web Apps Hub';
   return 'Drift';
 };
 

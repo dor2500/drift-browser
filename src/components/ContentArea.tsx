@@ -21,6 +21,7 @@ import { AutofillPage } from './AutofillPage';
 import { TaskManagerPage } from './TaskManagerPage';
 import { SiteSettingsPage } from './SiteSettingsPage';
 import { VpnPage } from './VpnPage';
+import { AppsPage } from './AppsPage';
 import { t } from '../i18n';
 
 interface Props {
@@ -156,6 +157,8 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                       <SiteSettingsPage state={state} />
                     ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://vpn') ? (
                       <VpnPage state={state} />
+                    ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://apps') ? (
+                      <AppsPage state={state} />
                     ) : (
                       <SettingsPage state={state} />
                     )

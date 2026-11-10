@@ -201,6 +201,11 @@ ipcMain.handle('drift:task-manager-kill', (e, pid: number, tabId?: string) => (f
 ipcMain.handle('drift:vpn-status', (e) => (fromShell(e) ? browser?.vpn.getStatus() : undefined));
 ipcMain.handle('drift:vpn-test', (e, config) => (fromShell(e) ? browser?.vpn.testConnection(config) : { success: false, error: 'Unavailable' }));
 ipcMain.handle('drift:vpn-lookup-ip', (e) => (fromShell(e) ? browser?.vpn.lookupPublicIp() : { ip: '' }));
+ipcMain.handle('drift:apps-list', (e) => (fromShell(e) ? store.loadWebApps() : []));
+ipcMain.handle('drift:apps-install', (e, appData) => (fromShell(e) ? store.saveWebApp(appData) : undefined));
+ipcMain.handle('drift:apps-uninstall', (e, id: string) => (fromShell(e) ? store.deleteWebApp(id) : false));
+ipcMain.handle('drift:apps-update', (e, id: string, patch) => (fromShell(e) ? store.updateWebApp(id, patch) : false));
+ipcMain.handle('drift:apps-launch', (e, id: string) => (fromShell(e) ? browser?.launchWebApp(id) : undefined));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

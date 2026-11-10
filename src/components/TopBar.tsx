@@ -216,6 +216,20 @@ export function TopBar({ state, onOpenBar }: Props) {
           </button>
         )}
         <button
+          className="tb-btn"
+          title="צילום מסך ועריכת תמונה · Web Capture (Ctrl+Shift+S / F10)"
+          onClick={() => cmd({ type: 'page:capture' })}
+        >
+          <Icon name="camera" size={16} />
+        </button>
+        <button
+          className="tb-btn"
+          title="יישומי אינטרנט · Web Apps Hub (drift://apps)"
+          onClick={() => cmd({ type: 'apps:open' })}
+        >
+          <Icon name="tab" size={16} />
+        </button>
+        <button
           className={cx('tb-btn vpn-toolbar-btn', state.settings.vpn.enabled && 'active')}
           title={
             state.settings.vpn.enabled

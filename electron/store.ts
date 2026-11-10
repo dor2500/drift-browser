@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AutofillData, CredentialEntry, SavedAddress, SavedCreditCard, SavedSession, SpaceState, SplitState, TabGroup, TabState } from '../shared/types';
+import type { AutofillData, CredentialEntry, InstalledWebApp, SavedAddress, SavedCreditCard, SavedSession, SpaceState, SplitState, TabGroup, TabState } from '../shared/types';
 
 export type PersistedTab = Pick<TabState, 'id' | 'url' | 'title' | 'favicon' | 'spaceId' | 'pinned' | 'essential' | 'muted' | 'groupId'>;
 
@@ -364,5 +364,77 @@ export function saveNow(d: Persisted): void {
     fs.renameSync(tmp, file());
   } catch (err) {
     console.error('[drift] failed to save session', err);
+  }
+}
+
+const appsFile = () => path.join(app.getPath('userData'), 'web-apps.json');
+
+export function loadWebApps(): InstalledWebApp[] {
+  try {
+    const raw = fs.readFileSync(appsFile(), 'utf8');
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [
+      {
+        id: 'whatsapp-web',
+        name: 'WhatsApp Web',
+        url: 'https://web.whatsapp.com/',
+        category: 'Social & Communication',
+        openAsWindow: true,
+        launchAtStartup: false,
+        installedAt: Date.now() - 86400000,
+      },
+      {
+        id: 'chatgpt',
+        name: 'ChatGPT',
+        url: 'https://chatgpt.com/',
+        category: 'AI & Productivity',
+        openAsWindow: true,
+        launchAtStartup: false,
+        installedAt: Date.now() - 43200000,
+      },
+    ];
+  }
+}
+
+export function saveWebApp(appData: { name: string; url: string; icon?: string; category?: string; openAsWindow?: boolean; launchAtStartup?: boolean }): InstalledWebApp {
+  const current = loadWebApps();
+  const newApp: InstalledWebApp = {
+    openAsWindow: true,
+    launchAtStartup: false,
+    ...appData,
+    id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    installedAt: Date.now(),
+  };
+  current.unshift(newApp);
+  try {
+    fs.writeFileSync(appsFile(), JSON.stringify(current, null, 2));
+  } catch (e) {
+    console.error('[drift] failed to save web app', e);
+  }
+  return newApp;
+}
+
+export function updateWebApp(id: string, patch: Partial<InstalledWebApp>): boolean {
+  const current = loadWebApps();
+  const idx = current.findIndex((a) => a.id === id);
+  if (idx === -1) return false;
+  current[idx] = { ...current[idx], ...patch };
+  try {
+    fs.writeFileSync(appsFile(), JSON.stringify(current, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function deleteWebApp(id: string): boolean {
+  const current = loadWebApps().filter((a) => a.id !== id);
+  try {
+    fs.writeFileSync(appsFile(), JSON.stringify(current, null, 2));
+    return true;
+  } catch {
+    return false;
   }
 }

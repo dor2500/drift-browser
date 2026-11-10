@@ -314,6 +314,25 @@ export interface BrowserState {
   tabGroups?: TabGroup[];
 }
 
+export interface InstalledWebApp {
+  id: string;
+  name: string;
+  url: string;
+  icon?: string;
+  category?: string;
+  openAsWindow: boolean;
+  launchAtStartup: boolean;
+  installedAt: number;
+}
+
+export interface CaptureData {
+  dataUrl: string;
+  tabId: string;
+  title: string;
+  url: string;
+  mode?: 'visible' | 'full' | 'area';
+}
+
 export interface VpnLocationInfo {
   id: string;
   name: string;
@@ -396,6 +415,11 @@ export type Command =
   | { type: 'taskManager:open' }
   | { type: 'vpn:open' }
   | { type: 'vpn:toggle' }
+  | { type: 'apps:open' }
+  | { type: 'app:install'; app: { name: string; url: string; icon?: string; openAsWindow?: boolean } }
+  | { type: 'app:uninstall'; id: string }
+  | { type: 'app:launch'; id: string }
+  | { type: 'page:capture'; mode?: 'visible' | 'full' | 'area'; id?: string }
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' | 'sidepanel' | 'vpn' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
@@ -624,6 +648,12 @@ export interface DriftApi {
   getVpnStatus(): Promise<VpnStatus>;
   testVpnConnection(customConfig?: Partial<any>): Promise<{ success: boolean; ip?: string; pingMs?: number; error?: string }>;
   lookupPublicIp(): Promise<{ ip: string; country?: string; city?: string; isp?: string }>;
+  getWebApps(): Promise<InstalledWebApp[]>;
+  installWebApp(app: { name: string; url: string; icon?: string; category?: string; openAsWindow?: boolean }): Promise<InstalledWebApp>;
+  uninstallWebApp(id: string): Promise<boolean>;
+  updateWebApp(id: string, patch: Partial<InstalledWebApp>): Promise<boolean>;
+  launchWebApp(id: string): Promise<void>;
+  onCapture(cb: (data: CaptureData) => void): () => void;
   importSources(): Promise<ImportSource[]>;
   runImport(source: ImportBrowser, options: ImportOptions): Promise<ImportResult>;
   onState(cb: (s: BrowserState) => void): () => void;

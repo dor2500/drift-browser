@@ -6,6 +6,7 @@
 @import './modes.css';
 @import './store.css';
 @import './vpn.css';
+@import './capture-apps.css';
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { colorTheme } from '../shared/colorThemes';
 import { THEMES, contentRadiusFor } from '../shared/themes';
-import type { HandoffItem, Snapshot } from '../shared/types';
+import type { CaptureData, HandoffItem, Snapshot } from '../shared/types';
 import { AiAssistantPanel } from './components/AiAssistantPanel';
 import { CloudClipboardPanel } from './components/CloudClipboardPanel';
 import { CommandBar } from './components/CommandBar';
@@ -13,6 +13,7 @@ import { GlobalMediaPanel } from './components/GlobalMediaPanel';
 import { TranslatePanel } from './components/TranslatePanel';
 import { SidePanel } from './components/SidePanel';
 import { VpnPanel } from './components/VpnPanel';
+import { CaptureStudioModal } from './components/CaptureStudioModal';
 import { Icon } from './components/Icon';
 import { Onboarding } from './components/Onboarding';
 import { type PopoverKind } from './components/PageActions';
@@ -49,6 +50,14 @@ export function App() {
   const [glanceSnaps, setGlanceSnaps] = useState<Snapshot[]>([]);
   const [popover, setPopover] = useState<PopoverKind | null>(null);
   const [handoffToast, setHandoffToast] = useState<HandoffItem | null>(null);
+  const [captureData, setCaptureData] = useState<CaptureData | null>(null);
+
+  useEffect(() => {
+    const unsub = window.drift.onCapture?.((data) => {
+      setCaptureData(data);
+    });
+    return () => unsub?.();
+  }, []);
 
   // Native web views paint above HTML. While any HTML layer must cover the
   // page (command bar, first-run setup, floating popover), the main process
@@ -311,6 +320,7 @@ export function App() {
 
       {bar && <CommandBar key={bar} mode={bar} state={state} anchor={horizontal ? anchor : undefined} onClose={closeBar} />}
       {onboarding && <Onboarding state={state} />}
+      {captureData && <CaptureStudioModal data={captureData} onClose={() => setCaptureData(null)} />}
     </div>
   );
 }

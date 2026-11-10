@@ -37,6 +37,15 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       {web && (
         <button
           className="page-action"
+          title="צילום מסך ועריכת תמונה · Web Capture (Ctrl+Shift+S / F10)"
+          onClick={() => cmd({ type: 'page:capture' })}
+        >
+          <Icon name="camera" size={14} />
+        </button>
+      )}
+      {web && (
+        <button
+          className="page-action"
           title="הוספה או הסרה מהסימניות · Bookmark this tab (Ctrl+D)"
           onClick={() => cmd({ type: 'bookmark:toggle', url: tab!.url, title: tab!.title })}
         >

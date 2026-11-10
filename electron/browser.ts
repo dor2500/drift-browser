@@ -48,7 +48,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, VPN_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, TASK_MANAGER_URL, VPN_URL, APPS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -424,6 +424,38 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(VPN_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: VPN_URL });
+  }
+
+  openApps() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(APPS_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: APPS_URL });
+  }
+
+  async launchWebApp(id: string) {
+    const apps = store.loadWebApps();
+    const appItem = apps.find((a) => a.id === id);
+    if (!appItem) return;
+    this.createTab({ url: appItem.url });
+  }
+
+  async captureWebPage(id = this.activeTabId, mode: 'visible' | 'full' | 'area' = 'visible') {
+    const wc = this.wc(id);
+    if (!wc || wc.isDestroyed()) return;
+    try {
+      const img = await wc.capturePage();
+      const tab = this.tab(id);
+      const dataUrl = 'data:image/png;base64,' + img.toPNG().toString('base64');
+      this.win.webContents.send('drift:capture-modal', {
+        dataUrl,
+        mode,
+        tabId: id,
+        title: tab?.title || 'Screenshot',
+        url: tab?.url || '',
+      });
+    } catch (e) {
+      console.error('[drift] captureWebPage failed:', e);
+    }
   }
 
   getTaskManagerMetrics(): TaskManagerProcess[] {
@@ -1120,6 +1152,23 @@ export class Browser {
         break;
       case 'vpn:toggle':
         this.setSettings({ vpn: { enabled: !this.settings.vpn.enabled } });
+        break;
+      case 'apps:open':
+        this.openApps();
+        break;
+      case 'app:install':
+        store.saveWebApp(c.app);
+        this.emit();
+        break;
+      case 'app:uninstall':
+        store.deleteWebApp(c.id);
+        this.emit();
+        break;
+      case 'app:launch':
+        void this.launchWebApp(c.id);
+        break;
+      case 'page:capture':
+        void this.captureWebPage(c.id, c.mode);
         break;
       case 'popover:toggle':
         this.win.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('drift:popover', { detail: '${c.kind}' }))`).catch(() => {});
@@ -1946,7 +1995,9 @@ export class Browser {
     if (!ctrl && !i.alt && i.shift && k === 'escape') return run({ type: 'win:taskManager' });
     if (ctrl && i.shift && !i.alt && k === 'e') return run({ type: 'store:open' });
     if (ctrl && i.shift && !i.alt && k === 'o') return run({ type: 'bookmarks:open' });
-    if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'sessions:open' });
+    if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:capture' });
+    if (ctrl && i.alt && k === 's') return run({ type: 'sessions:open' });
+    if (k === 'f10') return run({ type: 'page:capture' });
     if ((ctrl && k === '/') || (!ctrl && !i.alt && !i.shift && k === 'f1')) return run({ type: 'shortcuts:open' });
     if (ctrl && i.shift && !i.alt && k === 'delete') {
       this.openHistory('?clear=true');
@@ -1974,7 +2025,7 @@ export class Browser {
     if (ctrl && !i.alt && !i.shift && k === 'p') return run({ type: 'page:print' });
     if (i.alt && !ctrl && !i.shift && k === 'p') return run({ type: 'page:pip' });
     if (ctrl && !i.alt && !i.shift && k === 'u') return run({ type: 'page:source' });
-    if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:screenshot' });
+    if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:capture' });
     if (ctrl && i.shift && !i.alt && k === 'a') return run({ type: 'ai:toggle' });
     if (ctrl && !i.alt && !i.shift && k === 'j') return run({ type: 'downloads:open' });
     if (ctrl && !i.alt && !i.shift && k === 'd') {

@@ -125,6 +125,8 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'store', label: 'חנות התוספים וההרחבות (Drift Store · Ctrl+Shift+E)', en: 'drift store extensions addons themes plugins', run: () => cmd({ type: 'store:open' }) },
       { id: 'extensions-manager', label: 'ניהול תוספים והרחבות כרום (Chrome Extensions Manager · chrome://extensions)', en: 'extensions manager unpacked load developer mode chrome addons plugins', run: () => cmd({ type: 'extensions:open' }) },
       { id: 'site-settings', label: 'הגדרות אתרים והרשאות תוכן (Chrome Content Settings · chrome://settings/content)', en: 'site settings permissions camera microphone location notifications popups content cookies allow block', run: () => cmd({ type: 'tab:new', url: 'drift://site-settings' }) },
+      { id: 'web-capture', label: 'צילום מסך ועריכת תמונה (Web Capture & Annotation Studio · Ctrl+Shift+S / F10)', en: 'web capture screenshot crop annotate pen draw blur redact image save', run: () => cmd({ type: 'page:capture' }) },
+      { id: 'web-apps', label: 'יישומי אינטרנט ואפליקציות PWA (Web Apps Hub · drift://apps)', en: 'web apps pwa standalone install launch whatsapp chatgpt gmail desktop', run: () => cmd({ type: 'apps:open' }) },
       {
         id: 'vpn-toggle',
         label: state.settings.vpn.enabled ? 'השבת חיבור VPN ופרוקסי (Drift VPN)' : 'הפעל חיבור VPN ופרוקסי מאובטח (Drift VPN)',
