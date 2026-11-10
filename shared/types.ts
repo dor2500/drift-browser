@@ -463,6 +463,7 @@ export type Command =
   | { type: 'page:qr'; url?: string }
   | { type: 'tab:duplicate'; id: string }
   | { type: 'tab:muteOthers'; id: string }
+  | { type: 'tab:muteSite'; id: string }
   | { type: 'tab:closeRight'; id: string }
   | { type: 'tab:closeOthers'; id: string }
   | { type: 'sync:signin' }

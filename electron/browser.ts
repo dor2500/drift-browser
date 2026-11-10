@@ -1518,6 +1518,21 @@ export class Browser {
         }
         break;
       }
+      case 'tab:muteSite': {
+        const t = this.tab(c.id);
+        if (!t || !/^https?:/i.test(t.url)) break;
+        const origin = originOf(t.url);
+        const isMuted = this.permissions.siteDecisions(origin).some(([k, d]) => (k === 'media' || k === 'sound') && d === 'block');
+        const nextDecision = isMuted ? 'allow' : 'block';
+        this.permissions.setDecision(origin, 'media', nextDecision);
+        for (const tab of this.tabs) {
+          if (tab.url && originOf(tab.url) === origin) {
+            this.run({ type: 'tab:set', id: tab.id, muted: nextDecision === 'block' });
+          }
+        }
+        this.emit();
+        break;
+      }
       case 'tab:closeRight': {
         const spaceTabs = this.visibleIn(this.activeSpaceId).filter((t) => !t.essential && !t.pinned);
         const idx = spaceTabs.findIndex((t) => t.id === c.id);
@@ -1863,6 +1878,13 @@ export class Browser {
     wc.on('did-finish-load', () => {
       this.applySiteZoom(id);
       this.applyFontSize(wc);
+      if (/^https?:/i.test(wc.getURL())) {
+        const origin = originOf(wc.getURL());
+        if (this.permissions.siteDecisions(origin).some(([k, d]) => (k === 'media' || k === 'sound') && d === 'block')) {
+          wc.setAudioMuted(true);
+          patch({ muted: true });
+        }
+      }
       applyGeckoEngineToWebContents(wc, this.settings.engine === 'gecko');
       this.darkEngine.applyToWebContents(wc);
       this.stateMgr.notifyDomainChanged('tabs');
@@ -2092,6 +2114,10 @@ export class Browser {
   tabMenu(id: string) {
     const t = this.tab(id);
     if (!t) return;
+    const isWeb = /^https?:/i.test(t.url);
+    const tabOrigin = isWeb ? originOf(t.url) : '';
+    const siteHost = isWeb ? hostOf(tabOrigin) : '';
+    const isSiteMuted = isWeb && this.permissions.siteDecisions(tabOrigin).some(([k, d]) => (k === 'media' || k === 'sound') && d === 'block');
     const active = this.activeTabId;
     const inSplit = !!this.split?.tabIds.includes(id);
     const otherDevices = this.sync.state().otherDevices;
@@ -2132,6 +2158,10 @@ export class Browser {
       { type: 'separator' },
       { label: t.muted ? this.i18n.t('menu.unmute') : this.i18n.t('menu.mute'), click: () => this.run({ type: 'tab:set', id, muted: !t.muted }) },
       { label: 'השתקת כרטיסיות אחרות · Mute other tabs', click: () => this.run({ type: 'tab:muteOthers', id }) },
+      ...(isWeb ? [{
+        label: isSiteMuted ? `בטל השתקת אתר (${siteHost}) · Unmute site` : `השתק אתר זה לצמיתות (${siteHost}) · Mute site`,
+        click: () => this.run({ type: 'tab:muteSite', id }),
+      }] : []),
       { label: this.i18n.t('menu.reload'), click: () => this.run({ type: 'tab:reload', id }) },
       { label: 'כרטיסייה חדשה מימין · New tab to the right', click: () => this.createTab({ afterId: id }) },
       { label: 'שכפול כרטיסייה · Duplicate tab', click: () => this.createTab({ url: t.url, afterId: id }) },

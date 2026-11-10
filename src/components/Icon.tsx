@@ -14,6 +14,7 @@ const paths = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  minus: <path d="M5 12h14" />,
   x: <path d="M7 7l10 10M17 7L7 17" />,
   speaker: (
     <>

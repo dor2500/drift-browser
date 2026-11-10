@@ -13,7 +13,11 @@ export const openShellPopover = (kind: PopoverKind) =>
 /** Icons at the end of the address bar: copy link, tab handoff, cloud clipboard, dark mode, local AI, and ad-blocking shield. */
 export function PageActions({ tab, state }: { tab?: TabState; state: BrowserState }) {
   const [copied, setCopied] = useState(false);
+  const [showZoomPopup, setShowZoomPopup] = useState(false);
   useEffect(() => setCopied(false), [tab?.url]);
+  useEffect(() => {
+    if (!tab?.zoom || tab.zoom === 100) setShowZoomPopup(false);
+  }, [tab?.zoom]);
   const web = !!tab && /^https?:/.test(tab.url);
   const on = state.settings.adblock;
   const host = web ? new URL(tab!.url).hostname.replace(/^www\./, '').toLowerCase() : '';
@@ -30,9 +34,45 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
   return (
     <div className="page-actions">
       {tab?.zoom && (
-        <button className="page-action zoom-badge" title={t('zoom.reset', { percent: tab.zoom })} onClick={() => cmd({ type: 'zoom', dir: 0 })}>
-          {tab.zoom}%
-        </button>
+        <div className="zoom-badge-wrapper">
+          <button
+            className="page-action zoom-badge"
+            title={`מרחק מתצוגה: ${tab.zoom}% (לחץ לפתיחת תפריט מרחק)`}
+            onClick={() => setShowZoomPopup((v) => !v)}
+          >
+            {tab.zoom}%
+          </button>
+          {showZoomPopup && (
+            <div className="zoom-bubble-flyout">
+              <div className="zoom-bubble-row">
+                <button
+                  className="zoom-bubble-btn"
+                  title="הקטן תצוגה (Ctrl -)"
+                  onClick={() => cmd({ type: 'zoom', dir: -1 })}
+                >
+                  <Icon name="minus" size={12} />
+                </button>
+                <span className="zoom-bubble-percent">{tab.zoom}%</span>
+                <button
+                  className="zoom-bubble-btn"
+                  title="הגדל תצוגה (Ctrl +)"
+                  onClick={() => cmd({ type: 'zoom', dir: 1 })}
+                >
+                  <Icon name="plus" size={12} />
+                </button>
+              </div>
+              <button
+                className="zoom-bubble-reset"
+                onClick={() => {
+                  cmd({ type: 'zoom', dir: 0 });
+                  setShowZoomPopup(false);
+                }}
+              >
+                איפוס (100%)
+              </button>
+            </div>
+          )}
+        </div>
       )}
       {web && (
         <button
