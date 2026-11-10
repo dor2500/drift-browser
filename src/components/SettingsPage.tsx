@@ -455,6 +455,11 @@ export function SettingsPage({ state }: { state: BrowserState }) {
 
           <h3>{t('set.sitePermissions')}</h3>
           <p className="settings-lead">{t('set.sitePermissionsLead')}</p>
+          <div style={{ marginTop: 8, marginBottom: 12, display: 'flex', gap: 10 }}>
+            <button className="btn small primary" onClick={() => cmd({ type: 'tab:new', url: 'drift://site-settings' })}>
+              <Icon name="shield" size={14} /> פתח את מרכז הרשאות האתרים והתוכן המלא (drift://site-settings)
+            </button>
+          </div>
           {sites.length === 0 && <div className="empty-note">{t('set.noPermissions')}</div>}
           {sites.map(([origin, kinds]) => (
             <div key={origin} className="site-row">

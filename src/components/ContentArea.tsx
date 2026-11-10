@@ -19,6 +19,7 @@ import { CookiesPage } from './CookiesPage';
 import { ExtensionsPage } from './ExtensionsPage';
 import { AutofillPage } from './AutofillPage';
 import { TaskManagerPage } from './TaskManagerPage';
+import { SiteSettingsPage } from './SiteSettingsPage';
 import { t } from '../i18n';
 
 interface Props {
@@ -150,6 +151,8 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                       <AutofillPage state={state} />
                     ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://task-manager') ? (
                       <TaskManagerPage state={state} />
+                    ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://site-settings') ? (
+                      <SiteSettingsPage state={state} />
                     ) : (
                       <SettingsPage state={state} />
                     )

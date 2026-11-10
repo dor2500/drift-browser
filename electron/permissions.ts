@@ -181,6 +181,11 @@ export class Permissions {
     this.save();
   }
 
+  clearAll() {
+    this.saved = {};
+    this.save();
+  }
+
   private settle(id: string, granted: boolean) {
     const cbs = this.callbacks.get(id) ?? [];
     this.callbacks.delete(id);

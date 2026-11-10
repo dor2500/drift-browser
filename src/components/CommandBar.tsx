@@ -122,6 +122,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'shortcuts', label: 'לוח קיצורי מקלדת (Keyboard Shortcuts Hub · Ctrl+/)', en: 'keyboard shortcuts hotkeys command quick', run: () => cmd({ type: 'shortcuts:open' }) },
       { id: 'store', label: 'חנות התוספים וההרחבות (Drift Store · Ctrl+Shift+E)', en: 'drift store extensions addons themes plugins', run: () => cmd({ type: 'store:open' }) },
       { id: 'extensions-manager', label: 'ניהול תוספים והרחבות כרום (Chrome Extensions Manager · chrome://extensions)', en: 'extensions manager unpacked load developer mode chrome addons plugins', run: () => cmd({ type: 'extensions:open' }) },
+      { id: 'site-settings', label: 'הגדרות אתרים והרשאות תוכן (Chrome Content Settings · chrome://settings/content)', en: 'site settings permissions camera microphone location notifications popups content cookies allow block', run: () => cmd({ type: 'tab:new', url: 'drift://site-settings' }) },
       { id: 'incognito', label: 'חלון גלישה בסתר חדש (New Incognito Window · Ctrl+Shift+N)', en: 'incognito private window secret anonymous', run: () => cmd({ type: 'win:incognito' }) },
       { id: 'google', label: t('act.google'), en: translate({}, 'act.google'), run: () => cmd({ type: 'google:signin' }) },
       ...COLOR_THEMES.map((c) => ({

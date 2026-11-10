@@ -1029,7 +1029,8 @@ export class Browser {
         this.emit();
         break;
       case 'permission:reset':
-        if (c.kind) this.permissions.setDecision(c.origin, c.kind, undefined);
+        if (c.origin === '*') this.permissions.clearAll();
+        else if (c.kind) this.permissions.setDecision(c.origin, c.kind, undefined);
         else this.permissions.clearSite(c.origin);
         this.emit();
         break;
