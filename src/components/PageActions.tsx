@@ -131,9 +131,14 @@ export function PageActions({ tab, state }: { tab?: TabState; state: BrowserStat
       {web && (
         <button
           className="page-action"
-          title={copied ? t('url.copied') : t('url.copyLink')}
+          title={copied ? t('url.copied') : 'העתקת קישור (קליק ימני: קישור נקי ממעקב)'}
           onClick={() => {
             clipboardActions.pushCurrentOrText(tab!.url);
+            setCopied(true);
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            cmd({ type: 'page:copyCleanLink' });
             setCopied(true);
           }}
         >

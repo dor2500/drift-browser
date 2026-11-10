@@ -81,7 +81,12 @@ export function normalizeInput(input: string, searchUrl = SEARCH_URL): string {
     if (p === 'safety-check' || p === 'settings/safetycheck' || p === 'security' || p === 'safetycheck') return SECURITY_URL;
     if (p === 'vpn') return VPN_URL;
     if (p === 'apps') return APPS_URL;
-    if (p === 'performance') return PERFORMANCE_URL;
+    if (p === 'performance' || p === 'discards') return PERFORMANCE_URL;
+    if (p === 'task-manager' || p === 'taskmanager') return TASK_MANAGER_URL;
+    if (p === 'cookies' || p === 'site-data') return COOKIES_URL;
+    if (p === 'autofill' || p === 'payments') return AUTOFILL_URL;
+    if (p === 'shortcuts' || p === 'keyboard-shortcuts') return SHORTCUTS_URL;
+    if (p === 'sessions' || p === 'stash') return SESSIONS_URL;
     if (p === 'newtab' || p === 'blank') return NEWTAB_URL;
   }
   if (!looksLikeUrl(s)) return searchUrl + encodeURIComponent(s);

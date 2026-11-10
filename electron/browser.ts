@@ -56,7 +56,7 @@ import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
 import { applyGeckoEngineToWebContents, downloadGecko, geckoStatus, getGeckoUserAgent } from './gecko';
 import { FirebaseSyncManager, type Incoming, type LocalData } from './firebase-sync';
 import { HistoryIndex } from './history';
-import { RequestHub } from './requests';
+import { RequestHub, stripTracking } from './requests';
 import { readSource, sourceName } from './importer';
 import { Permissions, originOf } from './permissions';
 import { applyPatch, loadSettings, saveSettings } from './settings';
@@ -1321,6 +1321,14 @@ export class Browser {
       case 'page:readingMode':
         this.toggleReadingMode();
         break;
+      case 'page:copyCleanLink': {
+        const t = this.tab(this.glance?.id ?? this.activeTabId);
+        if (t?.url) {
+          const clean = stripTracking(t.url) ?? t.url;
+          this.clipboardMonitor.captureNow(clean);
+        }
+        break;
+      }
       case 'sync:signin':
         void this.sync.signIn().catch((err: Error) => this.sync.fail(err.message));
         break;
@@ -2182,6 +2190,11 @@ export class Browser {
         click: () => this.run({ type: 'tab:sleep' }),
       },
       { label: this.i18n.t('menu.copyLink'), click: () => this.clipboardMonitor.captureNow(t.url) },
+      {
+        label: 'העתקת קישור נקי ממעקב · Copy Clean Link',
+        enabled: /^https?:/.test(t.url),
+        click: () => this.clipboardMonitor.captureNow(stripTracking(t.url) ?? t.url),
+      },
       {
         label: 'Send Tab to Device',
         enabled: /^https?:/.test(t.url) && otherDevices.length > 0,

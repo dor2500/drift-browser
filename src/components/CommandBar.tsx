@@ -103,6 +103,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'shot', label: t('act.screenshot'), en: translate({}, 'act.screenshot'), run: () => cmd({ type: 'page:screenshot' }) },
       { id: 'translate', label: t('act.translate'), en: translate({}, 'act.translate'), run: () => cmd({ type: 'page:translate' }) },
       { id: 'source', label: t('act.source'), en: translate({}, 'act.source'), run: () => cmd({ type: 'page:source' }) },
+      { id: 'copy-clean-link', label: 'העתקת קישור נקי ממעקב (Copy Clean Link)', en: 'copy clean url link strip tracking parameters utm fbclid gclid', run: () => cmd({ type: 'page:copyCleanLink' }) },
       { id: 'reading-mode', label: 'מצב קריאה מתקדם (Reader Mode Pro · F9 / Ctrl+Alt+R)', en: 'reader mode clean text reading tts voice aloud print save markdown distraction free', run: () => cmd({ type: 'page:readingMode' }) },
       { id: 'pip', label: t('act.pip'), en: translate({}, 'act.pip'), run: () => cmd({ type: 'page:pip' }) },
       { id: 'media-hub', label: 'בקרת מדיה וסאונד גלובלית (Global Media Controls & 300% Booster · Ctrl+Alt+M)', en: 'media controls volume boost 300 pip picture in picture audio music speed', run: () => setTimeout(() => openShellPopover('media'), 40) },
