@@ -47,7 +47,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, PASSWORDS_URL, COOKIES_URL, EXTENSIONS_URL, AUTOFILL_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -384,6 +384,12 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(EXTENSIONS_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: EXTENSIONS_URL });
+  }
+
+  private openAutofill() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(AUTOFILL_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: AUTOFILL_URL });
   }
 
   async getInstalledExtensions(): Promise<InstalledExtension[]> {
@@ -1000,6 +1006,9 @@ export class Browser {
         break;
       case 'extensions:open':
         this.openExtensions();
+        break;
+      case 'autofill:open':
+        this.openAutofill();
         break;
       case 'popover:toggle':
         this.win.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('drift:popover', { detail: '${c.kind}' }))`).catch(() => {});

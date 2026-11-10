@@ -112,6 +112,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'history', label: 'היסטוריית גלישה (Browsing History · Ctrl+H)', en: 'browsing history recent visits clear cache cookies delete', run: () => cmd({ type: 'history:open' }) },
       { id: 'downloads-page', label: 'מנהל ההורדות (Downloads Hub · Ctrl+J)', en: 'downloads manager files torrent progress list open folder', run: () => cmd({ type: 'downloads:open' }) },
       { id: 'passwords', label: 'מנהל הסיסמאות והאימות (Password Manager)', en: 'password manager credentials autofill generate encrypt', run: () => cmd({ type: 'passwords:open' }) },
+      { id: 'autofill', label: 'מילוי אוטומטי, כרטיסי אשראי וכתובות (Autofill & Payment Cards)', en: 'autofill payments credit cards addresses checkout', run: () => cmd({ type: 'autofill:open' }) },
       { id: 'cookies', label: 'נתוני אתרים וקובצי עוגיות (Site Data & Cookies Explorer)', en: 'cookies site data localstorage inspect domain delete clear export', run: () => cmd({ type: 'cookies:open' }) },
       { id: 'bookmarks', label: 'מנהל הסימניות (Bookmarks Manager · Ctrl+Shift+O)', en: 'bookmarks manager favorites links html export', run: () => cmd({ type: 'bookmarks:open' }) },
       { id: 'sessions', label: 'סשנים שמורים ושמירת כרטיסיות (Tab Stash · Ctrl+Shift+S)', en: 'sessions tab stash snapshots restore tabs save session', run: () => cmd({ type: 'sessions:open' }) },

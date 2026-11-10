@@ -244,7 +244,7 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             )}
           </div>
 
-          <h3>אמצעי תשלום (Payment methods)</h3>
+          <h3>אמצעי תשלום וכרטיסים (Payment methods)</h3>
           <Toggle
             checked={s.autofill?.saveAndFillPayments ?? true}
             onChange={(saveAndFillPayments) => cmd({ type: 'settings:set', patch: { autofill: { saveAndFillPayments } } })}
@@ -259,6 +259,12 @@ export function SettingsPage({ state }: { state: BrowserState }) {
             label="שמירה ומילוי אוטומטי של כתובות ופרטי קשר (Save and fill addresses)"
             hint="ממלא אוטומטית כתובות משלוח, מספרי טלפון וכתובות דוא״ל בטפסים מקוונים"
           />
+
+          <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+            <button className="btn small primary" onClick={() => cmd({ type: 'autofill:open' })}>
+              <Icon name="key" size={14} /> נהל כרטיסי אשראי וכתובות שמורות (drift://autofill)
+            </button>
+          </div>
         </section>
 
         {/* 3. Privacy and security (פרטיות ואבטחה) */}

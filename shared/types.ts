@@ -359,6 +359,7 @@ export type Command =
   | { type: 'passwords:open' }
   | { type: 'cookies:open' }
   | { type: 'extensions:open' }
+  | { type: 'autofill:open' }
   | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' | 'translate' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
@@ -476,6 +477,37 @@ export interface InstalledExtension {
   inspectViews?: string[];
 }
 
+export interface SavedCreditCard {
+  id: string;
+  nameOnCard: string;
+  cardNumber: string; // decrypted / masked
+  lastFour: string;
+  expMonth: string;
+  expYear: string;
+  nickname?: string;
+  brand: 'visa' | 'mastercard' | 'amex' | 'discover' | 'generic';
+  createdAt: number;
+}
+
+export interface SavedAddress {
+  id: string;
+  fullName: string;
+  company?: string;
+  streetAddress: string;
+  city: string;
+  stateProvince?: string;
+  postalCode: string;
+  country: string;
+  phone?: string;
+  email?: string;
+  createdAt: number;
+}
+
+export interface AutofillData {
+  cards: SavedCreditCard[];
+  addresses: SavedAddress[];
+}
+
 export interface DriftApi {
   /** process.platform: 'win32' | 'darwin' | 'linux'. */
   platform: string;
@@ -529,6 +561,11 @@ export interface DriftApi {
   removeExtension(id: string): Promise<boolean>;
   toggleExtension(id: string, enabled: boolean): Promise<boolean>;
   updateExtensionSettings(id: string, patch: Partial<InstalledExtension>): Promise<boolean>;
+  getAutofillData(): Promise<AutofillData>;
+  saveCreditCard(card: Omit<SavedCreditCard, 'id' | 'createdAt' | 'lastFour' | 'brand'> & { id?: string }): Promise<SavedCreditCard>;
+  deleteCreditCard(id: string): Promise<boolean>;
+  saveAddress(addr: Omit<SavedAddress, 'id' | 'createdAt'> & { id?: string }): Promise<SavedAddress>;
+  deleteAddress(id: string): Promise<boolean>;
   getSavedSessions(): Promise<SavedSession[]>;
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;

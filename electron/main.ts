@@ -191,6 +191,11 @@ ipcMain.handle('drift:extensions-load-unpacked', (e) => (fromShell(e) ? browser?
 ipcMain.handle('drift:extensions-remove', (e, id: string) => (fromShell(e) ? browser?.removeExtension(id) : false));
 ipcMain.handle('drift:extensions-toggle', (e, id: string, enabled: boolean) => (fromShell(e) ? browser?.toggleExtension(id, enabled) : false));
 ipcMain.handle('drift:extensions-update-settings', (e, id: string, patch: any) => (fromShell(e) ? browser?.updateExtensionSettings(id, patch) : false));
+ipcMain.handle('drift:autofill-get', (e) => (fromShell(e) ? store.loadAutofillData() : { cards: [], addresses: [] }));
+ipcMain.handle('drift:autofill-save-card', (e, card) => (fromShell(e) ? store.saveCreditCard(card) : undefined));
+ipcMain.handle('drift:autofill-delete-card', (e, id: string) => (fromShell(e) ? store.deleteCreditCard(id) : false));
+ipcMain.handle('drift:autofill-save-address', (e, addr) => (fromShell(e) ? store.saveAddress(addr) : undefined));
+ipcMain.handle('drift:autofill-delete-address', (e, id: string) => (fromShell(e) ? store.deleteAddress(id) : false));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

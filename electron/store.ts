@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { CredentialEntry, SavedSession, SpaceState, SplitState, TabGroup, TabState } from '../shared/types';
+import type { AutofillData, CredentialEntry, SavedAddress, SavedCreditCard, SavedSession, SpaceState, SplitState, TabGroup, TabState } from '../shared/types';
 
 export type PersistedTab = Pick<TabState, 'id' | 'url' | 'title' | 'favicon' | 'spaceId' | 'pinned' | 'essential' | 'muted' | 'groupId'>;
 
@@ -69,6 +69,155 @@ export function saveStoredExtensions(list: StoredExtension[]): void {
   } catch (err) {
     console.error('[drift] failed to save extensions', err);
   }
+}
+
+const autofillFile = () => path.join(app.getPath('userData'), 'autofill.json');
+
+interface StoredCreditCard {
+  id: string;
+  nameOnCard: string;
+  encCardNumber: string;
+  lastFour: string;
+  expMonth: string;
+  expYear: string;
+  nickname?: string;
+  brand: 'visa' | 'mastercard' | 'amex' | 'discover' | 'generic';
+  createdAt: number;
+}
+
+interface StoredAutofill {
+  cards: StoredCreditCard[];
+  addresses: SavedAddress[];
+}
+
+function detectCardBrand(num: string): 'visa' | 'mastercard' | 'amex' | 'discover' | 'generic' {
+  const clean = num.replace(/\D/g, '');
+  if (/^4/.test(clean)) return 'visa';
+  if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/.test(clean)) return 'mastercard';
+  if (/^3[47]/.test(clean)) return 'amex';
+  if (/^(6011|65|64[4-9]|622)/.test(clean)) return 'discover';
+  return 'generic';
+}
+
+function readStoredAutofill(): StoredAutofill {
+  try {
+    const raw = fs.readFileSync(autofillFile(), 'utf8');
+    const data = JSON.parse(raw);
+    return {
+      cards: Array.isArray(data?.cards) ? data.cards : [],
+      addresses: Array.isArray(data?.addresses) ? data.addresses : [],
+    };
+  } catch {
+    return { cards: [], addresses: [] };
+  }
+}
+
+function writeStoredAutofill(data: StoredAutofill): void {
+  try {
+    fs.writeFileSync(autofillFile(), JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('[drift] failed to save autofill data', err);
+  }
+}
+
+export function loadAutofillData(): AutofillData {
+  const stored = readStoredAutofill();
+  const decryptedCards: SavedCreditCard[] = stored.cards.map((c) => {
+    const dec = decryptSecret(c.encCardNumber);
+    return {
+      id: c.id,
+      nameOnCard: c.nameOnCard,
+      cardNumber: dec,
+      lastFour: c.lastFour,
+      expMonth: c.expMonth,
+      expYear: c.expYear,
+      nickname: c.nickname,
+      brand: c.brand,
+      createdAt: c.createdAt,
+    };
+  });
+  return {
+    cards: decryptedCards,
+    addresses: stored.addresses,
+  };
+}
+
+export function saveCreditCard(card: Omit<SavedCreditCard, 'id' | 'createdAt' | 'lastFour' | 'brand'> & { id?: string }): SavedCreditCard {
+  const stored = readStoredAutofill();
+  const cleanNum = card.cardNumber.replace(/\D/g, '');
+  const lastFour = cleanNum.slice(-4) || '••••';
+  const brand = detectCardBrand(cleanNum);
+  const now = Date.now();
+  const id = card.id || String(now);
+
+  const encCardNumber = encryptSecret(cleanNum);
+  const newStoredCard: StoredCreditCard = {
+    id,
+    nameOnCard: card.nameOnCard,
+    encCardNumber,
+    lastFour,
+    expMonth: card.expMonth,
+    expYear: card.expYear,
+    nickname: card.nickname,
+    brand,
+    createdAt: now,
+  };
+
+  const updatedCards = stored.cards.filter((c) => c.id !== id);
+  updatedCards.push(newStoredCard);
+  writeStoredAutofill({ ...stored, cards: updatedCards });
+
+  return {
+    id,
+    nameOnCard: card.nameOnCard,
+    cardNumber: cleanNum,
+    lastFour,
+    expMonth: card.expMonth,
+    expYear: card.expYear,
+    nickname: card.nickname,
+    brand,
+    createdAt: now,
+  };
+}
+
+export function deleteCreditCard(id: string): boolean {
+  const stored = readStoredAutofill();
+  const nextCards = stored.cards.filter((c) => c.id !== id);
+  writeStoredAutofill({ ...stored, cards: nextCards });
+  return true;
+}
+
+export function saveAddress(addr: Omit<SavedAddress, 'id' | 'createdAt'> & { id?: string }): SavedAddress {
+  const stored = readStoredAutofill();
+  const now = Date.now();
+  const id = addr.id || String(now);
+
+  const newAddr: SavedAddress = {
+    id,
+    fullName: addr.fullName,
+    company: addr.company,
+    streetAddress: addr.streetAddress,
+    city: addr.city,
+    stateProvince: addr.stateProvince,
+    postalCode: addr.postalCode,
+    country: addr.country,
+    phone: addr.phone,
+    email: addr.email,
+    createdAt: now,
+  };
+
+  const updatedAddrs = stored.addresses.filter((a) => a.id !== id);
+  updatedAddrs.push(newAddr);
+  writeStoredAutofill({ ...stored, addresses: updatedAddrs });
+
+  return newAddr;
+}
+
+export function deleteAddress(id: string): boolean {
+  const stored = readStoredAutofill();
+  const nextAddrs = stored.addresses.filter((a) => a.id !== id);
+  writeStoredAutofill({ ...stored, addresses: nextAddrs });
+  return true;
 }
 
 const passwordsFile = () => path.join(app.getPath('userData'), 'passwords.json');

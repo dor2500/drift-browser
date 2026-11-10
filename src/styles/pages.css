@@ -5948,3 +5948,435 @@ select.field-input option { background: var(--panel); }
   font-size: 11.5px;
   color: var(--text-dim);
 }
+
+/* ------------------------------------------------------------------ Autofill & Payments Hub (drift://autofill) */
+
+.autofill-page {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  padding: 32px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.autofill-toast {
+  position: fixed;
+  bottom: 24px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 24px;
+  background: #0f172a;
+  border: 1px solid #38bdf8;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.autofill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.autofill-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border-contrast);
+  flex-wrap: wrap;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tab-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.tab-btn.active {
+  background: #004a77;
+  color: #c2e7ff;
+  font-weight: 600;
+}
+
+.tab-search {
+  flex: 1;
+  max-width: 360px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  background: var(--urlbar-bg);
+  border: 1px solid var(--border-contrast);
+}
+
+.tab-search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: none;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.section-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  margin-bottom: 20px;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 80%;
+}
+
+.toggle-info strong {
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.toggle-info span {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.autofill-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  text-align: center;
+  gap: 12px;
+}
+
+.empty-circle-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+  display: grid;
+  place-items: center;
+}
+
+/* Virtual Credit Card Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.virtual-credit-card {
+  position: relative;
+  aspect-ratio: 1.586 / 1;
+  border-radius: 16px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.virtual-credit-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.virtual-credit-card.card-brand-visa {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+}
+
+.virtual-credit-card.card-brand-mastercard {
+  background: linear-gradient(135deg, #18181b 0%, #451a03 50%, #991b1b 100%);
+}
+
+.virtual-credit-card.card-brand-amex {
+  background: linear-gradient(135deg, #09090b 0%, #065f46 60%, #0d9488 100%);
+}
+
+.virtual-credit-card.card-brand-discover {
+  background: linear-gradient(135deg, #1c1917 0%, #7c2d12 60%, #ea580c 100%);
+}
+
+.virtual-credit-card.card-brand-generic {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 60%, #475569 100%);
+}
+
+.card-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chip-graphic {
+  width: 44px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.brand-logo-text {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-style: italic;
+}
+
+.card-number-row {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 18px;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  direction: ltr;
+  text-align: center;
+}
+
+.card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.cardholder-wrap,
+.card-exp-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-meta-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.75;
+}
+
+.cardholder-name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-exp-date {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.card-nickname-tag {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  color: #e2e8f0;
+}
+
+.card-overlay-actions {
+  position: absolute;
+  bottom: 12px;
+  inset-inline-end: 12px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.virtual-credit-card:hover .card-overlay-actions {
+  opacity: 1;
+}
+
+.btn-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.btn-card-action:hover {
+  background: #1e293b;
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.btn-card-action.delete:hover {
+  background: #7f1d1d;
+  border-color: #ef4444;
+  color: #fff;
+}
+
+/* Addresses Section */
+.addresses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.address-card {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  gap: 14px;
+  transition: all 0.15s ease;
+}
+
+.address-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.address-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.addr-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  display: grid;
+  place-items: center;
+}
+
+.addr-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.addr-fullname {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.addr-company {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.address-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.addr-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addr-line.street span {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.address-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Modals */
+.card-editor-modal,
+.address-editor-modal {
+  width: 500px;
+}
+
+.card-security-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  font-size: 11.5px;
+  margin-top: 8px;
+}

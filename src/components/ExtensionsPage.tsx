@@ -487,3 +487,4 @@ export function ExtensionsPage({ state: _state }: { state: BrowserState }) {
     </div>
   );
 }
+
