@@ -8,7 +8,7 @@ interface Props {
 }
 
 type ClearRange = '1h' | '24h' | '7d' | '4w' | 'all';
-type ViewFilter = 'all' | 'bookmarks' | 'frequent';
+type ViewFilter = 'all' | 'recentlyClosed' | 'bookmarks' | 'frequent';
 
 export function HistoryPage({ state: _state }: Props) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -213,6 +213,12 @@ export function HistoryPage({ state: _state }: Props) {
             כל ההיסטוריה ({history.length})
           </button>
           <button
+            className={cx('history-tab-chip', filter === 'recentlyClosed' && 'active')}
+            onClick={() => setFilter('recentlyClosed')}
+          >
+            🕒 כרטיסיות שנסגרו לאחרונה ({_state.recentlyClosed?.length || 0})
+          </button>
+          <button
             className={cx('history-tab-chip', filter === 'bookmarks' && 'active')}
             onClick={() => setFilter('bookmarks')}
           >
@@ -248,7 +254,52 @@ export function HistoryPage({ state: _state }: Props) {
 
       {/* Content Groups */}
       <div className="history-content-scroll">
-        {loading ? (
+        {filter === 'recentlyClosed' ? (
+          (!_state.recentlyClosed || _state.recentlyClosed.length === 0) ? (
+            <div className="history-empty-state">
+              <Icon name="inbox" size={48} />
+              <h3>אין כרטיסיות שנסגרו לאחרונה</h3>
+              <p>כרטיסיות שתסגור יופיעו כאן וניתן יהיה לפתוח אותן מחדש בלחיצה אחת או באמצעות Ctrl+Shift+T.</p>
+            </div>
+          ) : (
+            <div className="history-group-section">
+              <div className="history-group-header">
+                <div className="group-title-wrap">
+                  <h2 className="history-group-title">כרטיסיות שנסגרו לאחרונה · Recently Closed Tabs</h2>
+                  <span className="history-group-badge">{_state.recentlyClosed.length}</span>
+                </div>
+              </div>
+              <div className="history-items-list">
+                {_state.recentlyClosed.map((rc) => (
+                  <div key={rc.id} className="history-item-row recently-closed-row">
+                    <span className="history-time-stamp">{formatTime(rc.closedAt)}</span>
+                    <div className="history-favicon-box">
+                      {rc.favicon ? (
+                        <img src={rc.favicon} alt="" className="history-favicon-img" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                      ) : (
+                        <span className="history-favicon-letter">{getDomain(rc.url)[0]?.toUpperCase() || '•'}</span>
+                      )}
+                    </div>
+                    <div className="history-meta-box">
+                      <span className="history-item-title" title={rc.title}>{rc.title}</span>
+                      <span className="history-item-domain">{getDomain(rc.url)}</span>
+                    </div>
+                    <div className="history-row-actions">
+                      <button
+                        className="btn small primary"
+                        onClick={() => cmd({ type: 'tab:reopen', closedId: rc.id })}
+                        title="פתח כרטיסייה זו מחדש"
+                      >
+                        <Icon name="tab" size={13} />
+                        <span>פתח מחדש</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        ) : loading ? (
           <div className="history-empty-state">
             <Icon name="clock" size={40} />
             <p>טוען נתוני היסטוריה...</p>

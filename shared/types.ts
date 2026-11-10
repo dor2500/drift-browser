@@ -299,6 +299,15 @@ export interface SyncState {
 
 export type SyncWhat = SyncState['what'];
 
+export interface RecentlyClosedTab {
+  id: string;
+  url: string;
+  title: string;
+  favicon?: string;
+  spaceId: string;
+  closedAt: number;
+}
+
 export interface BrowserState {
   tabs: TabState[];
   spaces: SpaceState[];
@@ -318,6 +327,7 @@ export interface BrowserState {
   clipboard: ClipboardItemEntry[];
   ai: AiState;
   tabGroups?: TabGroup[];
+  recentlyClosed?: RecentlyClosedTab[];
 }
 
 export interface InstalledWebApp {
@@ -394,7 +404,7 @@ export type Command =
   | { type: 'tab:back' | 'tab:forward' | 'tab:reload'; id?: string }
   | { type: 'tab:move'; id: string; zone: DropZone; targetId?: string; position?: DropPosition }
   | { type: 'tab:set'; id: string; pinned?: boolean; essential?: boolean; spaceId?: string; muted?: boolean }
-  | { type: 'tab:reopen' }
+  | { type: 'tab:reopen'; closedId?: string }
   | { type: 'tab:cycle'; dir: 1 | -1 }
   | { type: 'split:create'; ids: [string, string] }
   | { type: 'split:ratio'; ratio: number }

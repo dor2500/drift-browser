@@ -44,6 +44,7 @@ import {
   type SavedSessionTab,
   type InstalledExtension,
   type TaskManagerProcess,
+  type RecentlyClosedTab,
 } from '../shared/types';
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
@@ -108,7 +109,7 @@ export class Browser {
   private overlay = false;
   private overlaySeq = 0;
   private fullscreenTab?: string;
-  private closed: { url: string; spaceId: string }[] = [];
+  private closed: RecentlyClosedTab[] = [];
   private emitQueued = false;
 
   readonly stateMgr = new StateManager();
@@ -843,6 +844,7 @@ export class Browser {
       clipboard: this.stateMgr.clipboard,
       ai: this.stateMgr.ai,
       tabGroups: this.tabGroups,
+      recentlyClosed: [...this.closed].reverse(),
     };
   }
 
@@ -937,9 +939,16 @@ export class Browser {
     if (!t || !id) return;
     if (this.glance?.parentId === id) this.closeTab(this.glance.id, false);
     if (this.glance?.id === id) this.glance = undefined;
-    if (remember && !t.glanceOf) {
-      this.closed.push({ url: t.url, spaceId: t.spaceId });
-      if (this.closed.length > 25) this.closed.shift();
+    if (remember && !t.glanceOf && !isInternalUrl(t.url)) {
+      this.closed.push({
+        id: Math.random().toString(36).slice(2, 9),
+        url: t.url,
+        title: t.title || t.url,
+        favicon: t.favicon,
+        spaceId: t.spaceId,
+        closedAt: Date.now(),
+      });
+      if (this.closed.length > 35) this.closed.shift();
     }
 
     let replacement: string | undefined;
@@ -1066,8 +1075,11 @@ export class Browser {
         this.setTab(c);
         break;
       case 'tab:reopen': {
-        const last = this.closed.pop();
-        if (last) this.createTab({ url: last.url, spaceId: last.spaceId });
+        const targetIndex = c.closedId ? this.closed.findIndex((x) => x.id === c.closedId) : this.closed.length - 1;
+        if (targetIndex >= 0) {
+          const [target] = this.closed.splice(targetIndex, 1);
+          if (target) this.createTab({ url: target.url, spaceId: target.spaceId });
+        }
         break;
       }
       case 'tab:cycle': {
