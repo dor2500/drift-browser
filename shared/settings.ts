@@ -6,7 +6,7 @@ export type BookmarksBarMode = 'always' | 'newtab' | 'never';
 export type FontSizePreset = 'xsmall' | 'small' | 'medium' | 'large' | 'xlarge';
 export type StartupMode = 'newtab' | 'continue' | 'urls';
 export type SafeBrowsingMode = 'enhanced' | 'standard' | 'off';
-export type DnsOverHttpsMode = 'auto' | 'cloudflare' | 'google' | 'quad9' | 'off';
+export type DnsOverHttpsMode = 'auto' | 'cloudflare' | 'google' | 'quad9' | 'adguard' | 'mullvad' | 'off';
 export type PreloadPagesMode = 'standard' | 'extended' | 'off';
 
 export type VpnMode = 'builtin' | 'custom' | 'pac';

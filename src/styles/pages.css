@@ -4879,6 +4879,51 @@ select.field-input option { background: var(--panel); }
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+.download-sha-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.download-danger-box {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.download-danger-box.danger-high {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.download-danger-box.danger-medium {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.danger-box-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.danger-box-desc {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
 .downloads-search-clear {
   position: absolute;
   left: 12px;

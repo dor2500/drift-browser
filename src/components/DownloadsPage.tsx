@@ -277,6 +277,44 @@ export function DownloadsPage({ state }: Props) {
                               ההורדה הופסקה
                             </span>
                           )}
+
+                          {d.sha256 && (
+                            <span className="download-sha-badge mono" title={`SHA-256 Checksum:\n${d.sha256}`}>
+                              <Icon name="lock" size={11} />
+                              SHA-256: {d.sha256.slice(0, 10)}…
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Security & Danger Analysis Banner */}
+                      {d.dangerLevel && d.dangerLevel !== 'safe' && (
+                        <div
+                          className={cx(
+                            'download-danger-box',
+                            d.dangerLevel === 'dangerous' ? 'danger-high' : 'danger-medium'
+                          )}
+                        >
+                          <div className="danger-box-header">
+                            <Icon name="shield" size={14} />
+                            <strong>{d.dangerLevel === 'dangerous' ? 'אזהרת אבטחה חמורה' : 'קובץ הדורש תשומת לב'}</strong>
+                          </div>
+                          <p className="danger-box-desc">{d.dangerReason}</p>
+                          {d.sha256 && (
+                            <button
+                              className="btn small ghost-btn"
+                              style={{ marginTop: 6, fontSize: 11 }}
+                              onClick={() =>
+                                window.open(
+                                  `https://www.virustotal.com/gui/file/${d.sha256}`,
+                                  '_blank'
+                                )
+                              }
+                            >
+                              <Icon name="search" size={12} />
+                              סרוק קובץ ב-VirusTotal
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

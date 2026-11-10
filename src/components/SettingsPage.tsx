@@ -392,6 +392,8 @@ export function SettingsPage({ state }: { state: BrowserState }) {
               <option value="cloudflare">Cloudflare (1.1.1.1)</option>
               <option value="google">Google (Public DNS 8.8.8.8)</option>
               <option value="quad9">Quad9 (9.9.9.9)</option>
+              <option value="adguard">AdGuard DNS (חסימת פרסומות ומעקבים ברמת ה-DNS)</option>
+              <option value="mullvad">Mullvad DNS (פרטיות מקסימלית ללא תיעוד לוגים)</option>
               <option value="off">כבוי (Off)</option>
             </select>
           </div>

@@ -471,3 +471,4 @@ export function CaptureStudioModal({ data, onClose }: Props) {
     </div>
   );
 }
+

@@ -112,6 +112,8 @@ export interface MediaState {
   playing: boolean;
 }
 
+export type DownloadDangerLevel = 'safe' | 'suspicious' | 'dangerous';
+
 export interface DownloadInfo {
   id: string;
   filename: string;
@@ -122,6 +124,10 @@ export interface DownloadInfo {
   state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
   paused?: boolean;
   startedAt: number;
+  dangerLevel?: DownloadDangerLevel;
+  dangerReason?: string;
+  sha256?: string;
+  threatIgnored?: boolean;
 }
 
 export interface HistoryItem {

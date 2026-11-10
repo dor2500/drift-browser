@@ -305,3 +305,4 @@ export function AppsPage({ state }: Props) {
     </div>
   );
 }
+

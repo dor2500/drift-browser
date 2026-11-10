@@ -123,7 +123,7 @@ function sanitize(s: Settings): Settings {
       engineCheck: typeof s.privacy?.engineCheck === 'boolean' ? s.privacy.engineCheck : d.privacy.engineCheck,
       chromeCompare: typeof s.privacy?.chromeCompare === 'boolean' ? s.privacy.chromeCompare : d.privacy.chromeCompare,
       safeBrowsing: ['enhanced', 'standard', 'off'].includes(s.privacy?.safeBrowsing) ? s.privacy.safeBrowsing : d.privacy.safeBrowsing,
-      dnsOverHttps: ['auto', 'cloudflare', 'google', 'quad9', 'off'].includes(s.privacy?.dnsOverHttps) ? s.privacy.dnsOverHttps : d.privacy.dnsOverHttps,
+      dnsOverHttps: ['auto', 'cloudflare', 'google', 'quad9', 'adguard', 'mullvad', 'off'].includes(s.privacy?.dnsOverHttps) ? s.privacy.dnsOverHttps : d.privacy.dnsOverHttps,
       blockPopups: typeof s.privacy?.blockPopups === 'boolean' ? s.privacy.blockPopups : d.privacy.blockPopups,
       antiFingerprint: typeof s.privacy?.antiFingerprint === 'boolean' ? s.privacy.antiFingerprint : d.privacy.antiFingerprint,
     },

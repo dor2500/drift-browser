@@ -14,7 +14,7 @@ import {
   type MenuItemConstructorOptions,
   type WebContents,
 } from 'electron';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -297,6 +297,8 @@ export class Browser {
       cloudflare: 'https://cloudflare-dns.com/dns-query',
       google: 'https://dns.google/dns-query',
       quad9: 'https://dns.quad9.net/dns-query',
+      adguard: 'https://dns.adguard-dns.com/dns-query',
+      mullvad: 'https://dns.mullvad.net/dns-query',
     };
     try {
       if (mode === 'off') {
@@ -2675,6 +2677,23 @@ export class Browser {
       // "Ask where to save each file": Electron shows the save dialog when no path is set.
       if (this.settings.askDownloadLocation) item.setSaveDialogOptions({ defaultPath: file });
       else item.setSavePath(file);
+
+      const ext = path.extname(file).toLowerCase();
+      const dangerousExts = new Set(['.exe', '.bat', '.cmd', '.vbs', '.ps1', '.scr', '.jar', '.iso', '.msi', '.dll', '.hta', '.reg']);
+      const isHttp = item.getURL().startsWith('http://');
+      let dangerLevel: 'safe' | 'suspicious' | 'dangerous' = 'safe';
+      let dangerReason: string | undefined;
+
+      if (dangerousExts.has(ext)) {
+        if (isHttp) {
+          dangerLevel = 'dangerous';
+          dangerReason = 'קובץ הרצה מסוכן שהורד דרך פרוטוקול HTTP לא מאובטח (ללא הצפנת SSL/TLS)';
+        } else {
+          dangerLevel = 'suspicious';
+          dangerReason = 'קובץ הרצה מסוג Windows Executable – מומלץ לוודא שהמקור מהימן';
+        }
+      }
+
       const d: DownloadInfo = {
         id: newId(),
         filename: path.basename(file),
@@ -2684,6 +2703,8 @@ export class Browser {
         total: item.getTotalBytes(),
         state: 'progressing',
         startedAt: Date.now(),
+        dangerLevel,
+        dangerReason,
       };
       this.downloads = [d, ...this.downloads].slice(0, 40);
       this.downloadItems.set(d.id, item);
@@ -2703,6 +2724,14 @@ export class Browser {
         d.received = item.getReceivedBytes();
         d.state = st;
         this.downloadItems.delete(d.id);
+        if (st === 'completed') {
+          try {
+            if (fs.existsSync(d.path)) {
+              const buf = fs.readFileSync(d.path);
+              d.sha256 = createHash('sha256').update(buf).digest('hex');
+            }
+          } catch {}
+        }
         this.emit();
       });
       this.emit();
