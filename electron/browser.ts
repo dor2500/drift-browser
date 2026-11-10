@@ -2078,6 +2078,21 @@ export class Browser {
       { label: 'כרטיסייה חדשה מימין · New tab to the right', click: () => this.createTab({ afterId: id }) },
       { label: 'שכפול כרטיסייה · Duplicate tab', click: () => this.createTab({ url: t.url, afterId: id }) },
       { label: 'יצירת קוד QR עבור כרטיסייה זו · Create QR code', click: () => this.run({ type: 'page:qr', url: t.url }) },
+      { label: 'צילום מסך של כרטיסייה זו · Web Capture (Ctrl+Shift+S)', click: () => this.run({ type: 'page:capture', id }) },
+      {
+        label: 'התקנת אתר זה כ-Web App נפרד · Install as Web App',
+        enabled: /^https?:/.test(t.url),
+        click: () => this.run({ type: 'app:install', app: { name: t.title || 'Web App', url: t.url, openAsWindow: true } }),
+      },
+      {
+        label: t.asleep ? 'הערת כרטיסייה · Wake tab' : 'העברת כרטיסייה למצב שינה (חיסכון בזיכרון RAM) · Sleep tab',
+        enabled: !t.essential && !t.pinned && !isInternalUrl(t.url),
+        click: () => this.run(t.asleep ? { type: 'tab:wake', id } : { type: 'tab:sleep', id }),
+      },
+      {
+        label: 'העברת כל שאר הכרטיסיות למצב שינה · Put background tabs to sleep',
+        click: () => this.run({ type: 'tab:sleep' }),
+      },
       { label: this.i18n.t('menu.copyLink'), click: () => this.clipboardMonitor.captureNow(t.url) },
       {
         label: 'Send Tab to Device',

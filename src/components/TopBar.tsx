@@ -390,7 +390,17 @@ function HTab({
         ...swipe.style,
         ...(groupStyle ? ({ '--group-tint': groupStyle.border } as React.CSSProperties) : {}),
       }}
-      title={showHoverCard ? `${tab.title}\n${tab.url}${tab.asleep ? '\n💤 כרטיסייה במצב חיסכון בזיכרון (Memory Saver)' : ''}` : tab.title}
+      title={
+        showHoverCard
+          ? `${tab.title}\n🌐 ${tab.url || 'about:blank'}${
+              tab.asleep
+                ? '\n💤 מצב חיסכון בזיכרון פעיל (Memory Saver — שוחרר זיכרון RAM)'
+                : '\n⚡ פעיל'
+            }${tab.audible ? '\n🔊 משמיע מדיה' : ''}${
+              tab.muted ? '\n🔇 מושתק' : ''
+            }${tab.pinned ? '\n📌 כרטיסייה נעוצה' : ''}`
+          : tab.title
+      }
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}
       onDragEnd={endTabDrag}
@@ -411,7 +421,10 @@ function HTab({
         window.drift.tabMenu(tab.id);
       }}
     >
-      <Favicon tab={tab} />
+      <div className="htab-favicon-wrap">
+        <Favicon tab={tab} />
+        {tab.asleep && <span className="tab-sleep-badge" title="חיסכון בזיכרון (Memory Saver)">💤</span>}
+      </div>
       {!compact && <span className="htab-title">{tabTitle(tab, t('set.title'), t('tabs.new'))}</span>}
       {attention && <span className="tab-attention" />}
       {!compact && (tab.audible || tab.muted) && (

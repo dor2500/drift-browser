@@ -555,3 +555,39 @@
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;
 }
+
+/* Chrome Memory Saver Sleeping Tab & Favicon Styling */
+.htab.asleep, .tab.asleep {
+  opacity: 0.65;
+  filter: saturate(85%);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.htab.asleep:hover, .tab.asleep:hover {
+  opacity: 0.95;
+  filter: saturate(100%);
+}
+
+.htab-favicon-wrap, .tab-favicon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tab-sleep-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -5px;
+  font-size: 8px;
+  line-height: 1;
+  background: var(--bg, #18191b);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 50%;
+  padding: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
+}
+

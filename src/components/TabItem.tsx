@@ -44,7 +44,9 @@ export function TabItem({ tab, selected, inSplit, attention, dropPos, swipeEnabl
         ...swipe.style,
         ...(groupStyle ? ({ '--group-tint': groupStyle.border } as React.CSSProperties) : {}),
       }}
-      title={`${tab.title}\n${tab.url}`}
+      title={`${tab.title}\n🌐 ${tab.url || 'about:blank'}${
+        tab.asleep ? '\n💤 מצב חיסכון בזיכרון פעיל (Memory Saver — שוחרר זיכרון RAM)' : '\n⚡ פעיל'
+      }${tab.audible ? '\n🔊 משמיע מדיה' : ''}${tab.muted ? '\n🔇 מושתק' : ''}${tab.pinned ? '\n📌 כרטיסייה נעוצה' : ''}`}
       draggable
       onDragStart={(e) => startTabDrag(e, tab.id)}
       onDragEnd={endTabDrag}
@@ -66,7 +68,10 @@ export function TabItem({ tab, selected, inSplit, attention, dropPos, swipeEnabl
         window.drift.tabMenu(tab.id);
       }}
     >
-      <Favicon tab={tab} />
+      <div className="tab-favicon-wrap">
+        <Favicon tab={tab} />
+        {tab.asleep && <span className="tab-sleep-badge" title="חיסכון בזיכרון (Memory Saver)">💤</span>}
+      </div>
       <span className="tab-label">{tabTitle(tab, t('set.title'), t('tabs.new'))}</span>
       {attention && <span className="tab-attention" title={t('tabs.waiting')} />}
       {(tab.audible || tab.muted) && (
