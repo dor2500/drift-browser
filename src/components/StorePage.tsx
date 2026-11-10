@@ -4,8 +4,9 @@ import { COLOR_THEMES } from '../../shared/colorThemes';
 import { cmd, cx } from '../lib';
 import { Icon, type IconName } from './Icon';
 import { playAmbientSound, setAmbientVolume, stopAmbientSound } from '../lib/ambientSound';
+import { StoreArtwork } from './StoreArtwork';
 
-type StoreCategory = 'all' | 'security' | 'productivity' | 'media' | 'themes' | 'scripts';
+type StoreCategory = 'all' | 'security' | 'productivity' | 'media' | 'themes' | 'devtools';
 
 interface ScreenshotSlide {
   title: string;
@@ -25,7 +26,7 @@ interface StoreItem {
   id: string;
   name: string;
   nameHe: string;
-  category: 'security' | 'productivity' | 'media' | 'themes';
+  category: 'security' | 'productivity' | 'media' | 'themes' | 'devtools';
   version: string;
   author: string;
   icon: IconName;
@@ -304,6 +305,93 @@ const STORE_CATALOG: StoreItem[] = [
       { author: 'טל כ.', stars: 5, date: 'לפני שבוע', comment: 'הקראת הטקסט בקול היא פשוט תענוג כשאני קורא כתבות ארוכות תוך כדי משימות.' },
     ],
   },
+  {
+    id: 'drift-dark-reader',
+    name: 'Drift Dark Reader Max',
+    nameHe: 'Drift Dark Reader Max — מצב לילה חכם ומנוע ניגודיות OLED',
+    category: 'productivity',
+    version: '2.5.0',
+    author: 'Drift Visual Labs',
+    icon: 'moon',
+    rating: 4.97,
+    ratingCount: 34100,
+    users: '310,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #09090b 0%, #18181b 50%, #27272a 100%)',
+    bannerBadge: '🌙 OLED DARK MODE',
+    accentColor: '#38bdf8',
+    description:
+      'Smart dark theme generator for every website with OLED blacks, contrast preservation, blue-light filter and sepia controls.',
+    descriptionHe:
+      'מנוע מצב כהה חכם לכל אתר ברשת: הופך אתרי אינטרנט בהירים ובוהקים למצב לילה שחור OLED עמוק עם סינון אור כחול והגנה על העיניים.',
+    tags: ['מצב לילה', 'OLED', 'עיצוב', 'שחור', 'בריאות עיניים'],
+    featuresHe: [
+      'המרת כל אתר למצב לילה עמוק בזמן אמת',
+      'שמירה על ניגודיות תמונות וצבעים טבעיים',
+      'סינון אור כחול (Sepia) לשעות הערב והלילה',
+      'אפס מאמץ על הסוללה במסכי OLED',
+    ],
+    screenshots: [
+      {
+        title: 'מנוע היפוך גוונים חכם מבוסס OLED',
+        subtitle: 'שחור מוחלט החוסך בחיי סוללה ומונע סינוור עיניים',
+        icon: 'moon',
+        features: ['שחור OLED אמיתי #000000', 'שמירה על צבעי תמונות ווידאו', 'התאמה אוטומטית לפי שעות השקיעה'],
+      },
+      {
+        title: 'סרגלי כוונון בהירות, ניגודיות וספיה',
+        subtitle: 'שליטה מדויקת ברמת החום והרכות של הצבעים',
+        icon: 'sliders',
+        features: ['סליידר בהירות וניגודיות חי', 'פילטר חום גוונים להפחתת עייפות', 'החרגת אתרים בלחיצה אחת'],
+      },
+    ],
+    reviews: [
+      { author: 'נועם ד.', stars: 5, date: 'אתמול', comment: 'התוסף הכי חשוב בדפדפן! העיניים שלי כבר לא שורפות בגלישה בלילה.' },
+      { author: 'David K.', stars: 5, date: 'לפני 3 ימים', comment: 'Way better and faster than external extensions. Smooth 60fps scrolling.' },
+    ],
+  },
+  {
+    id: 'drift-dev-tools',
+    name: 'Drift DevTools Pro',
+    nameHe: 'Drift DevTools Pro — סרגל כלי מפתח: JSON, Regex & Pipette',
+    category: 'devtools',
+    version: '1.4.0',
+    author: 'Drift Developer Core',
+    icon: 'bolt',
+    rating: 4.93,
+    ratingCount: 16500,
+    users: '120,000+ משתמשים',
+    bannerGradient: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
+    bannerBadge: '🛠️ DEVELOPER SUITE',
+    accentColor: '#34d399',
+    description:
+      'Developer utilities right inside Drift: Instant JSON Tree Viewer, Base64 encoder/decoder, Live Regex sandbox, and Screen Color Pipette.',
+    descriptionHe:
+      'סרגל כלי פיתוח מובנה: מציג ומעצב קבצי JSON בעץ היררכי צבעוני, מקודד ומפענח Base64, בודק ביטויים רגולריים (Regex) ודוגם צבעים ישירות מהמסך.',
+    tags: ['פיתוח', 'JSON', 'Regex', 'צבעים', 'מפתחים'],
+    featuresHe: [
+      'מעצב ועץ JSON צבעוני עם קיפול ענפים',
+      'בודק ביטויים רגולריים (Regex) בזמן אמת',
+      'דוגם צבעים (Color Pipette) עם קודי HEX / RGB / HSL',
+      'קידוד ופענוח Base64 / URL בלחיצה',
+    ],
+    screenshots: [
+      {
+        title: 'מעצב JSON צבעוני עם חיפוש וסינון',
+        subtitle: 'עץ היררכי קריא עם העתקת מפתחות וערכים',
+        icon: 'bolt',
+        features: ['הדגשת תחביר (Syntax Highlighting)', 'כיווץ והרחבת אובייקטים', 'העתקת נתיבי JSONPath'],
+      },
+      {
+        title: 'דוגם צבעים וארגז חול ל-Regex',
+        subtitle: 'בדיקת התאמות ביטויים ודגימת צבעים ישירות מהאתר',
+        icon: 'palette',
+        features: ['דגימת פיקסל מהמסך', 'המרת צבעים ל-CSS HEX/RGBA', 'הדגשת Regex Match חיה'],
+      },
+    ],
+    reviews: [
+      { author: 'גיא ר.', stars: 5, date: 'לפני 4 ימים', comment: 'חוסך לי לפתוח אתרים חיצוניים מעצבנים לעיצוב JSON ובדיקת Regex. מעולה!' },
+    ],
+  },
 ];
 
 export function StorePage({ state }: { state: BrowserState }) {
@@ -315,6 +403,9 @@ export function StorePage({ state }: { state: BrowserState }) {
   // Selected item for Detailed Modal & Screenshots Gallery
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
   const [activeScreenshotIdx, setActiveScreenshotIdx] = useState(0);
+
+  // Per-card screenshot slider index state
+  const [cardSlideIdx, setCardSlideIdx] = useState<Record<string, number>>({});
 
   // Featured carousel index
   const [featuredIdx, setFeaturedIdx] = useState(0);
@@ -557,21 +648,8 @@ export function StorePage({ state }: { state: BrowserState }) {
           {/* Visual Artwork Showcase Mockup on Hero */}
           <div className="featured-hero-visual" onClick={() => setSelectedItem(featuredItem)}>
             <div className="hero-artwork-frame">
-              <div className="artwork-glass-card">
-                <div className="artwork-icon-large" style={{ color: featuredItem.accentColor }}>
-                  <Icon name={featuredItem.icon} size={48} />
-                </div>
-                <div className="artwork-badge">{featuredItem.bannerBadge}</div>
-                <div className="artwork-preview-list">
-                  {featuredItem.featuresHe.slice(0, 3).map((f, i) => (
-                    <div key={i} className="artwork-feat-item">
-                      <Icon name="check" size={13} />
-                      <span>{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="artwork-overlay-pill">לחץ לתמונות ומבט מורחב 🔍</div>
-              </div>
+              <StoreArtwork itemId={featuredItem.id} slideIdx={0} className="hero-artwork-rendered" />
+              <div className="artwork-overlay-pill">🔍 לחץ לצפייה בגלריית צילומי מסך מלאה</div>
             </div>
 
             {/* Carousel navigation buttons */}
@@ -620,6 +698,13 @@ export function StorePage({ state }: { state: BrowserState }) {
           <span>מולטימדיה ווידאו</span>
         </button>
         <button
+          className={cx('store-nav-btn', activeTab === 'devtools' && 'active')}
+          onClick={() => setActiveTab('devtools')}
+        >
+          <Icon name="bolt" size={15} />
+          <span>כלי פיתוח ו-Regex</span>
+        </button>
+        <button
           className={cx('store-nav-btn', activeTab === 'themes' && 'active')}
           onClick={() => setActiveTab('themes')}
         >
@@ -640,6 +725,7 @@ export function StorePage({ state }: { state: BrowserState }) {
               const isNotes = item.id === 'drift-scratchpad';
               const isPomo = item.id === 'drift-focus-timer';
               const isAuditor = item.id === 'drift-security-auditor';
+              const currentSlide = cardSlideIdx[item.id] ?? 0;
 
               return (
                 <div key={item.id} className={cx('store-card', !installed && 'not-installed')}>
@@ -649,21 +735,41 @@ export function StorePage({ state }: { state: BrowserState }) {
                     style={{ background: item.bannerGradient }}
                     onClick={() => {
                       setSelectedItem(item);
-                      setActiveScreenshotIdx(0);
+                      setActiveScreenshotIdx(currentSlide);
                     }}
                   >
-                    <div className="card-banner-badge">{item.bannerBadge}</div>
-                    <div className="card-banner-center">
-                      <div className="banner-icon-circle" style={{ color: item.accentColor }}>
-                        <Icon name={item.icon} size={32} />
-                      </div>
-                      <div className="banner-hover-overlay">
-                        <span>🔍 צפה בתמונות ומידע</span>
-                      </div>
+                    {/* Visual UI Screenshot Mockup */}
+                    <div className="banner-artwork-wrapper">
+                      <StoreArtwork itemId={item.id} slideIdx={currentSlide} className="card-artwork-embed" />
                     </div>
-                    <div className="card-banner-chips">
-                      <span className="banner-chip-version">v{item.version}</span>
+
+                    <div className="card-banner-top">
+                      <span className="card-banner-badge">{item.bannerBadge}</span>
                       <span className="banner-chip-rating">★ {item.rating}</span>
+                    </div>
+
+                    <div className="card-banner-bottom" onClick={(e) => e.stopPropagation()}>
+                      <div className="card-slide-selector">
+                        {item.screenshots.map((s, sIdx) => (
+                          <button
+                            key={sIdx}
+                            className={cx('card-slide-btn', currentSlide === sIdx && 'active')}
+                            onClick={() => setCardSlideIdx((prev) => ({ ...prev, [item.id]: sIdx }))}
+                            title={`צילום מסך ${sIdx + 1}: ${s.title}`}
+                          >
+                            📸 צילום {sIdx + 1}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className="banner-zoom-pill"
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setActiveScreenshotIdx(currentSlide);
+                        }}
+                      >
+                        🔍 הגדל
+                      </button>
                     </div>
                   </div>
 
@@ -697,6 +803,29 @@ export function StorePage({ state }: { state: BrowserState }) {
                           <span>{feat}</span>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Quick Screenshots Mini Gallery on Card */}
+                    <div className="card-quick-gallery">
+                      <div className="quick-gallery-label">
+                        <Icon name="tab" size={12} />
+                        <span>גלריית צילומי מסך מהירים:</span>
+                      </div>
+                      <div className="quick-gallery-thumbs">
+                        {item.screenshots.map((s, idx) => (
+                          <div
+                            key={idx}
+                            className={cx('quick-gallery-thumb', currentSlide === idx && 'active')}
+                            onClick={() => setCardSlideIdx((prev) => ({ ...prev, [item.id]: idx }))}
+                            title={`לחץ להחלפת צילום מסך: ${s.title}`}
+                          >
+                            <div className="thumb-art-crop">
+                              <StoreArtwork itemId={item.id} slideIdx={idx} className="thumb-mini-art" />
+                            </div>
+                            <span className="thumb-label">צילום {idx + 1}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Interactive live widget for Shield Pro */}
@@ -949,19 +1078,15 @@ export function StorePage({ state }: { state: BrowserState }) {
                 <h3 className="modal-section-title">🖼️ גלריית תמונות ותצוגה מקדימה</h3>
                 <div className="screenshot-display-frame">
                   <div className="screenshot-inner-mockup" style={{ background: selectedItem.bannerGradient }}>
-                    <div className="mockup-header-bar">
-                      <div className="mockup-dots">
-                        <span className="dot red" />
-                        <span className="dot yellow" />
-                        <span className="dot green" />
-                      </div>
-                      <span className="mockup-bar-title">{selectedItem.name} — Drift Preview</span>
+                    <div className="mockup-artwork-large-wrap">
+                      <StoreArtwork
+                        itemId={selectedItem.id}
+                        slideIdx={activeScreenshotIdx}
+                        className="modal-artwork-canvas"
+                      />
                     </div>
 
                     <div className="mockup-showcase-view">
-                      <div className="mockup-icon-large" style={{ color: selectedItem.accentColor }}>
-                        <Icon name={selectedItem.screenshots[activeScreenshotIdx]?.icon ?? selectedItem.icon} size={54} />
-                      </div>
                       <h4 className="mockup-title">{selectedItem.screenshots[activeScreenshotIdx]?.title}</h4>
                       <p className="mockup-subtitle">{selectedItem.screenshots[activeScreenshotIdx]?.subtitle}</p>
 
