@@ -1511,5 +1511,434 @@ select.field-input option { background: var(--panel); }
   animation: fadeInToast 0.2s ease-out;
 }
 
+/* ==========================================================
+   Bookmarks Manager Page (drift://bookmarks)
+   ========================================================== */
+
+.bookmarks-page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  background: var(--panel);
+  color: var(--text);
+  padding: 32px 48px;
+  user-select: text;
+}
+
+.bookmarks-header {
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bookmarks-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.bookmarks-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.bookmarks-title-row h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.bookmarks-sub {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 650px;
+}
+
+.bookmarks-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.bookmarks-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.bookmarks-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 520px;
+}
+
+.bookmarks-search-wrap svg {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.bookmarks-search-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 42px 0 16px;
+  border-radius: var(--button-radius);
+  border: 1px solid var(--border-contrast);
+  background: var(--urlbar-bg);
+  color: var(--text);
+  outline: none;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bookmarks-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.clear-search-btn {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.clear-search-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.bookmarks-count-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--element-bg);
+  border: 1px solid var(--border-contrast);
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.bookmarks-content {
+  margin-top: 16px;
+}
+
+.bookmarks-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+.bookmarks-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+.bookmarks-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--element-bg);
+  border: 1px dashed var(--border-contrast);
+  border-radius: 16px;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.empty-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.bookmarks-empty h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.bookmarks-empty p {
+  margin: 0 0 20px 0;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-width: 440px;
+}
+
+.empty-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.sug-label {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.sug-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sug-pill {
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sug-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Bookmarks List & Cards */
+.bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bookmark-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: var(--element-bg);
+  border: 1px solid var(--border-contrast);
+  border-radius: 12px;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+
+.bookmark-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--element-bg));
+  transform: translateX(-2px);
+}
+
+.bm-fav-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.bm-fav-icon img {
+  width: 18px;
+  height: 18px;
+  position: relative;
+  z-index: 2;
+}
+
+.bm-fav-icon svg {
+  position: absolute;
+  color: var(--text-faint);
+  z-index: 1;
+}
+
+.bm-info {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bm-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bm-url {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.bm-domain {
+  color: var(--accent);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.bm-full-url {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+.bm-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.bookmark-card:hover .bm-actions {
+  opacity: 1;
+}
+
+.bm-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-contrast);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bm-action-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bm-action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Add Bookmark Modal */
+.bm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.bm-modal-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border-contrast);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: scaleInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bm-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bm-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bm-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bm-modal-close:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.bm-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bm-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-contrast);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--element-bg);
+}
+
+
 
 

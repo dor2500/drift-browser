@@ -80,6 +80,15 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
         action: () => cmd({ type: 'store:open' }),
       },
       {
+        id: 'bookmarks',
+        category: 'tools',
+        titleHe: 'מנהל הסימניות (Bookmarks Manager)',
+        descHe: 'פתיחת מנהל הסימניות לחיפוש, ארגון וייצוא סימניות לקובץ HTML',
+        keys: ['Ctrl', 'Shift', 'O'],
+        icon: 'book',
+        action: () => cmd({ type: 'bookmarks:open' }),
+      },
+      {
         id: 'shortcuts',
         category: 'tools',
         titleHe: 'לוח קיצורי מקלדת זה',

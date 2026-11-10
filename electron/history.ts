@@ -160,6 +160,14 @@ export class HistoryIndex {
     return true;
   }
 
+  /** Return all saved bookmarks in recent order. */
+  getBookmarks(): { url: string; title: string; source?: string }[] {
+    return [...this.entries.values()]
+      .filter((e) => e.bookmark)
+      .sort((a, b) => b.last - a.last)
+      .map(({ url, title, source }) => ({ url, title, source }));
+  }
+
   /** Clear browsing history entries visited after `sinceMs` (keeps bookmarks). */
   clearHistory(sinceMs = 0) {
     for (const [url, e] of this.entries.entries()) {

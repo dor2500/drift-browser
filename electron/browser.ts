@@ -42,7 +42,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -336,6 +336,12 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(PERFORMANCE_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: PERFORMANCE_URL });
+  }
+
+  private openBookmarks() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(BOOKMARKS_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: BOOKMARKS_URL });
   }
 
   // ---------------------------------------------------------------- model
@@ -679,6 +685,9 @@ export class Browser {
         break;
       case 'performance:open':
         this.openPerformance();
+        break;
+      case 'bookmarks:open':
+        this.openBookmarks();
         break;
       case 'tab:sleep':
         if (c.id) {
@@ -1410,6 +1419,7 @@ export class Browser {
     }
     if (!ctrl && !i.alt && i.shift && k === 'escape') return run({ type: 'win:taskManager' });
     if (ctrl && i.shift && !i.alt && k === 'e') return run({ type: 'store:open' });
+    if (ctrl && i.shift && !i.alt && k === 'o') return run({ type: 'bookmarks:open' });
     if ((ctrl && k === '/') || (!ctrl && !i.alt && !i.shift && k === 'f1')) return run({ type: 'shortcuts:open' });
     if (ctrl && i.shift && !i.alt && k === 'delete') return run({ type: 'settings:open' });
     if (!ctrl && !i.alt && !i.shift && k === 'f7') {

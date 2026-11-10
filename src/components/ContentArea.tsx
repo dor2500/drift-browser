@@ -10,6 +10,7 @@ import { SettingsPage } from './SettingsPage';
 import { StorePage } from './StorePage';
 import { ShortcutsPage } from './ShortcutsPage';
 import { PerformancePage } from './PerformancePage';
+import { BookmarksPage } from './BookmarksPage';
 import { t } from '../i18n';
 
 interface Props {
@@ -123,6 +124,8 @@ export function ContentArea({ state, snapshots, dimmed, findOpen, onCloseFind }:
                       <ShortcutsPage state={state} />
                     ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://performance') ? (
                       <PerformancePage state={state} />
+                    ) : state.tabs.find((t) => t.id === id)?.url.startsWith('drift://bookmarks') ? (
+                      <BookmarksPage state={state} />
                     ) : (
                       <SettingsPage state={state} />
                     )

@@ -131,6 +131,7 @@ ipcMain.handle('drift:locale', (e) => (fromShell(e) ? browser?.i18n.bundle() : u
 ipcMain.handle('drift:languages', (e) => (fromShell(e) ? browser?.i18n.list() : undefined));
 ipcMain.handle('drift:install-language', (e, code: string) => (fromShell(e) ? browser?.i18n.install(String(code)) : false));
 ipcMain.handle('drift:suggest', (e, q: string) => (fromShell(e) ? browser?.history.suggest(String(q ?? '')) : []));
+ipcMain.handle('drift:get-bookmarks', (e) => (fromShell(e) ? browser?.history.getBookmarks() : []));
 ipcMain.handle('drift:import-sources', (e) => (fromShell(e) ? detectSources() : []));
 ipcMain.handle('drift:import', (e, source: ImportBrowser, options: ImportOptions) =>
   fromShell(e) ? browser?.runImport(source, options) : undefined,

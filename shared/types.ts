@@ -304,6 +304,7 @@ export type Command =
   | { type: 'store:open' }
   | { type: 'shortcuts:open' }
   | { type: 'performance:open' }
+  | { type: 'bookmarks:open' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'privacy:newIdentity' }
@@ -405,6 +406,7 @@ export interface DriftApi {
   languages(): Promise<{ languages: LanguageInfo[]; offline: boolean }>;
   installLanguage(code: string): Promise<boolean>;
   suggest(query: string): Promise<Suggestion[]>;
+  getBookmarks(): Promise<{ url: string; title: string; source?: string }[]>;
   importSources(): Promise<ImportSource[]>;
   runImport(source: ImportBrowser, options: ImportOptions): Promise<ImportResult>;
   onState(cb: (s: BrowserState) => void): () => void;

@@ -35,6 +35,7 @@ const api: DriftApi = {
   languages: () => ipcRenderer.invoke('drift:languages'),
   installLanguage: (code) => ipcRenderer.invoke('drift:install-language', code),
   suggest: (query) => ipcRenderer.invoke('drift:suggest', query),
+  getBookmarks: () => ipcRenderer.invoke('drift:get-bookmarks'),
   importSources: () => ipcRenderer.invoke('drift:import-sources'),
   runImport: (source, options) => ipcRenderer.invoke('drift:import', source, options),
   onState: (cb) => subscribe<BrowserState>('drift:state', cb),

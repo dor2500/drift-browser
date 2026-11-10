@@ -251,8 +251,8 @@ export function TopBar({ state, onOpenBar }: Props) {
             <button
               className="bm-item bm-all"
               style={{ marginInlineStart: 'auto' }}
-              title="כל הסימניות · All Bookmarks"
-              onClick={() => cmd({ type: 'settings:open' })}
+              title="כל הסימניות · All Bookmarks (Ctrl+Shift+O)"
+              onClick={() => cmd({ type: 'bookmarks:open' })}
             >
               <Icon name="book" size={12} />
               <span>כל הסימניות</span>
