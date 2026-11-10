@@ -304,3 +304,4 @@ export function SiteInfoPanel({ activeTab, state, onClose }: Props) {
     </div>
   );
 }
+

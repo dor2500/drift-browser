@@ -20,6 +20,8 @@ export const SHORTCUTS_URL = 'drift://shortcuts';
 export const PERFORMANCE_URL = 'drift://performance';
 export const BOOKMARKS_URL = 'drift://bookmarks';
 export const SESSIONS_URL = 'drift://sessions';
+export const HISTORY_URL = 'drift://history';
+export const DOWNLOADS_URL = 'drift://downloads';
 
 export const isInternalUrl = (url: string) => url.startsWith('drift://');
 export const internalTitle = (url: string) => {
@@ -30,6 +32,8 @@ export const internalTitle = (url: string) => {
   if (url.startsWith(PERFORMANCE_URL)) return 'ביצועים וזיכרון · Performance';
   if (url.startsWith(BOOKMARKS_URL)) return 'מנהל הסימניות · Bookmarks';
   if (url.startsWith(SESSIONS_URL)) return 'סשנים שמורים · Tab Stash & Sessions';
+  if (url.startsWith(HISTORY_URL)) return 'היסטוריית גלישה · History';
+  if (url.startsWith(DOWNLOADS_URL)) return 'מנהל ההורדות · Downloads';
   return 'Drift';
 };
 

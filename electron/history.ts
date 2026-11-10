@@ -168,6 +168,28 @@ export class HistoryIndex {
       .map(({ url, title, source }) => ({ url, title, source }));
   }
 
+  /** Return full history entries sorted by last visit descending. */
+  getAllHistory(limit = 1000): { url: string; title: string; visits: number; last: number; source?: string; bookmark?: boolean }[] {
+    return [...this.entries.values()]
+      .sort((a, b) => (b.last || 0) - (a.last || 0) || b.visits - a.visits)
+      .slice(0, limit)
+      .map(({ url, title, visits, last, source, bookmark }) => ({ url, title, visits, last, source, bookmark }));
+  }
+
+  /** Delete a specific URL from history. */
+  deleteEntry(url: string): boolean {
+    const e = this.entries.get(url);
+    if (!e) return false;
+    if (e.bookmark) {
+      e.visits = 0;
+      e.last = 0;
+    } else {
+      this.entries.delete(url);
+    }
+    this.save();
+    return true;
+  }
+
   /** Clear browsing history entries visited after `sinceMs` (keeps bookmarks). */
   clearHistory(sinceMs = 0) {
     for (const [url, e] of this.entries.entries()) {

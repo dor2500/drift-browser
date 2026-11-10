@@ -44,7 +44,7 @@ import {
 import { DEFAULT_SETTINGS, SEARCH_ENGINES, type FontSizePreset, type Settings, type SettingsPatch } from '../shared/settings';
 import { THEMES, contentRadiusFor } from '../shared/themes';
 import type { MessageKey } from '../shared/i18n';
-import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
+import { NEWTAB_URL, SETTINGS_URL, STORE_URL, SHORTCUTS_URL, PERFORMANCE_URL, BOOKMARKS_URL, SESSIONS_URL, HISTORY_URL, DOWNLOADS_URL, internalTitle, isInternalUrl, isSafeRemoteUrl, normalizeInput } from '../shared/url';
 import { permissionShortName, hostOf } from '../shared/permissions';
 import { AdBlock, hostOfUrl } from './adblock';
 import { BROWSER_NAMES, openInBrowser, otherBrowsers } from './env';
@@ -350,6 +350,18 @@ export class Browser {
     const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(SESSIONS_URL));
     if (existing) this.activate(existing.id);
     else this.createTab({ url: SESSIONS_URL });
+  }
+
+  private openHistory() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(HISTORY_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: HISTORY_URL });
+  }
+
+  private openDownloads() {
+    const existing = this.tabs.find((t) => !t.glanceOf && t.url.startsWith(DOWNLOADS_URL));
+    if (existing) this.activate(existing.id);
+    else this.createTab({ url: DOWNLOADS_URL });
   }
 
   getSavedSessions(): SavedSession[] {
@@ -758,6 +770,12 @@ export class Browser {
       case 'sessions:open':
         this.openSessions();
         break;
+      case 'history:open':
+        this.openHistory();
+        break;
+      case 'downloads:open':
+        this.openDownloads();
+        break;
       case 'tab:sleep':
         if (c.id) {
           if (c.id !== this.activeTabId) this.destroyView(c.id);
@@ -938,6 +956,10 @@ export class Browser {
       }
       case 'download:cancel':
         this.downloadItems.get(c.id)?.cancel();
+        break;
+      case 'download:remove':
+        this.downloads = this.downloads.filter((d) => d.id !== c.id);
+        this.emit();
         break;
       case 'downloads:clear':
         this.downloads = this.downloads.filter((d) => d.state === 'progressing');
@@ -1495,7 +1517,7 @@ export class Browser {
     if (!ctrl && !i.alt && !i.shift && k === 'f7') {
       return run({ type: 'settings:set', patch: { caretBrowsing: !this.settings.caretBrowsing } });
     }
-    if (ctrl && !i.alt && !i.shift && k === 'h') return run({ type: 'settings:open' });
+    if (ctrl && !i.alt && !i.shift && k === 'h') return run({ type: 'history:open' });
     if (ctrl && !i.alt && !i.shift && k === ',') return run({ type: 'settings:open' });
     if ((ctrl && !i.alt && k === 'l') || k === 'f6') return this.ui({ type: 'commandbar', mode: 'current' }), true;
     if (ctrl && !i.alt && !i.shift && k === 'w') return run({ type: 'tab:close' });
@@ -1515,7 +1537,7 @@ export class Browser {
     if (ctrl && !i.alt && !i.shift && k === 'u') return run({ type: 'page:source' });
     if (ctrl && i.shift && !i.alt && k === 's') return run({ type: 'page:screenshot' });
     if (ctrl && i.shift && !i.alt && k === 'a') return run({ type: 'ai:toggle' });
-    if (ctrl && !i.alt && !i.shift && k === 'j') return this.downloadsMenu(), true;
+    if (ctrl && !i.alt && !i.shift && k === 'j') return run({ type: 'downloads:open' });
     if (ctrl && !i.alt && !i.shift && k === 'd') {
       const t = this.tab(this.activeTabId);
       if (t && !t.essential) this.run({ type: 'tab:set', id: t.id, pinned: !t.pinned });

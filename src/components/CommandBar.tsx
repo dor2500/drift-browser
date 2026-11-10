@@ -108,6 +108,8 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'reopen', label: t('menu.reopen'), en: translate({}, 'menu.reopen'), run: () => cmd({ type: 'tab:reopen' }) },
       { id: 'newspace', label: t('menu.newSpace'), en: translate({}, 'menu.newSpace'), run: () => cmd({ type: 'space:new' }) },
       { id: 'settings', label: t('menu.settings'), en: translate({}, 'menu.settings'), run: () => cmd({ type: 'settings:open' }) },
+      { id: 'history', label: 'היסטוריית גלישה (Browsing History · Ctrl+H)', en: 'browsing history recent visits clear cache cookies delete', run: () => cmd({ type: 'history:open' }) },
+      { id: 'downloads-page', label: 'מנהל ההורדות (Downloads Hub · Ctrl+J)', en: 'downloads manager files torrent progress list open folder', run: () => cmd({ type: 'downloads:open' }) },
       { id: 'bookmarks', label: 'מנהל הסימניות (Bookmarks Manager · Ctrl+Shift+O)', en: 'bookmarks manager favorites links html export', run: () => cmd({ type: 'bookmarks:open' }) },
       { id: 'sessions', label: 'סשנים שמורים ושמירת כרטיסיות (Tab Stash · Ctrl+Shift+S)', en: 'sessions tab stash snapshots restore tabs save session', run: () => cmd({ type: 'sessions:open' }) },
       { id: 'performance', label: 'לוח ביצועים וחיסכון בזיכרון (Memory Saver & Performance)', en: 'performance memory saver dashboard tabs ram sleep wake', run: () => cmd({ type: 'performance:open' }) },

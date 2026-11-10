@@ -132,6 +132,13 @@ ipcMain.handle('drift:languages', (e) => (fromShell(e) ? browser?.i18n.list() : 
 ipcMain.handle('drift:install-language', (e, code: string) => (fromShell(e) ? browser?.i18n.install(String(code)) : false));
 ipcMain.handle('drift:suggest', (e, q: string) => (fromShell(e) ? browser?.history.suggest(String(q ?? '')) : []));
 ipcMain.handle('drift:get-bookmarks', (e) => (fromShell(e) ? browser?.history.getBookmarks() : []));
+ipcMain.handle('drift:history-list', (e, limit?: number) => (fromShell(e) ? browser?.history.getAllHistory(limit) : []));
+ipcMain.handle('drift:history-delete', (e, url: string) => (fromShell(e) ? browser?.history.deleteEntry(url) : false));
+ipcMain.handle('drift:history-clear', (e, sinceMs?: number) => {
+  if (!fromShell(e) || !browser) return false;
+  browser.history.clearHistory(sinceMs);
+  return true;
+});
 ipcMain.handle('drift:sessions-list', (e) => (fromShell(e) ? browser?.getSavedSessions() : []));
 ipcMain.handle('drift:sessions-save', (e, name: string, tabs: any[], spaceName?: string) =>
   fromShell(e) ? browser?.saveSessionSnapshot(name, tabs, spaceName) : undefined

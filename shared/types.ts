@@ -113,6 +113,15 @@ export interface DownloadInfo {
   startedAt: number;
 }
 
+export interface HistoryItem {
+  url: string;
+  title: string;
+  visits: number;
+  last: number;
+  source?: string;
+  bookmark?: boolean;
+}
+
 export interface FindState {
   tabId: string;
   active: number;
@@ -323,6 +332,8 @@ export type Command =
   | { type: 'performance:open' }
   | { type: 'bookmarks:open' }
   | { type: 'sessions:open' }
+  | { type: 'history:open' }
+  | { type: 'downloads:open' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'privacy:newIdentity' }
@@ -370,7 +381,7 @@ export type Command =
   | { type: 'find:query'; text: string; forward?: boolean; next?: boolean }
   | { type: 'find:stop' }
   | { type: 'zoom'; dir: 1 | -1 | 0 }
-  | { type: 'download:open' | 'download:show' | 'download:cancel'; id: string }
+  | { type: 'download:open' | 'download:show' | 'download:cancel' | 'download:remove'; id: string }
   | { type: 'downloads:clear' }
   | { type: 'page:print' | 'page:source' | 'page:screenshot' | 'page:translate' | 'page:pip' }
   | { type: 'split:toggle' }
@@ -425,6 +436,9 @@ export interface DriftApi {
   installLanguage(code: string): Promise<boolean>;
   suggest(query: string): Promise<Suggestion[]>;
   getBookmarks(): Promise<{ url: string; title: string; source?: string }[]>;
+  getHistory(limit?: number): Promise<HistoryItem[]>;
+  deleteHistory(url: string): Promise<boolean>;
+  clearHistory(sinceMs?: number): Promise<boolean>;
   getSavedSessions(): Promise<SavedSession[]>;
   saveSessionSnapshot(name: string, tabs: SavedSessionTab[], spaceName?: string): Promise<SavedSession>;
   deleteSavedSession(id: string): Promise<void>;
