@@ -208,6 +208,16 @@ export function TopBar({ state, onOpenBar }: Props) {
             )}
           </button>
         )}
+        {(!!state.media || state.tabs.some((t) => t.audible)) && (
+          <button
+            className="tb-btn media-hub-btn active"
+            title="שליטה במדיה וסאונד · Global Media Hub (Ctrl+Alt+M)"
+            onClick={() => openShellPopover('media')}
+          >
+            <Icon name="music" size={16} />
+            <span className="media-hub-dot" />
+          </button>
+        )}
         <DownloadsButton downloads={state.downloads} className="tb-btn" />
         <button className="tb-btn menu-btn" title={t('nav.menu')} onClick={() => window.drift.appMenu()}>
           <Icon name="more" size={18} />

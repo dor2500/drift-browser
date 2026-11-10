@@ -474,3 +474,4 @@ export function HistoryPage({ state: _state }: Props) {
     </div>
   );
 }
+

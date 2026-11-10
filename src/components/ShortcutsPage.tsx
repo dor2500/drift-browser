@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import type { BrowserState } from '../../shared/types';
 import { cmd, cx } from '../lib';
 import { Icon, type IconName } from './Icon';
+import { openShellPopover } from './PageActions';
 
 interface ShortcutDef {
   id: string;
@@ -114,6 +115,24 @@ export function ShortcutsPage({ state: _state }: { state: BrowserState }) {
         keys: ['Ctrl', 'Shift', 'S'],
         icon: 'inbox',
         action: () => cmd({ type: 'sessions:open' }),
+      },
+      {
+        id: 'media-hub',
+        category: 'tools',
+        titleHe: 'בקרת מדיה וסאונד גלובלית (Global Media Hub)',
+        descHe: 'פתיחת חלונית שליטה מרכזית בנגנים, הגברת ווליום עד 300% ומעבר שירים',
+        keys: ['Ctrl', 'Alt', 'M'],
+        icon: 'music',
+        action: () => openShellPopover('media'),
+      },
+      {
+        id: 'pip',
+        category: 'tools',
+        titleHe: 'תמונה בתוך תמונה (Picture-in-Picture)',
+        descHe: 'הוצאת סרטון הווידאו בדף לתוך חלון צף מעל שאר האפליקציות',
+        keys: ['Alt', 'P'],
+        icon: 'pip',
+        action: () => cmd({ type: 'page:pip' }),
       },
       {
         id: 'shortcuts',

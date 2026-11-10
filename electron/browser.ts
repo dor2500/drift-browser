@@ -776,6 +776,9 @@ export class Browser {
       case 'downloads:open':
         this.openDownloads();
         break;
+      case 'popover:toggle':
+        this.win.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent('drift:popover', { detail: '${c.kind}' }))`).catch(() => {});
+        break;
       case 'tab:sleep':
         if (c.id) {
           if (c.id !== this.activeTabId) this.destroyView(c.id);
@@ -1088,7 +1091,7 @@ export class Browser {
         app.quit();
         break;
       case 'media:control':
-        this.mediaControl(c.id, c.action);
+        this.mediaControl(c.id, c.action, c.value);
         break;
       case 'permission:respond':
         this.permissions.respond(c.id, c.allow, c.remember);
@@ -1528,6 +1531,7 @@ export class Browser {
     if (ctrl && i.alt && k === 'arrowleft') return run({ type: 'space:cycle', dir: -1 });
     if (ctrl && i.alt && k === 'v') return run({ type: 'split:toggle' });
     if ((ctrl && i.alt && k === 'r') || (!ctrl && !i.alt && !i.shift && k === 'f9')) return run({ type: 'page:readingMode' });
+    if (ctrl && i.alt && k === 'm') return run({ type: 'popover:toggle', kind: 'media' });
     if (ctrl && !i.alt && !i.shift && k === 'f') return this.ui({ type: 'find' }), true;
     if (ctrl && !i.alt && (k === '=' || k === '+')) return run({ type: 'zoom', dir: 1 });
     if (ctrl && !i.alt && (k === '-' || k === '_')) return run({ type: 'zoom', dir: -1 });
@@ -1706,15 +1710,50 @@ export class Browser {
   // ---------------------------------------------------------------- media
 
   /** Play/pause and next/previous for the page playing audio or video (YouTube, Spotify, SoundCloud…). */
-  private mediaControl(id: string, action: 'toggle' | 'next' | 'prev') {
+  private mediaControl(
+    id: string,
+    action: 'toggle' | 'next' | 'prev' | 'forward' | 'backward' | 'loop' | 'pip' | 'speed' | 'boost',
+    value?: number,
+  ) {
     const wc = this.wc(id);
     if (!wc) return;
-    const scripts = {
+    const speedVal = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 1.0;
+    const boostVal = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 1.0;
+    const scripts: Record<string, string> = {
       toggle: `(() => { const all = [...document.querySelectorAll('video, audio')]; const m = all.find((x) => !x.paused) || all[0]; if (m) m.paused ? m.play() : m.pause(); })()`,
       next: `(() => { const b = document.querySelector('.ytp-next-button, [data-testid=control-button-skip-forward], .skipControl__next'); if (b) b.click(); })()`,
       prev: `(() => { const v = document.querySelector('video, audio'); if (v && v.currentTime > 3) { v.currentTime = 0; return; } const b = document.querySelector('.ytp-prev-button, [data-testid=control-button-skip-back], .skipControl__previous'); if (b) b.click(); })()`,
+      forward: `(() => { const v = document.querySelector('video, audio'); if (v) v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10); })()`,
+      backward: `(() => { const v = document.querySelector('video, audio'); if (v) v.currentTime = Math.max(0, v.currentTime - 10); })()`,
+      loop: `(() => { const v = document.querySelector('video, audio'); if (v) v.loop = !v.loop; })()`,
+      pip: `(() => { const v = document.querySelector('video'); if (v) { v.disablePictureInPicture = false; if (document.pictureInPictureElement) document.exitPictureInPicture(); else v.requestPictureInPicture(); } })()`,
+      speed: `(() => { const v = document.querySelector('video, audio'); if (v) v.playbackRate = ${speedVal}; })()`,
+      boost: `(() => {
+        try {
+          const v = document.querySelector('video, audio');
+          if (!v) return;
+          if (!window.__driftAudioCtx) {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const ctx = new AudioCtx();
+            const src = ctx.createMediaElementSource(v);
+            const gain = ctx.createGain();
+            src.connect(gain);
+            gain.connect(ctx.destination);
+            window.__driftAudioCtx = ctx;
+            window.__driftGainNode = gain;
+          }
+          if (window.__driftAudioCtx.state === 'suspended') {
+            void window.__driftAudioCtx.resume();
+          }
+          if (window.__driftGainNode) {
+            window.__driftGainNode.gain.value = ${boostVal};
+          }
+        } catch (e) {}
+      })()`,
     };
-    void wc.executeJavaScript(scripts[action], true).catch(() => {});
+    if (scripts[action]) {
+      void wc.executeJavaScript(scripts[action], true).catch(() => {});
+    }
   }
 
   // ---------------------------------------------------------------- import

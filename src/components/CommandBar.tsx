@@ -102,6 +102,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'translate', label: t('act.translate'), en: translate({}, 'act.translate'), run: () => cmd({ type: 'page:translate' }) },
       { id: 'source', label: t('act.source'), en: translate({}, 'act.source'), run: () => cmd({ type: 'page:source' }) },
       { id: 'pip', label: t('act.pip'), en: translate({}, 'act.pip'), run: () => cmd({ type: 'page:pip' }) },
+      { id: 'media-hub', label: 'בקרת מדיה וסאונד גלובלית (Global Media Controls & 300% Booster · Ctrl+Alt+M)', en: 'media controls volume boost 300 pip picture in picture audio music speed', run: () => setTimeout(() => openShellPopover('media'), 40) },
       { id: 'split', label: t('act.split'), en: translate({}, 'act.split'), run: () => cmd({ type: 'split:toggle' }) },
       { id: 'compact', label: t('act.compact'), en: translate({}, 'act.compact'), run: () => cmd({ type: 'ui:compact' }) },
       { id: 'vertical', label: t('act.vertical'), en: translate({}, 'act.vertical'), run: () => cmd({ type: 'settings:set', patch: { verticalTabs: !state.settings.verticalTabs } }) },

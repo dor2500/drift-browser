@@ -334,6 +334,7 @@ export type Command =
   | { type: 'sessions:open' }
   | { type: 'history:open' }
   | { type: 'downloads:open' }
+  | { type: 'popover:toggle'; kind: 'media' | 'clipboard' | 'darkmode' | 'handoff' | 'siteinfo' }
   | { type: 'tab:sleep'; id?: string }
   | { type: 'tab:wake'; id: string }
   | { type: 'privacy:newIdentity' }
@@ -377,7 +378,12 @@ export type Command =
   | { type: 'ai:refresh-models' }
   | { type: 'updates:check' }
   | { type: 'adblock:site'; host: string; paused: boolean }
-  | { type: 'media:control'; id: string; action: 'toggle' | 'next' | 'prev' }
+  | {
+      type: 'media:control';
+      id: string;
+      action: 'toggle' | 'next' | 'prev' | 'forward' | 'backward' | 'loop' | 'pip' | 'speed' | 'boost';
+      value?: number;
+    }
   | { type: 'find:query'; text: string; forward?: boolean; next?: boolean }
   | { type: 'find:stop' }
   | { type: 'zoom'; dir: 1 | -1 | 0 }
