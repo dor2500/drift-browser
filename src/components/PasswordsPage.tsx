@@ -48,6 +48,59 @@ export function PasswordsPage({ state: _state }: Props) {
     }
   };
 
+  const handleExportCsv = () => {
+    if (passwords.length === 0) {
+      showToast('אין סיסמאות שמורות לייצוא');
+      return;
+    }
+    const headers = 'name,url,username,password,note';
+    const rows = passwords.map((p) => {
+      const name = p.url.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+      const escape = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
+      return `${escape(name)},${escape(p.url)},${escape(p.username)},${escape(p.password)},${escape(p.notes || '')}`;
+    });
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `drift-passwords-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`יוצאו ${passwords.length} סיסמאות לקובץ CSV`);
+  };
+
+  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) return;
+        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+        if (lines.length < 2) return;
+        let count = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const parts = lines[i].split(',').map((p) => p.replace(/^"|"$/g, '').trim());
+          if (parts.length >= 4) {
+            const [, url, username, password, notes] = parts;
+            if (url && username && password) {
+              await window.drift.savePassword({ url, username, password, notes: notes || '' });
+              count++;
+            }
+          }
+        }
+        await loadAll();
+        showToast(`יובאו ${count} סיסמאות מקובץ CSV בהצלחה!`);
+      } catch {
+        showToast('שגיאה בקריאת קובץ CSV');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   useEffect(() => {
     void loadAll();
   }, []);
@@ -205,6 +258,19 @@ export function PasswordsPage({ state: _state }: Props) {
             <Icon name="bolt" size={15} />
             <span>מחולל סיסמאות</span>
           </button>
+          <button
+            className="btn passwords-action-btn"
+            onClick={handleExportCsv}
+            title="ייצוא סיסמאות לקובץ CSV תואם Google Chrome"
+          >
+            <Icon name="download" size={15} />
+            <span>ייצוא CSV</span>
+          </button>
+          <label className="btn passwords-action-btn" title="ייבוא סיסמאות מקובץ CSV של כרום או דפדפן אחר" style={{ cursor: 'pointer' }}>
+            <Icon name="folder" size={15} />
+            <span>ייבוא CSV</span>
+            <input type="file" accept=".csv" onChange={handleImportCsv} style={{ display: 'none' }} />
+          </label>
         </div>
       </header>
 
