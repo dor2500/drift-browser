@@ -593,6 +593,70 @@ kbd {
 .result .sub { color: var(--text-faint); margin-left: 8px; }
 .result .hint { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; }
 
+/* Omnibox Smart Calculator & Direct Answer row */
+.result.calc-result {
+  background: color-mix(in srgb, var(--accent) 10%, var(--element-bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  height: 48px;
+}
+.result.calc-result.selected {
+  background: color-mix(in srgb, var(--accent) 22%, var(--element-bg));
+  border-color: var(--accent);
+}
+.calc-badge-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.calc-badge-icon[data-cat='currency'] {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+.calc-badge-icon[data-cat='unit'] {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+.calc-badge-icon[data-cat='color'] {
+  background: rgba(232, 121, 249, 0.2);
+  color: #e879f9;
+}
+.calc-result-text {
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+.calc-hint {
+  font-weight: 600;
+  color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.commandbar-toast {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: #090d16;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  animation: fadeInToast 0.15s ease-out;
+  z-index: 20;
+}
+
 /* ------------------------------------------------------------------ split pro toolbar */
 .split-pro-toolbar {
   position: absolute;

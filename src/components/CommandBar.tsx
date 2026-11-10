@@ -10,10 +10,12 @@ import { Icon } from './Icon';
 import { openShellPopover } from './PageActions';
 import type { Anchor } from './TopBar';
 import { t } from '../i18n';
+import { evaluateOmniboxQuery, type OmniboxAnswer } from '../lib/omniboxCalculator';
 
 type Action = { id: string; label: string; en: string; run: () => void };
 type RemoteTabHit = { deviceName: string; url: string; title: string };
 type Item =
+  | { kind: 'calc'; answer: OmniboxAnswer }
   | { kind: 'go'; input: string }
   | { kind: 'ai'; prompt: string }
   | { kind: 'action'; a: Action }
@@ -36,6 +38,7 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
   const [q, setQ] = useState(navigateCurrent ? active!.url : '');
   const [sel, setSel] = useState(0);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   // Bookmarks and history (Drift's own plus imported) matching what you type.
@@ -105,6 +108,11 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       { id: 'reopen', label: t('menu.reopen'), en: translate({}, 'menu.reopen'), run: () => cmd({ type: 'tab:reopen' }) },
       { id: 'newspace', label: t('menu.newSpace'), en: translate({}, 'menu.newSpace'), run: () => cmd({ type: 'space:new' }) },
       { id: 'settings', label: t('menu.settings'), en: translate({}, 'menu.settings'), run: () => cmd({ type: 'settings:open' }) },
+      { id: 'bookmarks', label: 'מנהל הסימניות (Bookmarks Manager · Ctrl+Shift+O)', en: 'bookmarks manager favorites links html export', run: () => cmd({ type: 'bookmarks:open' }) },
+      { id: 'performance', label: 'לוח ביצועים וחיסכון בזיכרון (Memory Saver & Performance)', en: 'performance memory saver dashboard tabs ram sleep wake', run: () => cmd({ type: 'performance:open' }) },
+      { id: 'shortcuts', label: 'לוח קיצורי מקלדת (Keyboard Shortcuts Hub · Ctrl+/)', en: 'keyboard shortcuts hotkeys command quick', run: () => cmd({ type: 'shortcuts:open' }) },
+      { id: 'store', label: 'חנות התוספים וההרחבות (Drift Store · Ctrl+Shift+E)', en: 'drift store extensions addons themes plugins', run: () => cmd({ type: 'store:open' }) },
+      { id: 'incognito', label: 'חלון גלישה בסתר חדש (New Incognito Window · Ctrl+Shift+N)', en: 'incognito private window secret anonymous', run: () => cmd({ type: 'win:incognito' }) },
       { id: 'google', label: t('act.google'), en: translate({}, 'act.google'), run: () => cmd({ type: 'google:signin' }) },
       ...COLOR_THEMES.map((c) => ({
         id: `theme-${c.id}`,
@@ -141,7 +149,16 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
     const needle = s.toLowerCase();
     const matching = actions.filter((a) => needle && (a.label.toLowerCase().includes(needle) || a.en.toLowerCase().includes(needle)));
     if (actionMode) return (needle ? matching : actions).slice(0, 12).map((a) => ({ kind: 'action' as const, a }));
-    const out: Item[] = s ? [{ kind: 'go', input: s }] : [];
+
+    const out: Item[] = [];
+
+    // Omnibox Smart Calculator, Unit Converter & Direct Answers
+    const calcAnswer = evaluateOmniboxQuery(s);
+    if (calcAnswer) {
+      out.push({ kind: 'calc', answer: calcAnswer });
+    }
+
+    if (s) out.push({ kind: 'go', input: s });
     if (needle.length >= 2) for (const a of matching.slice(0, 3)) out.push({ kind: 'action', a });
     const open = new Set(state.tabs.map((t) => t.url));
     for (const sg of suggestions) if (!open.has(sg.url)) out.push({ kind: 'suggest', s: sg });
@@ -168,7 +185,12 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
 
   const choose = (it: Item | undefined) => {
     if (!it) return;
-    if (it.kind === 'ai') {
+    if (it.kind === 'calc') {
+      navigator.clipboard.writeText(it.answer.result);
+      setToast(`הועתק: ${it.answer.result}`);
+      setTimeout(() => onClose(), 650);
+      return;
+    } else if (it.kind === 'ai') {
       aiActions.sendPrompt(it.prompt, 'chat', true);
     } else if (it.kind === 'action') {
       it.a.run();
@@ -219,23 +241,38 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
           {items.map((it, i) => (
             <div
               key={
-                it.kind === 'go'
-                  ? 'go'
-                  : it.kind === 'ai'
-                    ? 'ai'
-                    : it.kind === 'action'
-                      ? `a:${it.a.id}`
-                      : it.kind === 'suggest'
-                        ? `s:${it.s.url}`
-                        : it.kind === 'remote-tab'
-                          ? `rt:${it.r.deviceName}:${it.r.url}`
-                          : it.tab.id
+                it.kind === 'calc'
+                  ? `calc:${it.answer.title}`
+                  : it.kind === 'go'
+                    ? 'go'
+                    : it.kind === 'ai'
+                      ? 'ai'
+                      : it.kind === 'action'
+                        ? `a:${it.a.id}`
+                        : it.kind === 'suggest'
+                          ? `s:${it.s.url}`
+                          : it.kind === 'remote-tab'
+                            ? `rt:${it.r.deviceName}:${it.r.url}`
+                            : it.tab.id
               }
-              className={cx('result', i === sel && 'selected')}
+              className={cx('result', i === sel && 'selected', it.kind === 'calc' && 'calc-result')}
               onMouseEnter={() => setSel(i)}
               onClick={() => choose(it)}
             >
-              {it.kind === 'ai' ? (
+              {it.kind === 'calc' ? (
+                <>
+                  <div className="calc-badge-icon" data-cat={it.answer.category}>
+                    <Icon name={it.answer.icon === 'palette' ? 'palette' : it.answer.icon === 'ruler' ? 'sliders' : it.answer.icon === 'coins' ? 'cart' : 'bolt'} size={15} />
+                  </div>
+                  <span className="label">
+                    <span className="calc-result-text">{it.answer.title}</span>
+                    <span className="sub">{it.answer.subtitle}</span>
+                  </span>
+                  <span className="hint calc-hint">
+                    {it.answer.category === 'math' ? '🧮 חישוב' : it.answer.category === 'currency' ? '💱 מטבע' : it.answer.category === 'unit' ? '📏 יחידות' : '🎨 צבע'} · העתק ↵
+                  </span>
+                </>
+              ) : it.kind === 'ai' ? (
                 <>
                   <Icon name="sparkles" />
                   <span className="label">
@@ -296,6 +333,12 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
             </div>
           ))}
         </div>
+        {toast && (
+          <div className="commandbar-toast">
+            <Icon name="check" size={13} />
+            <span>{toast}</span>
+          </div>
+        )}
       </div>
     </div>
   );
