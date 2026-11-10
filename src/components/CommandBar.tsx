@@ -21,7 +21,8 @@ type Item =
   | { kind: 'action'; a: Action }
   | { kind: 'suggest'; s: Suggestion }
   | { kind: 'tab'; tab: TabState }
-  | { kind: 'remote-tab'; r: RemoteTabHit };
+  | { kind: 'remote-tab'; r: RemoteTabHit }
+  | { kind: 'site-search'; prefix: string; label: string; query?: string; url?: string };
 
 interface Props {
   mode: 'new' | 'current';
@@ -44,12 +45,13 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
   // Bookmarks and history (Drift's own plus imported) matching what you type.
   useEffect(() => {
     const s = q.trim();
-    if (!s || s.startsWith('@ai') || s.startsWith('?') || (navigateCurrent && s === active?.url)) {
+    if (!s || s === '@' || s.startsWith('@ai') || s.startsWith('?') || (navigateCurrent && s === active?.url)) {
       setSuggestions([]);
       return;
     }
+    const cleanSearch = s.replace(/^@(bookmarks|history|tabs)\s*/i, '').trim();
     let alive = true;
-    const timer = setTimeout(() => void window.drift.suggest(s).then((r) => alive && setSuggestions(r)), 60);
+    const timer = setTimeout(() => void window.drift.suggest(cleanSearch || s).then((r) => alive && setSuggestions(r)), 60);
     return () => {
       alive = false;
       clearTimeout(timer);
@@ -165,6 +167,67 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
 
   const items = useMemo<Item[]>(() => {
     const raw = q.trim();
+
+    // Chrome Site Search shortcuts: @, @tabs, @history, @bookmarks, @youtube, @github
+    if (raw === '@') {
+      return [
+        { kind: 'site-search', prefix: '@tabs', label: 'חיפוש בכרטיסיות פתוחות (Search Open Tabs)' },
+        { kind: 'site-search', prefix: '@history', label: 'חיפוש בהיסטוריית גלישה (Search History)' },
+        { kind: 'site-search', prefix: '@bookmarks', label: 'חיפוש בסימניות (Search Bookmarks)' },
+        { kind: 'site-search', prefix: '@ai', label: 'שאל את עוזר ה-AI המקומי (Ask Local AI / Ollama)' },
+        { kind: 'site-search', prefix: '@youtube', label: 'חיפוש ישיר ב-YouTube' },
+        { kind: 'site-search', prefix: '@github', label: 'חיפוש מאגרי קוד ב-GitHub' },
+      ];
+    }
+
+    if (/^@tabs\b/i.test(raw)) {
+      const query = raw.replace(/^@tabs\s*/i, '').trim().toLowerCase();
+      const matchingTabs = state.tabs
+        .filter((t) => !t.glanceOf)
+        .filter((t) => !query || t.title.toLowerCase().includes(query) || t.url.toLowerCase().includes(query));
+      return matchingTabs.map((t) => ({ kind: 'tab' as const, tab: t }));
+    }
+
+    if (/^@bookmarks\b/i.test(raw)) {
+      const query = raw.replace(/^@bookmarks\s*/i, '').trim().toLowerCase();
+      const bms = suggestions.filter((s) => s.kind === 'bookmark');
+      const filtered = query ? bms.filter((b) => b.title.toLowerCase().includes(query) || b.url.toLowerCase().includes(query)) : bms;
+      return filtered.map((s) => ({ kind: 'suggest' as const, s }));
+    }
+
+    if (/^@history\b/i.test(raw)) {
+      const query = raw.replace(/^@history\s*/i, '').trim().toLowerCase();
+      const hist = suggestions.filter((s) => s.kind !== 'bookmark');
+      const filtered = query ? hist.filter((h) => h.title.toLowerCase().includes(query) || h.url.toLowerCase().includes(query)) : hist;
+      return filtered.map((s) => ({ kind: 'suggest' as const, s }));
+    }
+
+    if (/^@(youtube|yt)\b/i.test(raw)) {
+      const query = raw.replace(/^@(youtube|yt)\s*/i, '').trim();
+      return [
+        {
+          kind: 'site-search',
+          prefix: 'YouTube',
+          label: query ? `חפש "${query}" ב-YouTube` : 'הקלד מונח לחיפוש ב-YouTube...',
+          query,
+          url: query ? `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}` : 'https://www.youtube.com',
+        },
+      ];
+    }
+
+    if (/^@(github|gh)\b/i.test(raw)) {
+      const query = raw.replace(/^@(github|gh)\s*/i, '').trim();
+      return [
+        {
+          kind: 'site-search',
+          prefix: 'GitHub',
+          label: query ? `חפש "${query}" ב-GitHub` : 'הקלד מונח לחיפוש מאגרים ב-GitHub...',
+          query,
+          url: query ? `https://github.com/search?q=${encodeURIComponent(query)}` : 'https://github.com',
+        },
+      ];
+    }
+
     // Omnibox Local AI shortcut: `@ai <prompt>` or `? <prompt>`
     if (/^(@ai\b|\?)/i.test(raw)) {
       const promptText = raw.replace(/^(@ai\b|\?)\s*/i, '').trim();
@@ -231,6 +294,15 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
       cmd({ type: 'tab:activate', id: it.tab.id });
     } else if (it.kind === 'remote-tab') {
       cmd({ type: 'tab:new', url: it.r.url });
+    } else if (it.kind === 'site-search') {
+      if (it.url) {
+        if (navigateCurrent) cmd({ type: 'tab:navigate', input: it.url });
+        else cmd({ type: 'tab:new', url: it.url });
+        onClose();
+      } else {
+        setQ(`${it.prefix} `);
+      }
+      return;
     } else {
       const target = it.kind === 'go' ? it.input : it.s.url;
       if (navigateCurrent) cmd({ type: 'tab:navigate', input: target });
@@ -280,13 +352,15 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
                     ? 'go'
                     : it.kind === 'ai'
                       ? 'ai'
-                      : it.kind === 'action'
-                        ? `a:${it.a.id}`
-                        : it.kind === 'suggest'
-                          ? `s:${it.s.url}`
-                          : it.kind === 'remote-tab'
-                            ? `rt:${it.r.deviceName}:${it.r.url}`
-                            : it.tab.id
+                      : it.kind === 'site-search'
+                        ? `ss:${it.prefix}:${it.label}`
+                        : it.kind === 'action'
+                          ? `a:${it.a.id}`
+                          : it.kind === 'suggest'
+                            ? `s:${it.s.url}`
+                            : it.kind === 'remote-tab'
+                              ? `rt:${it.r.deviceName}:${it.r.url}`
+                              : it.tab.id
               }
               className={cx('result', i === sel && 'selected', it.kind === 'calc' && 'calc-result')}
               onMouseEnter={() => setSel(i)}
@@ -339,6 +413,15 @@ export function CommandBar({ mode, state, anchor, onClose }: Props) {
                     <span className="sub">{displayUrl(it.r.url)}</span>
                   </span>
                   <span className="hint">{it.r.deviceName} · Synced Tab</span>
+                </>
+              ) : it.kind === 'site-search' ? (
+                <>
+                  <Icon name={it.prefix.includes('tab') ? 'tab' : it.prefix.includes('book') ? 'star' : it.prefix.includes('hist') ? 'clock' : it.prefix.includes('yt') || it.prefix === 'YouTube' ? 'play' : it.prefix.includes('gh') || it.prefix === 'GitHub' ? 'fox' : 'search'} />
+                  <span className="label">
+                    <strong>{it.prefix}</strong> {it.label}
+                    {it.query && <span className="sub">חיפוש ישיר: {it.query}</span>}
+                  </span>
+                  <span className="hint">Chrome Site Search</span>
                 </>
               ) : it.kind === 'go' ? (
                 <>
